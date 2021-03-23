@@ -3,4 +3,4 @@ A discord bot that plays music from youtube and local files and can also normali
 
 Install NodeJS from https://nodejs.org/en/download/
 
-In the same directory of miku.js, run "npm install", then "node miku.js"
+In the same directory as miku.js, run "npm install", then "node miku.js"
