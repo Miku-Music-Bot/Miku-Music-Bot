@@ -214,11 +214,11 @@ function createUI () {                // creates message object for ui
     if (nowPlaying.live) { duration = 'live' }
 
     if (!nowPlaying.fileName) {                                     // if song is a youtube video
-      newMessage.embed.thumbnail = { url: nowPlaying.thumbnail }        // set thumbnail to youtube thumbnail
+      newMessage.embed.thumbnail = { url: nowPlaying.thumbnails[0].url }        // set thumbnail to youtube thumbnail
       newMessage.embed.fields = [
         { name: 'Requested by', value: nowPlaying.id, inline: true },
         { name: 'Duration', value: duration, inline: true },
-        { name: 'Youtube Link', value: nowPlaying.link, inline: true }, // youtube link
+        { name: 'Youtube Link', value: nowPlaying.url, inline: true }, // youtube link
         { name: 'Queue:', value: queueMessage },
         { name: 'Autoplay', value: autoplay, inline: true},
         { name: 'Repeat', value: repeatSong + ' time(s)', inline: true},
@@ -435,8 +435,8 @@ function player (play) {              // takes in a song and determines how to p
   var stream = undefined
 
   if (play.fileName) { stream = fs.createReadStream('./autoplay/' + play.fileName) }
-  else if (play.live) { stream = ytdl(play.link, { quality: [91, 92, 93, 94, 95] }) }
-  else { stream = ytdl(play.link, { filter: format => format.contentLength, quality: 'highestaudio' }) }
+  else if (play.live) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95] }) }
+  else { stream = ytdl(play.url, { filter: format => format.contentLength, quality: 'highestaudio' }) }
 
   if (settings.normalize) { ffmpeg(stream).audioFilters('loudnorm=I=-23:LRA=7:tp=-2:measured_I=-30.52:measured_LRA=0:measured_tp=-16.5:measured_thresh=-40.99:offset=-2.38').format('ogg').pipe(output) } // normalize audio with ffmpeg if enabled
   else { ffmpeg(stream).format('ogg').pipe(output) }
@@ -703,7 +703,7 @@ function createSearchMessage () {       // creates message object for searchMess
       if (i === ytIndex) { searchMessage = searchMessage.concat('\nYoutube Search Results:\n') }  // if entry = ytIndex, add header 'Youtube Search Results'
 
       if (searchResults.items[i] && !searchResults.items[i].fileName) {   // if item is a youtube item, show title, duration, and link
-        searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n', searchResults.items[i].link, '\n')
+        searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n', searchResults.items[i].url, '\n')
       } else if (!searchResults.items[i] && i === ytIndex) {
         searchMessage = searchMessage.concat('\nNothing Found!\n')        // if no searchResults left and ytIndex === i, add 'Nothing Found'
       }
