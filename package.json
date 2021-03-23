@@ -1,0 +1,36 @@
+{
+  "name": "miku-discordmusicbot",
+  "version": "1.0.0",
+  "description": "A discord bot that plays music from youtube or local files and can normalize audio levels.",
+  "main": "miku.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bwu1324/Miku-DiscordMusicBot.git"
+  },
+  "keywords": [
+    "Discord",
+    "Bot",
+    "Music",
+    "Normalize"
+  ],
+  "author": "Bwu1324",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bwu1324/Miku-DiscordMusicBot/issues"
+  },
+  "homepage": "https://github.com/bwu1324/Miku-DiscordMusicBot#readme",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.0.20",
+    "discord.js": "^12.5.1",
+    "events": "^3.3.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "fs": "0.0.1-security",
+    "music-metadata": "^7.8.1",
+    "stream": "0.0.2",
+    "ytdl-core": "^4.5.0",
+    "ytsr": "^3.3.1"
+  }
+}
