@@ -21,6 +21,7 @@ var queue = []          // queue for youtube
 var autoplayQueue = []  // queue for autoplay
 var autoplayList = []   // non randomized list of files in autoplay folder
 var nowPlaying          // data for currently playing song
+var progressUpdate      // updater for progressBar
 var paused = false      // paused or not
 
 var voiceChannel        // currently connected voice channel id
@@ -147,8 +148,11 @@ uiReact.on('react', (message) => {      // listener for reactions on ui
       if (dispatcher) {
         if (paused) {
           dispatcher.resume()
+          nowPlaying.total = nowPlaying.total + Date.now() - nowPlaying.pstart
+          nowPlaying.pstart = undefined
         }
         else {
+          nowPlaying.pstart = Date.now()
           dispatcher.pause(true)
         }
         paused = !paused
@@ -211,14 +215,39 @@ function createUI () {                // creates message object for ui
     if (finishQueue) { autoStop = 'Automatically stopping after finishing the queue' }
 
     let duration = nowPlaying.duration                              // set duration as duration unless song is live
-    if (nowPlaying.live) { duration = 'live' }
+    let progressBar = ''
+    if (nowPlaying.isLive) {                                          // create progress bar
+      duration = 'live'
+      progressBar = 'LIVE'
+    } else {
+      var msduration = 0                                                // convert duration string to msec
+      var temp = nowPlaying.duration.split(':')
+      for (let i = temp.length; i > 0; i--) { msduration += parseInt(temp[i - 1]) * 1000 * 60**(temp.length - i) }
+
+      var played = Date.now() - nowPlaying.start - nowPlaying.total
+      if (paused) { played = nowPlaying.pstart - nowPlaying.start - nowPlaying.total }
+
+      var timeToEnd = (msduration - played) / 1000
+      var min = Math.floor(Math.floor(timeToEnd) / 60)              // calculate string for time to end
+      let sec
+      if (Math.floor(timeToEnd) % 60 < 10) { sec = '0' + Math.floor(timeToEnd) % 60 }
+      else { sec = Math.floor(timeToEnd) % 60 }
+      progressBar = progressBar.concat('-', min, ':', sec, ' [')
+
+      for (let i = 0; i < 60; i++) {
+        if (i === Math.floor((played / msduration) * 60)) { progressBar = progressBar.concat('|') }
+        else { progressBar = progressBar.concat('-') }
+      }
+
+      progressBar = progressBar.concat('] ', nowPlaying.duration)
+    }
 
     if (!nowPlaying.fileName) {                                     // if song is a youtube video
-      newMessage.embed.thumbnail = { url: nowPlaying.thumbnails[0].url }        // set thumbnail to youtube thumbnail
+      newMessage.embed.thumbnail = { url: nowPlaying.bestThumbnail.url }        // set thumbnail to youtube thumbnail
       newMessage.embed.fields = [
         { name: 'Requested by', value: nowPlaying.id, inline: true },
-        { name: 'Duration', value: duration, inline: true },
         { name: 'Youtube Link', value: nowPlaying.url, inline: true }, // youtube link
+        { name: 'Progress:', value: progressBar },
         { name: 'Queue:', value: queueMessage },
         { name: 'Autoplay', value: autoplay, inline: true},
         { name: 'Repeat', value: repeatSong + ' time(s)', inline: true},
@@ -228,8 +257,8 @@ function createUI () {                // creates message object for ui
       newMessage.embed.thumbnail = { url: settings.autoplayThumbnail } // set thumbnail to autoplay thumbnail
       newMessage.embed.fields = [
         { name: 'Requested by', value: nowPlaying.id, inline: true },
-        { name: 'Duration', value: duration, inline: true },
         { name: 'Artist', value: nowPlaying.artist, inline: true },           // set artist field instead of link
+        { name: 'Progress:', value: progressBar },
         { name: 'Queue:', value: queueMessage },
         { name: 'Autoplay', value: autoplay, inline: true},
         { name: 'Repeat', value: repeatSong + ' time(s)', inline: true},
@@ -435,11 +464,12 @@ async function joinVoice (message) {  // joins voice channel, returns true if su
 
 function player (play) {              // takes in a song and determines how to play it and plays it
   clearTimeout(autostopTimeout)       // clear the autostop timeout since we are not inactive anymore
+  clearTimeout(progressUpdate)        // clear the updater for progress
   const output = new PassThrough()    // pass through stream
   var stream = undefined
 
   if (play.fileName) { stream = fs.createReadStream('./autoplay/' + play.fileName) }
-  else if (play.live) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95] }) }
+  else if (play.isLive) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95] }) }
   else { stream = ytdl(play.url, { filter: format => format.contentLength, quality: 'highestaudio' }) }
 
   ffmpeg(stream).audioFilters(settings.ffmpegFilter).format('ogg').pipe(output) // apply audio filters with ffmpeg
@@ -447,6 +477,10 @@ function player (play) {              // takes in a song and determines how to p
   dispatcher = connection.play(output) // send the audio stream to discord
 
   dispatcher.on('start', () => {      // set paused to false since we are playing and update UI
+    nowPlaying.start = Date.now()      // record when playing start
+    nowPlaying.total = 0
+    nowPlaying.pstart = undefined       // have not been paused yet
+    progressUpdate = setInterval(() => { sendUI() }, 5555)
     paused = false
     sendUI()
   })
@@ -455,6 +489,7 @@ function player (play) {              // takes in a song and determines how to p
 
 var autostopTimeout = undefined
 function playNext () {                // plays the next song or stops playing depending on settings
+  clearTimeout(progressUpdate)
   refreshAutoplay().then(() => {
     if (autoplay && autoplayQueue.length < 10) { autoplayInit() } // maintain length of autoplay queue if autoplay is enabled
     if (dispatcher) { dispatcher.destroy() }                      // make sure dispatcher has stopped
@@ -518,6 +553,9 @@ function stop () {                    // stops the player and resets variables
   showQueueMessage.then((message) => { if (!message.deleted) { message.delete() } }) // delete any messages that are not needed anymore
   searchMessage.then((message) => { if (!message.deleted) { message.delete() } })
   notification.then((message) => { if (!message.deleted) { message.delete() } })
+
+  clearTimeout(autostopTimeout)       // clear the autostop timeout since we are already stopped
+  clearTimeout(progressUpdate)        // clear the updater for progress
 
   if (voiceChannel) { voiceChannel.leave() } // leave voice channel and stop dispatcher
   if (dispatcher) { dispatcher.destroy() }
@@ -696,19 +734,34 @@ function createSearchMessage () {       // creates message object for searchMess
     let searchMessage = ''
     for (let i = (searchPage - 1) * 5; i < searchPage * 5; i++) { // iterate through searchResults.items and add each to searchMessage
       if (i === 0) { searchMessage = searchMessage.concat('\nAutoplay Search Results:\n') } // if it's the first entry, add header 'Autoplay Search Results'
+      if (searchResults.items[i] && !searchResults.items[i].isLive) {
+        if (searchResults.items[i] && searchResults.items[i].fileName) {    // item is an autoplay item, show title and duration
+          searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n')
+        } else if (i === 0) {                                               // if no autoplay item and is the first entry, add 'Nothing Found'
+          searchMessage = searchMessage.concat('\nNothing Found!\n')
+        }
 
-      if (searchResults.items[i] && searchResults.items[i].fileName) {    // item is an autoplay item, show title and duration
-        searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n')
-      } else if (i === 0) {                                               // if no autoplay item and is the first entry, add 'Nothing Found'
-        searchMessage = searchMessage.concat('\nNothing Found!\n')
-      }
+        if (i === ytIndex) { searchMessage = searchMessage.concat('\nYoutube Search Results:\n') }  // if entry = ytIndex, add header 'Youtube Search Results'
 
-      if (i === ytIndex) { searchMessage = searchMessage.concat('\nYoutube Search Results:\n') }  // if entry = ytIndex, add header 'Youtube Search Results'
+        if (searchResults.items[i] && !searchResults.items[i].fileName) {   // if item is a youtube item, show title, duration, and link
+          searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n      Uploaded by: ', searchResults.items[i].author.name, '\n', searchResults.items[i].url, '\n')
+        } else if (!searchResults.items[i] && i === ytIndex) {
+          searchMessage = searchMessage.concat('\nNothing Found!\n')        // if no searchResults left and ytIndex === i, add 'Nothing Found'
+        }
+      } else {
+        if (searchResults.items[i] && searchResults.items[i].fileName) {    // item is an autoplay item, show title and duration
+          searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - live \n')
+        } else if (i === 0) {                                               // if no autoplay item and is the first entry, add 'Nothing Found'
+          searchMessage = searchMessage.concat('\nNothing Found!\n')
+        }
 
-      if (searchResults.items[i] && !searchResults.items[i].fileName) {   // if item is a youtube item, show title, duration, and link
-        searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - ', searchResults.items[i].duration, '\n', searchResults.items[i].url, '\n')
-      } else if (!searchResults.items[i] && i === ytIndex) {
-        searchMessage = searchMessage.concat('\nNothing Found!\n')        // if no searchResults left and ytIndex === i, add 'Nothing Found'
+        if (i === ytIndex) { searchMessage = searchMessage.concat('\nYoutube Search Results:\n') }  // if entry = ytIndex, add header 'Youtube Search Results'
+
+        if (searchResults.items[i] && !searchResults.items[i].fileName) {   // if item is a youtube item, show title, duration, and link
+          searchMessage = searchMessage.concat('\n', i + 1, ': ', searchResults.items[i].title, ' - live \n      Uploaded by: ', searchResults.items[i].author.name, '\n', searchResults.items[i].url, '\n')
+        } else if (!searchResults.items[i] && i === ytIndex) {
+          searchMessage = searchMessage.concat('\nNothing Found!\n')        // if no searchResults left and ytIndex === i, add 'Nothing Found'
+        }
       }
     }
     newMessage.embed.description = searchMessage    // set description to searchMessage
@@ -767,6 +820,7 @@ client.on('message', async function (message) { // when bot recieveds a message
         }
         searchResults.items[index].id = '<@!' + searchResults.request.author.id + '>'
         queuer(searchResults.request, searchResults.items[index])
+        searchResults.items = []
         searchMessage.then((message) => { if (!message.deleted) { message.delete() } })
       } else {
         sendError('There are only ' + searchResults.items.length + ' search results!')
@@ -787,6 +841,8 @@ client.on('message', async function (message) { // when bot recieveds a message
     } else {
       paused = false
       dispatcher.resume()
+      nowPlaying.total = nowPlaying.total + Date.now() - nowPlaying.pstart
+      nowPlaying.pstart = undefined
       sendUI()
     }
   } else if (message.content === 'skip' || message.content === 'next') {  // if skip, check if playing and skip
@@ -794,9 +850,10 @@ client.on('message', async function (message) { // when bot recieveds a message
     else { playNext() }
   } else if (message.content === 'pause') {                               // if pause, check if playing and pause
     if (!dispatcher) { sendError('<@!' + message.author.id + '> There\'s nothing to pause') }
-    else if (nowPlaying.live) { sendError('<@!' + message.author.id + '> Live videos cannot be paused') }
+    else if (nowPlaying.isLive) { sendError('<@!' + message.author.id + '> Live videos cannot be paused') }
     else if (!paused) {
       dispatcher.pause(true)
+      nowPlaying.pstart = Date.now()
       paused = true
       sendUI()
     }
