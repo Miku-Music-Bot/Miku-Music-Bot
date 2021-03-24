@@ -11,6 +11,6 @@ A discord bot that plays music from Youtube and local files and can apply audio 
 
 3. In the same directory as miku.js, run "npm install", then "node miku.js".
 
-4. In discord, type [Your prefix]"set channel" to set the channel for miku to listen for commands on.
+4. In discord, type "[Your prefix]set channel" to set the channel for miku to listen for commands on.
 
 Local songs should be placed in /autoplay (avoid putting anything other than audio files in here)
