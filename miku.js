@@ -225,7 +225,7 @@ function createUI () {                // creates message object for ui
         { name: 'Auto Stop', value: autoStop, inline: true}
       ]
     } else {                                                        // if song is a local file
-      newMessage.embed.thumbnail = { url: 'https://i.imgur.com/ZJQhzhs.jpg' } // set thumbnail to autoplay thumbnail
+      newMessage.embed.thumbnail = { url: settings.autoplayThumbnail } // set thumbnail to autoplay thumbnail
       newMessage.embed.fields = [
         { name: 'Requested by', value: nowPlaying.id, inline: true },
         { name: 'Duration', value: duration, inline: true },
@@ -238,7 +238,7 @@ function createUI () {                // creates message object for ui
     }
   } else {                                        // if not currently playing a song, display idle message
     newMessage.embed.title = 'Listening for commands'
-    newMessage.embed.thumbnail = { url: 'https://s1.zerochan.net/Hatsune.Miku.600.1769011.jpg' } // miku idle thumbnail
+    newMessage.embed.thumbnail = { url: settings.idleThumbnail } // miku idle thumbnail
     newMessage.embed.description = 'Type "' + settings.prefix + 'help" for a list of avaliable commands'
     newMessage.embed.fields = [ { name: 'Autoplay', value: autoplay } ]
   }
@@ -423,9 +423,13 @@ async function joinVoice (message) {  // joins voice channel, returns true if su
     sendError('<@!' + message.author.id + '> Please join a voice channel to play music')
     return false
   } else {
-    connection = await voiceChannel.join()
-    sendNotification('Joined <@!' + message.author.id + '> in the voice channel named: ' + voiceChannel.name)
-    return true
+    try {
+      connection = await voiceChannel.join()
+      sendNotification('Joined <@!' + message.author.id + '> in the voice channel named: ' + voiceChannel.name)
+      return true
+    } catch {
+      sendError
+    }
   }
 }
 
@@ -438,8 +442,7 @@ function player (play) {              // takes in a song and determines how to p
   else if (play.live) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95] }) }
   else { stream = ytdl(play.url, { filter: format => format.contentLength, quality: 'highestaudio' }) }
 
-  if (settings.normalize) { ffmpeg(stream).audioFilters('loudnorm=I=-23:LRA=7:tp=-2:measured_I=-30.52:measured_LRA=0:measured_tp=-16.5:measured_thresh=-40.99:offset=-2.38').format('ogg').pipe(output) } // normalize audio with ffmpeg if enabled
-  else { ffmpeg(stream).format('ogg').pipe(output) }
+  ffmpeg(stream).audioFilters(settings.ffmpegFilter).format('ogg').pipe(output) // apply audio filters with ffmpeg
 
   dispatcher = connection.play(output) // send the audio stream to discord
 
