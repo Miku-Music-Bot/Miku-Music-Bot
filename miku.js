@@ -14,7 +14,7 @@ ffmpeg.setFfmpegPath(ffmpegPath.path) // set path for ffmpeg
 var settings = require('./config.json')
 var finishSong = false  // stop after current song or not
 var finishQueue = false // stop after finishing youtube queue or not
-var autoplay = true     // play songs from autoplay or not
+var autoplay = false     // play songs from autoplay or not
 var repeatSong = 0      // how many times to repeat song
 
 var queue = []          // queue for youtube
