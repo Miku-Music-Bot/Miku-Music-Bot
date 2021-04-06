@@ -978,3 +978,12 @@ client.on('message', async function (message) { // when bot recieveds a message
     sendError('<@!' + message.author.id + '> That is not a valid command. Type "' + settings.prefix + 'help" to show the list of avaliable commands.')
   }
 })
+
+
+// catching signals and do something before exit
+var signals = ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT', 'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM' ]
+signals.forEach((sig) => {
+  process.on(sig, function () {
+    if (typeof sig === "string") { channel.bulkDelete(100).then(() => { process.exit(1) }) }
+  })
+})
