@@ -469,8 +469,8 @@ function player (play) {              // takes in a song and determines how to p
   var stream = undefined
 
   if (play.fileName) { stream = fs.createReadStream('./autoplay/' + play.fileName) }
-  else if (play.isLive) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95] }) }
-  else { stream = ytdl(play.url, { filter: format => format.contentLength, quality: 'highestaudio' }) }
+  else if (play.isLive) { stream = ytdl(play.url, { quality: [91, 92, 93, 94, 95], highwatermrk: 1 << 25 }) }
+  else { stream = ytdl(play.url, { filter: format => format.contentLength, quality: 'highestaudio', highwatermark: 1 << 25 }) }
 
   ffmpeg(stream).audioFilters(settings.ffmpegFilter).format('ogg').pipe(output) // apply audio filters with ffmpeg
 
