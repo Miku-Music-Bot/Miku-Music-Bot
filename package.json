@@ -25,6 +25,7 @@
     "@ffmpeg-installer/ffmpeg": "^1.0.20",
     "discord.js": "^12.5.1",
     "events": "^3.3.0",
+    "ffmpeg-static": "^4.4.0",
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "music-metadata": "^7.8.1",
