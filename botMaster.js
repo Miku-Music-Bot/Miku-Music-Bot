@@ -20,15 +20,16 @@ var database = undefined;
  * @returns {Promise} - resolves once connection is established
  */
 function init() {
-	return new Promise(async (resolve, reject) => {
-		try {
-			await dbClient.connect();
-			database = dbClient.db(MONGODB_DBNAME);
-			resolve();
-		} catch (error) {
-			reject(error);
-		}
-	})
+	return new Promise((resolve, reject) => {
+		dbClient.connect()
+			.then(() => {
+				database = dbClient.db(MONGODB_DBNAME);
+				resolve();
+			})
+			.catch((error) => {
+				reject(error);
+			});
+	});
 }
 
 var guildList = [];
@@ -56,7 +57,7 @@ function newGuild(id) {
  * 
  * @param {string} id - discord guild id string
  */
-function removeGuild(id) { 	
+function removeGuild(id) {
 	for (let i = 0; i < guildList.length; i++) {
 		if (guildList[i].getName() === id) {
 			guildList[i].removeGuild();
@@ -65,4 +66,4 @@ function removeGuild(id) {
 	}
 }
 
-module.exports = { init, newGuild, removeGuild }
+module.exports = { init, newGuild, removeGuild };

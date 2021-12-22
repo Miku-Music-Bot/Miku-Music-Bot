@@ -33,7 +33,7 @@ class GuildData extends EventEmitter {
 				this.channelID = foundGuild.channelID,
 				this.prefix = foundGuild.prefix,
 				this.filters = foundGuild.filters,
-				this.playlists = foundGuild.playlists
+				this.playlists = foundGuild.playlists;
 			}
 			else {
 				this.configured = false;
@@ -64,7 +64,7 @@ class GuildData extends EventEmitter {
 			prefix: this.prefix,
 			filters: this.filters,
 			playlists: this.playlists
-		}
+		};
 	}
 }
 

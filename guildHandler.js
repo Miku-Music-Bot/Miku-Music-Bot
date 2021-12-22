@@ -35,7 +35,7 @@ class GuildHander {
 		this.bot.once('ready', () => {
 			console.log(`Guild handler for guild id: ${this.guildData.guildID} is ready!`);
 			console.log(this.guildData);
-		})
+		});
 
 		this.bot.login(DISCORD_TOKEN);
 	}
