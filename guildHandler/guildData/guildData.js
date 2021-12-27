@@ -2,10 +2,14 @@ const { EventEmitter } = require('events');
 
 const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guilds';	// name of mongodb collection for guild data
 
+/**
+ * GuildData
+ * 
+ * Abstracts away database connection
+ * Handles getting and setting guild settings
+ */
 class GuildData extends EventEmitter {
 	/**
-	 * Creates GuildData object
-	 * 
 	 * @param {string} id - discord guild id
 	 * @param {Db} db - mongodb database for bot data
 	 */
@@ -17,8 +21,9 @@ class GuildData extends EventEmitter {
 	}
 
 	/**
-	 * Initiallizes GuildData
+	 * initData()
 	 * 
+	 * Initiallizes GuildData
 	 * connects to database and tries to get data
 	 * if no data exits, creates default values and saves it
 	 * if an error occurs, it retries after 10 seconds
@@ -54,6 +59,8 @@ class GuildData extends EventEmitter {
 	}
 
 	/**
+	 * getData()
+	 * 
 	 * @returns {object} - object containing bot settings
 	 */
 	getData() {

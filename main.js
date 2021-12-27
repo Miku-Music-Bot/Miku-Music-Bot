@@ -55,7 +55,9 @@ bot.once('ready', () => {
 botMaster.init()
 	.then(() => {
 		// login as bot
-		bot.login(DISCORD_TOKEN);
+
+		//bot.login(DISCORD_TOKEN);
+		botMaster.newGuild('869064758366732298');				// TESTING ONLY!!!
 	})
 	.catch((error) => {
 		// stop if connection to database fails
