@@ -121,11 +121,6 @@ class GuildHander extends EventEmitter {
 		}
 		if (message.channelId !== this.guildData.channelId && this.guildData.channelId) return;			// ignore if not in right channel, or no channel is set
 	}
-
-	/**
-	 * 
-	 */
-	reactionHandler(reaction, )
 }
 
 module.exports = GuildHander;
