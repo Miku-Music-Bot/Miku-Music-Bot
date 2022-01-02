@@ -7,10 +7,13 @@ const { Client, Intents } = require('discord.js');
  * Starts webserver
  * Connects to database and discord
  * Starts handlers for each guild
- * Handles when bot is added or removed from channels
+ * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
 
+require('dotenv').config();	// grab env variables
+
 const botMaster = require(path.join(__dirname, 'botMaster.js'));
+const webPanel = require(path.join(__dirname, 'webPanel', 'webPanel.js'));
 
 /**
  * checks guilds bot is in and adds handlers for all of them just in case
@@ -27,7 +30,9 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;		// discord bot token
 
 const bot = new Client({				// set intent flags for bot
 	intents: [
-		Intents.FLAGS.GUILDS			// for guildCreate and guildDelete events
+		Intents.FLAGS.GUILDS,					// for guildCreate and guildDelete events
+		Intents.FLAGS.GUILD_MESSAGES,			// for creating and deleting messages
+		Intents.FLAGS.GUILD_MESSAGE_REACTIONS,	// for adding and removing message reactions
 	]
 });
 
@@ -43,21 +48,44 @@ bot.on('guildDelete', (guild) => {
 	botMaster.removeGuild(guild.id);
 });
 
+// when bot receives a message
+bot.on('messageCreate', (message) => {
+	if (message.author.id === bot.user.id) return; 		//npm ignore if message author is the bot
+	if (!message.guildId) return;						// ignore if is a dm
+
+	let guild = botMaster.getGuild(message.guildId);
+	if (guild) { guild.messageHandler(message); }
+});
+
+// when bot receives a reaction
+bot.on('messageReactionAdd', (messageReaction, user) => {
+	botMaster.getGuild(messageReaction.guild.id).reactionHandler(messageReaction, user);
+});
+
 // once ready, start handlers for all existing guilds
 bot.once('ready', () => {
 	console.log(`Logged in as ${bot.user.tag}!`);
 
-	refreshGuilds();
+	// refresh guilds every minute
+	setTimeout(refreshGuilds, 5000);
 	setInterval(refreshGuilds, 60000);
 });
 
 // get botMaster ready
 botMaster.init()
 	.then(() => {
-		// login as bot
+		// start web panel
+		webPanel(botMaster)
+			.then(() => {
+				// login as bot
+				bot.login(DISCORD_TOKEN);
+			})
+			.catch((error) => {
+				// stop if web server fails to start
+				console.log(`Error starting web server: ${error}`);
+				process.exit();
+			});
 
-		//bot.login(DISCORD_TOKEN);
-		botMaster.newGuild('869064758366732298');				// TESTING ONLY!!!
 	})
 	.catch((error) => {
 		// stop if connection to database fails

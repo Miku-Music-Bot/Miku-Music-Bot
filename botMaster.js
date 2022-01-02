@@ -34,21 +34,15 @@ function init() {
 	});
 }
 
-var guildList = [];		// stores all guilds
+var guildList = {};		// stores all guilds
 /**
  * getGuild()
  * 
  * Returns GuildHandler for guild with matching id
  * @param {string} id - discord guild id string
+ * @returns {guildHandler | undefined} - returns guildHandler or undefined if not found
  */
-function getGuild(id) {
-	for (let i = 0; i < guildList.length; i++) {
-		if (guildList[i].getID() === id) {
-			return guildList[i];
-		}
-	}
-	return null;
-}
+function getGuild(id) { return guildList[id]; }
 
 
 /**
@@ -61,7 +55,7 @@ function getGuild(id) {
 function newGuild(id) {
 	if (!getGuild(id)) {
 		let newGuild = new GuildHander(id, database);
-		guildList.push(newGuild);
+		guildList[id] = newGuild;
 	}
 }
 
@@ -72,12 +66,8 @@ function newGuild(id) {
  * @param {string} id - discord guild id string
  */
 function removeGuild(id) {
-	for (let i = 0; i < guildList.length; i++) {
-		if (guildList[i].getName() === id) {
-			guildList[i].removeGuild();
-			guildList.splice(i, 1);
-		}
-	}
+	guildList[id].removeGuild();
+	guildList[id] = undefined;
 }
 
 module.exports = { init, getGuild, newGuild, removeGuild };

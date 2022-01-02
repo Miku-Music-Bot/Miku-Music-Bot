@@ -4,7 +4,7 @@
 	"description": "A fully featured discord music bot.",
 	"main": "main.js",
 	"scripts": {
-		"lint": "eslint --fix ./*.js",
+		"lint": "eslint . --ext .js --fix",
 		"prestart": "npm run lint",
 		"start": "node main.js"
 	},
@@ -24,7 +24,8 @@
 	"dependencies": {
 		"@discordjs/voice": "^0.7.5",
 		"discord.js": "^13.3.1",
-		"express": "^4.17.1",
+		"dotenv": "^10.0.0",
+		"express": "^4.17.2",
 		"mongodb": "^4.2.2",
 		"ytdl-core": "^4.9.2"
 	},
