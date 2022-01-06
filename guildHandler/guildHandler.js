@@ -124,7 +124,7 @@ class GuildHander extends EventEmitter {
 		let argument = '';
 		if (message.content.startsWith(this.guildData.prefix)) {
 			prefix = true;
-			message.content = message.content.slice(this.guildData.prefix.length, message.content.length);
+			message.content = message.content.slice(this.guildData.prefix.length + 1, message.content.length);
 		}
 
 		// if this is the set-channel command and begins with the prefix
