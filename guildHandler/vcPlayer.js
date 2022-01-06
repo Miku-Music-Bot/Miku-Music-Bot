@@ -22,7 +22,7 @@ class VCPlayer {
 	 */
 	join(channelId) {
 		this.vc = new Promise((resolve, reject) => {
-			console.log(this.guildHandler.bot.guilds.get(this.guildHandler.guildData.guildId).channels.cache.get(channelId))
+			console.log(this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).channels.cache.get(channelId))
 			resolve();
 			reject();
 		});
