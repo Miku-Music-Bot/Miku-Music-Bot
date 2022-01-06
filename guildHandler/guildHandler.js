@@ -153,8 +153,10 @@ class GuildHander extends EventEmitter {
 			switch (command) {
 				case ('join'): {
 					this.vcPlayer.join(message.member.voice.channelId);
+					break;
 				}
 				case ('play'): {
+					argument;
 				}
 			}
 		}
