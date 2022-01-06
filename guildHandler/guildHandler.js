@@ -3,7 +3,8 @@ const { EventEmitter } = require('events');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'UI.js'));
-const GuildData = require(path.join(__dirname, 'guildData', 'guildData.js'));
+const GuildData = require(path.join(__dirname, 'guildData', 'GuildData.js'));
+const CommandPerm = require(path.join(__dirname, 'CommandPerm.js'));
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -36,20 +37,6 @@ class GuildHander extends EventEmitter {
 		this.messageFilters = [];
 		this.reactionFilters = [];
 
-		this.ui = new UI(this);
-
-		this.guildData = new GuildData(id, db);
-		this.guildData.once('ready', () => {
-			this.startBot();
-		});
-	}
-
-	/**
-	 * startBot()
-	 * 
-	 * Sets up discord client and events
-	 */
-	startBot() {
 		this.bot = new Client({				// set intent flags for bot
 			intents: [
 				Intents.FLAGS.GUILDS,					// for accessing guild roles
@@ -65,7 +52,13 @@ class GuildHander extends EventEmitter {
 			if (!this.guildData.configured) { this.setup(); }	// start setup if bot is not configured yet
 		});
 
-		this.bot.login(DISCORD_TOKEN);
+		this.ui = new UI(this);
+		this.permissions = new CommandPerm(this);
+
+		this.guildData = new GuildData(id, db);
+		this.guildData.once('ready', () => {
+			this.bot.login(DISCORD_TOKEN);
+		});
 	}
 
 	/**
@@ -76,7 +69,7 @@ class GuildHander extends EventEmitter {
 	setup() {
 		const defaultChannel = this.bot.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
 
-		const setupMessage0 = new MessageEmbed()
+		const setupMessage = new MessageEmbed()
 			.setColor(TEAL)
 			.setImage(`${BOT_DOMAIN}/thumbnail_image.jpg`)
 			.setTitle('Set up Miku')
@@ -85,7 +78,7 @@ class GuildHander extends EventEmitter {
 				Create or choose one and type: "${this.guildData.prefix}set-channel" in that channel`
 			)
 			.setFooter({ text: `For help, email: ${SUPPORT_EMAIL}` });
-		defaultChannel.send({ embeds: [setupMessage0] });
+		defaultChannel.send({ embeds: [setupMessage] });
 	}
 
 	/**
@@ -94,12 +87,28 @@ class GuildHander extends EventEmitter {
 	 * Sends a notification
 	 * @param {string} message - message you want to send
 	 */
-	sendNotification(message) {
+	sendNotification(message, channelId) {
+		if (!channelId) { channelId = this.guildData.channelId; }
 		const notification = new MessageEmbed()
 			.setColor(GREY)
 			.setDescription(message);
 
-		this.bot.channels.cache.get(this.guildData.channelId).send({ embeds: [notification] });
+		this.bot.channels.cache.get(channelId).send({ embeds: [notification] });
+	}
+
+	/**
+	 * sendError()
+	 * 
+	 * Sends a notification
+	 * @param {string} message - message you want to send
+	 */
+	sendError(message, channelId) {
+		if (!channelId) { channelId = this.guildData.channelId; }
+		const notification = new MessageEmbed()
+			.setColor(PINK)
+			.setDescription(message);
+
+		this.bot.channels.cache.get(channelId).send({ embeds: [notification] });
 	}
 
 	/**
@@ -109,7 +118,8 @@ class GuildHander extends EventEmitter {
 	 * @param {Message} message - discord message object
 	 */
 	messageHandler(message) {
-		if (message.content === `${this.guildData.prefix}set channel`) {
+		// if this is the set-channel command and begins with the prefix
+		if (message.content === `${this.guildData.prefix}set-channel` && this.permissions.check('set-channel', message)) {
 			this.guildData.setChannel(message.channelId);
 
 			this.ui.sendUI();
@@ -119,7 +129,8 @@ class GuildHander extends EventEmitter {
 				this.guildData.setConfigured(true);
 			}
 		}
-		if (message.channelId !== this.guildData.channelId && this.guildData.channelId) return;			// ignore if not in right channel, or no channel is set
+		// ignore if not in right channel
+		if (message.channelId !== this.guildData.channelId) return;
 	}
 }
 

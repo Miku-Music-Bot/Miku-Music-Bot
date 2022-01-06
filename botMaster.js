@@ -1,7 +1,7 @@
 const path = require('path');
 const { MongoClient } = require('mongodb');
 
-const GuildHander = require(path.join(__dirname, 'guildHandler', 'guildHandler'));
+const GuildHander = require(path.join(__dirname, 'guildHandler', 'GuildHandler'));
 
 /**
  * botMaster.js
