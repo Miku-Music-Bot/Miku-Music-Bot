@@ -21,7 +21,7 @@ class VCPlayer {
 	 * @returns {Promise} - Promise that resolves to once vc is joined, 
 	 */
 	join(channelId) {
-		this.vc = new Promise(async (resolve, reject) => {
+		this.vc = new Promise((resolve, reject) => {
 			console.log(this.guildHandler.bot.channels.cache.get(channelId))
 			resolve();
 			reject();
