@@ -118,6 +118,9 @@ class GuildHander extends EventEmitter {
 	 * @param {Message} message - discord message object
 	 */
 	messageHandler(message) {
+		// ignore if not in right channel
+		if (message.channelId !== this.guildData.channelId && message.content.indexOf('set-channel') === -1) return;
+
 		// split message into command and argument
 		let prefix = false;
 		let command = '';
@@ -128,31 +131,28 @@ class GuildHander extends EventEmitter {
 		}
 		message.content = message.content + ' ';
 		for (let i = 0; i < message.content.length; i++) {
-			if (message.content[i] == ' ') {
+			if (message.content[i] === ' ') {
 				command = message.content.slice(0, i);
 				argument = message.content.slice(i + 1, message.content.length);
 			}
 		}
 
-
-		// if this is the set-channel command and begins with the prefix
-		if (prefix && command === 'set-channel' && this.permissions.check('set-channel', message)) {
-			this.guildData.setChannel(message.channelId);
-
-			this.ui.sendUI();
-
-			if (!this.guildData.configured) {
-				this.sendNotification('This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.');
-				this.guildData.setConfigured(true);
-			}
-		}
-
-		// ignore if not in right channel
-		if (message.channelId !== this.guildData.channelId) return;
-
 		// check permissions for command then handle each command
 		if (this.permissions.check(command, message)) {
 			switch (command) {
+				case ('set-channel'): {
+					if (prefix) {
+						this.guildData.setChannel(message.channelId);
+
+						this.ui.sendUI();
+
+						if (!this.guildData.configured) {
+							this.sendNotification('This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.');
+							this.guildData.setConfigured(true);
+						}
+					}
+					break;
+				}
 				case ('join'): {
 					this.vcPlayer.join(message.member.voice.channelId);
 					break;
