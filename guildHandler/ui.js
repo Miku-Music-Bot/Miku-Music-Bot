@@ -17,7 +17,7 @@ const GD_BLUE = '#4688F4';
 class UI {
 	/**
 	 * UI
-	 * @param {guildHandler} guildHandler - guildHandler of the guild this ui object is to be responsible for
+	 * @param {GuildHandler} guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */
 	constructor(guildHandler) {
 		this.guildHandler = guildHandler;
