@@ -128,7 +128,7 @@ class GuildHander extends EventEmitter {
 		}
 
 		// if this is the set-channel command and begins with the prefix
-		if (command === 'set-channel' && this.permissions.check('set-channel', message)) {
+		if (prefix && command === 'set-channel' && this.permissions.check('set-channel', message)) {
 			this.guildData.setChannel(message.channelId);
 
 			this.ui.sendUI();
