@@ -124,8 +124,16 @@ class GuildHander extends EventEmitter {
 		let argument = '';
 		if (message.content.startsWith(this.guildData.prefix)) {
 			prefix = true;
-			message.content = message.content.slice(this.guildData.prefix.length + 1, message.content.length);
+			message.content = message.content.slice(this.guildData.prefix.length, message.content.length);
 		}
+		message.content = message.content + ' ';
+		for (let i = 0; i < message.content.length; i++) {
+			if (message.content[i] == ' ') {
+				command = message.content.slice(0, i);
+				argument = message.content.slice(i + 1, message.content.length);
+			}
+		}
+
 
 		// if this is the set-channel command and begins with the prefix
 		if (prefix && command === 'set-channel' && this.permissions.check('set-channel', message)) {
@@ -141,14 +149,6 @@ class GuildHander extends EventEmitter {
 
 		// ignore if not in right channel
 		if (message.channelId !== this.guildData.channelId) return;
-
-		message.content = message.content + ' ';
-		for (let i = 0; i < message.content.length; i++) {
-			if (message.content[i] == ' ') {
-				command = message.content.slice(0, i);
-				argument = message.content.slice(i + 1, message.content.length);
-			}
-		}
 
 		// check permissions for command then handle each command
 		if (this.permissions.check(command, message)) {
