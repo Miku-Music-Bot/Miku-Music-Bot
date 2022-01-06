@@ -34,7 +34,7 @@ class CommandPerm {
 		if (this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).ownerId === message.author.id) return true;
 
 		// if we get here, they don't have permission
-		this.guildHandler.sendError(`<@${message.author.id}> You don\t have permission to use the "${command}" command!`, message.channel.id);
+		this.guildHandler.sendError(`<@${message.author.id}> You don\'t have permission to use the "${command}" command!`, message.channel.id);
 	}
 }
 
