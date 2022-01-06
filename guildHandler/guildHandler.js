@@ -118,8 +118,17 @@ class GuildHander extends EventEmitter {
 	 * @param {Message} message - discord message object
 	 */
 	messageHandler(message) {
+		// split message into command and argument
+		let prefix = false;
+		let command = '';
+		let argument = '';
+		if (message.content.startsWith(this.guildData.prefix)) {
+			prefix = true;
+			message.content = message.content.slice(this.guildData.prefix.length, message.content.length);
+		}
+
 		// if this is the set-channel command and begins with the prefix
-		if (message.content === `${this.guildData.prefix}set-channel` && this.permissions.check('set-channel', message)) {
+		if (command === 'set-channel' && this.permissions.check('set-channel', message)) {
 			this.guildData.setChannel(message.channelId);
 
 			this.ui.sendUI();
@@ -132,13 +141,6 @@ class GuildHander extends EventEmitter {
 
 		// ignore if not in right channel
 		if (message.channelId !== this.guildData.channelId) return;
-
-		// split message into command and argument
-		let command = '';
-		let argument = '';
-		if (message.content.startsWith(this.guildData.prefix)) {
-			message.content = message.content.slice(0, this.guildData.prefix.length);
-		}
 
 		message.content = message.content + ' ';
 		for (let i = 0; i < message.content.length; i++) {
