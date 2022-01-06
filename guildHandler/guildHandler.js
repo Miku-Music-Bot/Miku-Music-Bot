@@ -129,8 +129,36 @@ class GuildHander extends EventEmitter {
 				this.guildData.setConfigured(true);
 			}
 		}
+
 		// ignore if not in right channel
 		if (message.channelId !== this.guildData.channelId) return;
+
+		// split message into command and argument
+		let command = '';
+		let argument = '';
+		if (message.content.startsWith(this.guildData.prefix)) {
+			message.content = message.content.slice(0, this.guildData.prefix.length);
+		}
+
+		message.content = message.content + ' ';
+		for (let i = 0; i < message.content.length; i++) {
+			if (message.content[i] == ' ') {
+				command = message.content.slice(0, i);
+				argument = message.content.slice(i + 1, message.content.length);
+			}
+		}
+
+		// check permissions for command then handle each command
+		if (this.permissions.check(command, message)) {
+			switch (command) {
+				case ('join'): {
+
+				}
+				case ('play'): {
+
+				}
+			}
+		}
 	}
 }
 

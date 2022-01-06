@@ -9,12 +9,11 @@ class CommandPerm {
 	 */
 	constructor(guildHandler) {
 		this.guildHandler = guildHandler;
-		this.commandList = [
-			{
-				command: 'set-channel',
-				roles: []
-			}
-		];
+		this.commandList = {
+			'set-channel': [],
+			'join': [],
+			'play': [],
+		};
 	}
 
 	/**
@@ -22,10 +21,19 @@ class CommandPerm {
 	 * 
 	 * @param {string} command - command to test
 	 * @param {Message} message - discord message object that requested the command
+	 * @returns {boolean} - true if user has permission to use the command, false if not
 	 */
 	check(command, message) {
+		// if command doesn't exit, return false
+		if (!this.commandList[command]) {
+			this.guildHandler.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, message.channel.id);
+			return false;
+		}
+
+		// if the user is the guild owner, return true no matter what
 		if (this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).ownerId === message.author.id) return true;
 
+		// if we get here, they don't have permission
 		this.guildHandler.sendError(`<@${message.author.id}> You don\t have permission to use the "${command}" command!`, message.channel.id);
 	}
 }
