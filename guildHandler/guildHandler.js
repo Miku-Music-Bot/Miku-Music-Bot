@@ -6,6 +6,7 @@ const UI = require(path.join(__dirname, 'ui.js'));
 const GuildData = require(path.join(__dirname, 'guildData', 'guildData.js'));
 const CommandPerm = require(path.join(__dirname, 'commandPerm.js'));
 const VCPlayer = require(path.join(__dirname, 'vcPlayer.js'));
+const log = require(path.join(__dirnme, 'logger.js'));
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -56,6 +57,7 @@ class GuildHander extends EventEmitter {
 		this.ui = new UI(this);
 		this.permissions = new CommandPerm(this);
 		this.vcPlayer = new VCPlayer(this);
+		this.log = new log;
 
 		this.guildData = new GuildData(id, db);
 		this.guildData.once('ready', () => { this.bot.login(DISCORD_TOKEN); });
