@@ -51,7 +51,7 @@ class GuildHander {
 		});
 
 		this.bot.once('ready', () => {
-			this.commandPerm.init();
+			this.permissions.init();
 
 			this.log('Logged into discord, guild handler is ready!');
 
