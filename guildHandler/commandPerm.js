@@ -44,7 +44,7 @@ class CommandPerm {
 	 * @param {string} roleId - discord role id for permissions you would like to add 
 	 */
 	addPermission(command, roleId) {
-		removePermission(command, roleId);
+		this.removePermission(command, roleId);
 		this.permissions[command].push(roleId);
 		this.savePermissions();
 		this.log(`Added permission for roleId: ${roleId} for command: ${command}`);
@@ -59,7 +59,7 @@ class CommandPerm {
 	removePermission(command, roleId) {
 		let location = this.permissions[command].indexOf(roleId);
 		if (location !== -1) {
-			this.permissions[command].splice(i, 1);
+			this.permissions[command].splice(location, 1);
 			this.savePermissions();
 			this.log(`Removed permission for roleId: ${roleId} for command: ${command}`);
 		}
