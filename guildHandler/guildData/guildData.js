@@ -182,7 +182,7 @@ class GuildData extends EventEmitter {
 			prefix: this.prefix,
 			filters: this.filters,
 			playlists: this.playlists,
-			permissions = this.permissions,
+			permissions: this.permissions,
 		};
 	}
 }
