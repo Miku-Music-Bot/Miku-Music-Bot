@@ -23,7 +23,7 @@ class CommandPerm {
 	init() {
 		let guild = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId);
 		console.log(guild);
-		console.log(guild.roles);
+		console.log(guild.roles.cache);
 		guild.roles.cache.filter(role => role.name === 'everyone')
 	}
 
