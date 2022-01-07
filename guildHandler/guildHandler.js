@@ -178,7 +178,7 @@ class GuildHander {
 		}
 		let msg = message.content + ' ';
 		for (let i = 0; i < msg.length; i++) {
-			if (msg.content[i] === ' ') {
+			if (msg[i] === ' ') {
 				command = msg.slice(0, i);
 				argument = msg.slice(i + 1, msg.length);
 			}
