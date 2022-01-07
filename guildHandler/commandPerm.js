@@ -10,16 +10,21 @@ class CommandPerm {
 	constructor(guildHandler) {
 		this.guildHandler = guildHandler;
 
+		this.commandList = {
+			'set-channel': [],
+			'join': [],
+			'play': [],
+		};
+	}
+
+	/**
+	 * init()
+	 */
+	init() {
 		let guild = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId);
 		console.log(guild);
 		console.log(guild.roles);
 		guild.roles.cache.filter(role => role.name === 'everyone')
-
-		this.commandList = {
-			'set-channel': [],
-			'join': ['@everyone'],
-			'play': ['@everyone'],
-		};
 	}
 
 	/**

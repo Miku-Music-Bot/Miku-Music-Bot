@@ -51,7 +51,7 @@ class GuildHander {
 		});
 
 		this.bot.once('ready', () => {
-			this.guild = this.bot.guilds.cache.get(this.guildData.guildId);
+			this.commandPerm.init();
 
 			this.log('Logged into discord, guild handler is ready!');
 
