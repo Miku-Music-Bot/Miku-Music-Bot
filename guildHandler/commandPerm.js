@@ -9,10 +9,13 @@ class CommandPerm {
 	 */
 	constructor(guildHandler) {
 		this.guildHandler = guildHandler;
+		let guild = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId);
+		console.log(guild.roles.cache);
+		guild.roles.cache.filter(role => role.name === 'everyone')
 		this.commandList = {
 			'set-channel': [],
-			'join': [],
-			'play': [],
+			'join': ['@everyone'],
+			'play': ['@everyone'],
 		};
 	}
 
@@ -32,6 +35,9 @@ class CommandPerm {
 
 		// if the user is the guild owner, return true no matter what
 		if (this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).ownerId === message.author.id) return true;
+
+
+
 
 		// if we get here, they don't have permission
 		this.guildHandler.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, message.channel.id);
