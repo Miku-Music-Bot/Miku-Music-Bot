@@ -57,6 +57,7 @@ class GuildData extends EventEmitter {
 				this.prefix = foundGuild.prefix;
 				this.filters = foundGuild.filters;
 				this.playlists = foundGuild.playlists;
+				this.permissions = {};
 
 				this.log('Guild data retrieved');
 				for (let property in this.getData()) {
@@ -70,6 +71,7 @@ class GuildData extends EventEmitter {
 				this.prefix = '!miku ';
 				this.filters = [];
 				this.playlists = [];
+				this.permissions = {};
 
 				await this.collection.insertOne(this.getData());
 			}
@@ -155,7 +157,17 @@ class GuildData extends EventEmitter {
 		this.saveData();
 	}
 
-
+	/**
+	 * setPermissions()
+	 * 
+	 * Set the permissions of the bots
+	 * @param {object} permissions 
+	 */
+	setPermissions(permissions) {
+		this.log('Guild data: permissions set to ${permissions}');
+		this.permissions = permissions;
+		this.saveData();
+	}
 
 	/**
 	 * getData()
@@ -169,7 +181,8 @@ class GuildData extends EventEmitter {
 			channelId: this.channelId,
 			prefix: this.prefix,
 			filters: this.filters,
-			playlists: this.playlists
+			playlists: this.playlists,
+			permissions = this.permissions,
 		};
 	}
 }
