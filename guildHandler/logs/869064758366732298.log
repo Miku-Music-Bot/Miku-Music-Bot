@@ -1,0 +1,38 @@
+[2022-01-07T04:54:19.573Z] Creating guild handler for guild id: 869064758366732298
+[2022-01-07T04:54:19.576Z] Checking temp folder for unsaved settings
+[2022-01-07T04:54:19.577Z] No unsaved data found, requesting settings from database
+[2022-01-07T04:54:19.644Z] No guild data found, using defaults
+[2022-01-07T04:54:19.717Z] Saving data! First trying database
+[2022-01-07T04:54:19.719Z] Guild data ready, logging in to discord
+[2022-01-07T04:54:19.786Z] Database save successful
+[2022-01-07T04:54:20.089Z] Logged into discord, guild handler is ready!
+[2022-01-07T04:54:20.091Z] This guild has not been configured, running setup
+[2022-01-07T04:54:20.093Z] Found default channel with id: 869298234886082630 to send message to
+[2022-01-07T04:55:37.473Z] Recieved messageId: 928874494959955988 with content: {set-channel } from userId: 924810105243971665 in channelId: 869298234886082630. Determined command: set-channel, argument: {}
+[2022-01-07T04:55:37.473Z] Permission rejected to command with messageId: 928874494959955988
+[2022-01-07T04:56:01.123Z] Recieved messageId: 928874594138456154 with content: {set-channel } from userId: 924810105243971665 in channelId: 869298234886082630. Determined command: set-channel, argument: {}
+[2022-01-07T04:56:01.124Z] Permission rejected to command with messageId: 928874594138456154
+[2022-01-07T04:56:57.685Z] Recieved messageId: 928874830709813368 with content: {set-channel } from userId: 269909877202223104 in channelId: 874112908852858930. Determined command: set-channel, argument: {}
+[2022-01-07T04:56:57.686Z] Permission granted to command with messageId: 928874830709813368
+[2022-01-07T04:57:24.917Z] Recieved messageId: 928874945604354088 with content: {set-channel } from userId: 269909877202223104 in channelId: 874112908852858930. Determined command: set-channel, argument: {}
+[2022-01-07T04:57:24.917Z] Permission granted to command with messageId: 928874945604354088
+[2022-01-07T04:57:24.918Z] Guild data: channelId set to 874112908852858930
+[2022-01-07T04:57:24.918Z] Saving data! First trying database
+[2022-01-07T04:57:24.919Z] Guild data: configured set to true
+[2022-01-07T04:57:24.919Z] Saving data! First trying database
+[2022-01-07T04:57:24.996Z] Database save successful
+[2022-01-07T04:57:25.372Z] Database save successful
+[2022-01-07T04:59:50.794Z] Creating guild handler for guild id: 869064758366732298
+[2022-01-07T04:59:50.806Z] Checking temp folder for unsaved settings
+[2022-01-07T04:59:50.810Z] No unsaved data found, requesting settings from database
+[2022-01-07T04:59:50.894Z] Guild data retrieved.
+[2022-01-07T04:59:50.895Z] configured: true
+[2022-01-07T04:59:50.896Z] guildId: 869064758366732298
+[2022-01-07T04:59:50.897Z] channelId: 874112908852858930
+[2022-01-07T04:59:50.898Z] prefix: !miku 
+[2022-01-07T04:59:50.899Z] filters: 
+[2022-01-07T04:59:50.900Z] playlists: 
+[2022-01-07T04:59:50.902Z] Saving data! First trying database
+[2022-01-07T04:59:50.909Z] Guild data ready, logging in to discord
+[2022-01-07T04:59:50.992Z] Database save successful
+[2022-01-07T04:59:51.266Z] Logged into discord, guild handler is ready!

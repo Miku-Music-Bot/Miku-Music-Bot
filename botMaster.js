@@ -26,6 +26,7 @@ function init() {
 		dbClient.connect()
 			.then(() => {
 				database = dbClient.db(MONGODB_DBNAME);
+				console.log('Connected to MongoDB database');
 				resolve();
 			})
 			.catch((error) => {

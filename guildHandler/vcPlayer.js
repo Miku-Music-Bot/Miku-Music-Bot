@@ -11,6 +11,7 @@ class VCPlayer {
 	 */
 	constructor (guildHandler) {
 		this.guildHandler = guildHandler;
+		this.log = this.guildHandler.log;
 	}
 
 	/**

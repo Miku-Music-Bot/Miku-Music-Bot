@@ -1,12 +1,11 @@
 const path = require('path');
-const { EventEmitter } = require('events');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'ui.js'));
 const GuildData = require(path.join(__dirname, 'guildData', 'guildData.js'));
 const CommandPerm = require(path.join(__dirname, 'commandPerm.js'));
 const VCPlayer = require(path.join(__dirname, 'vcPlayer.js'));
-const log = require(path.join(__dirnme, 'logger.js'));
+const Logger = require(path.join(__dirname, 'logger.js'));
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -26,15 +25,20 @@ const GD_BLUE = '#4688F4';
  * 
  * Handles all bot functions for a specific guild
  */
-class GuildHander extends EventEmitter {
+class GuildHander {
 	/**
 	 * Creates GuildData object and once data is ready, calls startBot()
 	 * @param {string} id - discord guild id for GuildHander to be responsible for
 	 * @param {Db} db - mongodb database for bot data
 	 */
 	constructor(id, db) {
-		super();
-		console.log(`Creating guild handler for guild id: ${id}`);
+		this.log = (message) => this.logger.log(message);
+		this.ui = new UI(this);
+		this.permissions = new CommandPerm(this);
+		this.vcPlayer = new VCPlayer(this);
+		this.logger = new Logger(path.join(__dirname, 'logs'), id);
+
+		this.log(`Creating guild handler for guild id: ${id}`);
 
 		this.messageFilters = [];
 		this.reactionFilters = [];
@@ -49,27 +53,32 @@ class GuildHander extends EventEmitter {
 		this.bot.once('ready', () => {
 			this.guild = this.bot.guilds.cache.get(this.guildData.guildId);
 
-			console.log(`Guild handler for guild id: ${this.guildData.guildId} is ready!`);
+			this.log('Logged into discord, guild handler is ready!');
 
-			if (!this.guildData.configured) { this.setup(); }	// start setup if bot is not configured yet
+			if (!this.guildData.configured) {
+				this.log('This guild has not been configured, running setup...');
+				this.setup();
+			}
 		});
 
-		this.ui = new UI(this);
-		this.permissions = new CommandPerm(this);
-		this.vcPlayer = new VCPlayer(this);
-		this.log = new log;
-
-		this.guildData = new GuildData(id, db);
-		this.guildData.once('ready', () => { this.bot.login(DISCORD_TOKEN); });
+		this.guildData = new GuildData(this, id, db);
+		this.guildData.once('ready', () => {
+			this.log('Guild data ready, logging in to discord...');
+			this.bot.login(DISCORD_TOKEN);
+		});
 	}
 
 	/**
 	 * setup()
 	 * 
 	 * Handles the user setup for a brand new server
+	 * @param {number} wait - amount of time to wait before retrying in case of an error
 	 */
-	setup() {
+	setup(wait) {
+		if (!wait) { wait = 1000; }
+		if (wait > 60000) { wait = 60000; }
 		const defaultChannel = this.bot.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
+		this.log(`Found default channel with id: ${defaultChannel.id} to send setup message to`);
 
 		const setupMessage = new MessageEmbed()
 			.setColor(TEAL)
@@ -80,7 +89,15 @@ class GuildHander extends EventEmitter {
 				Create or choose one and type: "${this.guildData.prefix}set-channel" in that channel`
 			)
 			.setFooter({ text: `For help, email: ${SUPPORT_EMAIL}` });
-		defaultChannel.send({ embeds: [setupMessage] });
+		defaultChannel.send({ embeds: [setupMessage] })
+			.then((message) => {
+				this.log(`Setup message sent, messageId: ${message.id}`);
+			}).catch((error) => {
+				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				setTimeout(() => {
+					this.setup(wait * 10);
+				}, wait);
+			});
 	}
 
 	/**
@@ -88,14 +105,28 @@ class GuildHander extends EventEmitter {
 	 * 
 	 * Sends a notification
 	 * @param {string} message - message you want to send
+	 * @param {string} channelId - discord channel id for text channel for message to be sent
+	 * @param {number} wait - amount of time to wait 
 	 */
-	sendNotification(message, channelId) {
+	sendNotification(message, channelId, wait) {
+		if (!wait) { wait = 1000; }
+		if (wait > 60000) { wait = 60000; }
 		if (!channelId) { channelId = this.guildData.channelId; }
+
+		this.log(`Sending notification with message: ${message} to channelId: ${channelId}`);
 		const notification = new MessageEmbed()
 			.setColor(GREY)
 			.setDescription(message);
 
-		this.bot.channels.cache.get(channelId).send({ embeds: [notification] });
+		this.bot.channels.cache.get(channelId).send({ embeds: [notification] })
+			.then((message) => {
+				this.log(`Notification message sent, messageId: ${message.id}`);
+			}).catch((error) => {
+				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				setTimeout(() => {
+					this.setup(wait * 10);
+				}, wait);
+			});
 	}
 
 	/**
@@ -103,14 +134,28 @@ class GuildHander extends EventEmitter {
 	 * 
 	 * Sends a notification
 	 * @param {string} message - message you want to send
+	 * @param {string} channelId - discord channel id for text channel for message to be sent
+	 * @param {number} wait - amount of time to wait 
 	 */
-	sendError(message, channelId) {
+	sendError(message, channelId, wait) {
+		if (!wait) { wait = 1000; }
+		if (wait > 60000) { wait = 60000; }
 		if (!channelId) { channelId = this.guildData.channelId; }
-		const notification = new MessageEmbed()
+
+		this.log(`Sending notification with message: ${message} to channelId: ${channelId}`);
+		const error = new MessageEmbed()
 			.setColor(PINK)
 			.setDescription(message);
 
-		this.bot.channels.cache.get(channelId).send({ embeds: [notification] });
+		this.bot.channels.cache.get(channelId).send({ embeds: [error] })
+			.then((message) => {
+				this.log(`Error message sent, messageId: ${message.id}`);
+			}).catch((error) => {
+				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				setTimeout(() => {
+					this.setup(wait * 10);
+				}, wait);
+			});
 	}
 
 	/**
@@ -131,16 +176,19 @@ class GuildHander extends EventEmitter {
 			prefix = true;
 			message.content = message.content.slice(this.guildData.prefix.length, message.content.length);
 		}
-		message.content = message.content + ' ';
-		for (let i = 0; i < message.content.length; i++) {
-			if (message.content[i] === ' ') {
-				command = message.content.slice(0, i);
-				argument = message.content.slice(i + 1, message.content.length);
+		let msg = message.content + ' ';
+		for (let i = 0; i < msg.content.length; i++) {
+			if (msg.content[i] === ' ') {
+				command = msg.content.slice(0, i);
+				argument = msg.content.slice(i + 1, msg.content.length);
 			}
 		}
 
+		this.log(`Recieved messageId: ${message.id} with content: {${message.content}} from userId: ${message.author.id} in channelId: ${message.channelId}. Determined command: ${command}, argument: {${argument}}`);
+
 		// check permissions for command then handle each command
 		if (this.permissions.check(command, message)) {
+			this.log(`Permission granted to command with messageId: ${message.id}`);
 			switch (command) {
 				case ('set-channel'): {
 					if (prefix) {
@@ -160,9 +208,18 @@ class GuildHander extends EventEmitter {
 					break;
 				}
 				case ('play'): {
-					argument;
+					if (argument) {
+						// do something
+					}
+					else {
+						// do something else
+					}
+					break;
 				}
 			}
+		}
+		else {
+			this.log(`Permission rejected to command with messageId: ${message.id}`);
 		}
 	}
 }

@@ -64,7 +64,7 @@ bot.on('messageReactionAdd', (messageReaction, user) => {
 
 // once ready, start handlers for all existing guilds
 bot.once('ready', () => {
-	console.log(`Logged in as ${bot.user.tag}!`);
+	console.log(`Logged in to discord as ${bot.user.tag}`);
 
 	// refresh guilds every minute
 	setTimeout(refreshGuilds, 5000);
