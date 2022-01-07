@@ -26,9 +26,10 @@ class CommandPerm {
 	check(command, message) {
 
 		let guild = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId);
-		console.log(guild.roles.cache);
+		console.log(guild);
+		console.log(guild.roles);
 		guild.roles.cache.filter(role => role.name === 'everyone')
-		
+
 		// if command doesn't exit, return false
 		if (!this.commandList[command]) {
 			this.guildHandler.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, message.channel.id);
