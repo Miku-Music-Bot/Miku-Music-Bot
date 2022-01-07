@@ -27,6 +27,7 @@ class VCPlayer {
 				const voiceChannel = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).channels.cache.get(channelId);
 				if (voiceChannel) {
 					voiceChannel.join();
+					console.log(voiceChannel);
 				}
 			}
 			catch (error) {
