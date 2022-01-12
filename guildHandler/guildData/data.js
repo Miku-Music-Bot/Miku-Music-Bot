@@ -1,5 +1,4 @@
 const { MongoClient } = require('mongodb');
-const fs = require('fs');
 const path = require('path');
 const guildComponent = require(path.join(__dirname, '..', 'guildComponent.js'));
 
@@ -33,8 +32,9 @@ class GuildData extends guildComponent {
 	 * connects to database and tries to get data
 	 * if no data exits, creates default values and saves it
 	 * if an error occurs, it retries after 10 seconds
-	 * emits "ready" event when done
+	 * calls callback once done
 	 * @param {number} wait - amount of time to wait before retrying in case of an error
+	 * @param {function} cb - callback for when done getting data
 	 */
 	async initData(wait, cb) {
 		if (!wait) { wait = 1000; }
@@ -49,18 +49,9 @@ class GuildData extends guildComponent {
 			const db = dbClient.db(MONGODB_DBNAME);
 			this.collection = db.collection(GUILDDATA_COLLECTION_NAME);
 
-			// try gettings data from temp files if 
-			var foundGuild;
-			try {
-				this.debug('Checking temp folder for unsaved settings...');
-				await fs.promises.stat(path.join(__dirname, 'temp', this.guildId + '.json'));
-				foundGuild = require(path.join(__dirname, 'temp', this.guildId + '.json'));
-				this.debug(`Unsaved data found at {location: ${path.join(__dirname, 'temp', this.guildId + '.json')}}`);
-			} catch (error) {
-				// grab guild data from the database
-				this.debug('No unsaved data found, requesting settings from database');
-				foundGuild = await this.collection.findOne({ guildId: this.guildId });
-			}
+			// grab guild data from the database
+			this.debug('No unsaved data found, requesting settings from database');
+			const foundGuild = await this.collection.findOne({ guildId: this.guildId });
 
 
 			if (foundGuild) {
@@ -103,32 +94,18 @@ class GuildData extends guildComponent {
 	 * saveData()
 	 * 
 	 * Saves guildData to database
-	 * If that fails, it saves data to a temporary file then retries connection every minute 
 	 */
 	async saveData() {
 		clearInterval(this.retrySave);
-		this.debug('Saving data! First trying database...');
+		this.debug('Saving data!');
 		const result = await this.collection.replaceOne({ guildId: this.guildId }, this.getData());
 
 		// check if save was successful or not
 		if (result.modifiedCount === 1) {
-			// delete temp file if needed
-			this.debug('Database save successful');
-			try {
-				await fs.promises.stat(path.join(__dirname, 'temp', this.guildId + '.json'));
-				await fs.promises.unlink(path.join(__dirname, 'temp', this.guildId + '.json'));
-				this.debug(`Temporary file at {location: ${path.join(__dirname, 'temp', this.guildId + '.json')}} successfully deleted`);
-			} catch { /* */ }
+			this.debug('Data save successful');
 		}
 		else {
-			this.log('Could not save data to MongoDB database, saving temporary file...');
-			try {
-				await fs.promises.writeFile(path.join(__dirname, 'temp', this.guildId + '.json'), JSON.stringify(this.getData()));
-				this.log('Temporary file successfully saved');
-			}
-			catch (error) {
-				this.log(`Error: {${error}} while saving data to temporary file, retrying in 1 min`);
-			}
+			this.error('Data save failed, retrying in 1 min');
 			this.retrySave = setInterval(() => this.saveData(), 60000);
 		}
 	}

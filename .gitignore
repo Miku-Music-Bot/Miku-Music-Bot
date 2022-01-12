@@ -5,4 +5,5 @@
 test.env
 
 /tests/test
-/guildHandler/guildData/temp/*
+!/guildHandler/logs/
+/guildHandler/logs/*
