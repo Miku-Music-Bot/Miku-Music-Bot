@@ -1,0 +1,1 @@
+This is where guild handler logs will go, split into folder for each guild
