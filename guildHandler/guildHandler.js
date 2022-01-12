@@ -2,10 +2,10 @@ const path = require('path');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'ui.js'));
-const GuildData = require(path.join(__dirname, 'guildData', 'guildData.js'));
-const CommandPerm = require(path.join(__dirname, 'commandPerm.js'));
+const Data = require(path.join(__dirname, 'guildData', 'data.js'));
+const Permissions = require(path.join(__dirname, 'permissions.js'));
 const VCPlayer = require(path.join(__dirname, 'vcPlayer.js'));
-const Logger = require(path.join(__dirname, 'logger.js'));
+const newLogger = require(path.join(__dirname, 'logger.js'));
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -27,21 +27,19 @@ const GD_BLUE = '#4688F4';
  */
 class GuildHander {
 	/**
-	 * Creates GuildData object and once data is ready, calls startBot()
+	 * Creates data object and once data is ready, calls startBot()
 	 * @param {string} id - discord guild id for GuildHander to be responsible for
-	 * @param {Db} db - mongodb database for bot data
 	 */
-	constructor(id, db) {
-		this.log = (message) => this.logger.log(message);
-		this.ui = new UI(this);
-		this.permissions = new CommandPerm(this);
-		this.vcPlayer = new VCPlayer(this);
-		this.logger = new Logger(path.join(__dirname, 'logs'), id);
+	constructor(id) {
+		const logger = newLogger(path.join(__dirname, 'id'));
+		this.logger = logger;
+		this.debug = (msg) => { logger.debug(msg); };
+		this.info = (msg) => { logger.info(msg); };
+		this.warn = (msg) => { logger.warn(msg); };
+		this.error = (msg) => { logger.error(msg); };
+		this.fatal = (msg) => { logger.fatal(msg); };
 
-		this.log(`Creating guild handler for guild id: ${id}`);
-
-		this.messageFilters = [];
-		this.reactionFilters = [];
+		this.info(`Creating guild handler for guild {id: ${id}}`);
 
 		this.bot = new Client({				// set intent flags for bot
 			intents: [
@@ -51,19 +49,23 @@ class GuildHander {
 		});
 
 		this.bot.once('ready', () => {
+			this.guild = this.bot.guilds.cache.get(this.data.guildId);
+
+			this.ui = new UI(this);
+			this.vcPlayer = new VCPlayer(this);
+			this.permissions = new Permissions(this);
 			this.permissions.init();
 
-			this.log('Logged into discord, guild handler is ready!');
+			this.info('Logged into discord, guild handler is ready!');
 
-			if (!this.guildData.configured) {
-				this.log('This guild has not been configured, running setup...');
+			if (!this.data.configured) {
+				this.info('This guild has not been configured, running setup...');
 				this.setup();
 			}
 		});
 
-		this.guildData = new GuildData(this, id, db);
-		this.guildData.once('ready', () => {
-			this.log('Guild data ready, logging in to discord...');
+		this.data = new Data(this, id, () => {
+			this.info('Guild data ready, logging in to discord...');
 			this.bot.login(DISCORD_TOKEN);
 		});
 	}
@@ -78,7 +80,7 @@ class GuildHander {
 		if (!wait) { wait = 1000; }
 		if (wait > 60000) { wait = 60000; }
 		const defaultChannel = this.bot.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
-		this.log(`Found default channel with id: ${defaultChannel.id} to send setup message to`);
+		this.debug(`Found default channel with {id: ${defaultChannel.id}} to send setup message to`);
 
 		const setupMessage = new MessageEmbed()
 			.setColor(TEAL)
@@ -86,14 +88,15 @@ class GuildHander {
 			.setTitle('Set up Miku')
 			.setDescription(`
 				Miku needs an empty and dedicated text channel to use.\n
-				Create or choose one and type: "${this.guildData.prefix}set-channel" in that channel`
+				Create or choose one and type: "${this.data.prefix}set-channel" in that channel`
 			)
 			.setFooter({ text: `For help, email: ${SUPPORT_EMAIL}` });
 		defaultChannel.send({ embeds: [setupMessage] })
 			.then((message) => {
-				this.log(`Setup message sent, messageId: ${message.id}`);
-			}).catch((error) => {
-				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				this.debug(`Setup message sent, {messageId: ${message.id}}`);
+			})
+			.catch((error) => {
+				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec...`);
 				setTimeout(() => {
 					this.setup(wait * 10);
 				}, wait);
@@ -111,18 +114,19 @@ class GuildHander {
 	sendNotification(message, channelId, wait) {
 		if (!wait) { wait = 1000; }
 		if (wait > 60000) { wait = 60000; }
-		if (!channelId) { channelId = this.guildData.channelId; }
+		if (!channelId) { channelId = this.data.channelId; }
 
-		this.log(`Sending notification with message: ${message} to channelId: ${channelId}`);
+		this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
 		const notification = new MessageEmbed()
 			.setColor(GREY)
 			.setDescription(message);
 
 		this.bot.channels.cache.get(channelId).send({ embeds: [notification] })
 			.then((message) => {
-				this.log(`Notification message sent, messageId: ${message.id}`);
-			}).catch((error) => {
-				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				this.debug(`Notification message sent, {messageId: ${message.id}}`);
+			})
+			.catch((error) => {
+				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec...`);
 				setTimeout(() => {
 					this.setup(wait * 10);
 				}, wait);
@@ -140,18 +144,19 @@ class GuildHander {
 	sendError(message, channelId, wait) {
 		if (!wait) { wait = 1000; }
 		if (wait > 60000) { wait = 60000; }
-		if (!channelId) { channelId = this.guildData.channelId; }
+		if (!channelId) { channelId = this.data.channelId; }
 
-		this.log(`Sending notification with message: ${message} to channelId: ${channelId}`);
+		this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
 		const error = new MessageEmbed()
 			.setColor(PINK)
 			.setDescription(message);
 
 		this.bot.channels.cache.get(channelId).send({ embeds: [error] })
 			.then((message) => {
-				this.log(`Error message sent, messageId: ${message.id}`);
-			}).catch((error) => {
-				this.log(`Error: {${error}} sending setup message, trying again in ${wait} sec`);
+				this.debug(`Error message sent, {messageId: ${message.id}}`);
+			})
+			.catch((error) => {
+				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec`);
 				setTimeout(() => {
 					this.setup(wait * 10);
 				}, wait);
@@ -166,15 +171,15 @@ class GuildHander {
 	 */
 	messageHandler(message) {
 		// ignore if not in right channel
-		if (message.channelId !== this.guildData.channelId && message.content.indexOf('set-channel') === -1) return;
+		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
 
 		// split message into command and argument
 		let prefix = false;
 		let command = '';
 		let argument = '';
-		if (message.content.startsWith(this.guildData.prefix)) {
+		if (message.content.startsWith(this.data.prefix)) {
 			prefix = true;
-			message.content = message.content.slice(this.guildData.prefix.length, message.content.length);
+			message.content = message.content.slice(this.data.prefix.length, message.content.length);
 		}
 		let msg = message.content + ' ';
 		for (let i = 0; i < msg.length; i++) {
@@ -184,21 +189,21 @@ class GuildHander {
 			}
 		}
 
-		this.log(`Recieved messageId: ${message.id} with content: {${message.content}} from userId: ${message.author.id} in channelId: ${message.channelId}. Determined command: ${command}, argument: {${argument}}`);
+		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
 		if (this.permissions.check(command, message)) {
-			this.log(`Permission granted to command with messageId: ${message.id}`);
+			this.debug(`Permission granted to command with {messageId: ${message.id}}`);
 			switch (command) {
 				case ('set-channel'): {
 					if (prefix) {
-						this.guildData.setChannel(message.channelId);
+						this.data.setChannel(message.channelId);
 
 						this.ui.sendUI();
 
-						if (!this.guildData.configured) {
+						if (!this.data.configured) {
 							this.sendNotification('This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.');
-							this.guildData.setConfigured(true);
+							this.data.setConfigured(true);
 						}
 					}
 					break;
@@ -219,7 +224,7 @@ class GuildHander {
 			}
 		}
 		else {
-			this.log(`Permission rejected to command with messageId: ${message.id}`);
+			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 		}
 	}
 }

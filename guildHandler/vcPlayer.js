@@ -1,17 +1,19 @@
+const path = require('path');
+const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
+
 /**
  * VCPlayer
  * 
  * Handles joining and playing a stream in a voice channel
  */
 
-class VCPlayer {
+class VCPlayer extends GuildComponent {
 	/**
 	 * VCPlayer
 	 * @param {GuildHander} - guildHandler for this vcplayer
 	 */
 	constructor (guildHandler) {
-		this.guildHandler = guildHandler;
-		this.log = this.guildHandler.log;
+		super(guildHandler);
 	}
 
 	/**
@@ -24,14 +26,14 @@ class VCPlayer {
 	join(channelId) {
 		this.vc = new Promise((resolve, reject) => {
 			try {
-				const voiceChannel = this.guildHandler.bot.guilds.cache.get(this.guildHandler.guildData.guildId).channels.cache.get(channelId);
+				const voiceChannel = this.guild.channels.cache.get(channelId);
 				if (voiceChannel) {
 					voiceChannel.join();
 					console.log(voiceChannel);
 				}
 			}
 			catch (error) {
-				this.log(error);
+				console.log(error);
 				reject();
 			}
 		});

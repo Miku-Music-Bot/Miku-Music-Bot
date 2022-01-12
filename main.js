@@ -12,7 +12,7 @@ const { Client, Intents } = require('discord.js');
 
 require('dotenv').config();	// grab env variables
 
-const botMaster = require(path.join(__dirname, 'botMaster.js'));
+const botMaster = require(path.join(__dirname, 'guildHandler', 'guildMaster.js'));
 const webPanel = require(path.join(__dirname, 'webPanel', 'webPanel.js'));
 
 /**
@@ -71,24 +71,15 @@ bot.once('ready', () => {
 	setInterval(refreshGuilds, 60000);
 });
 
-// get botMaster ready
-botMaster.init()
-	.then(() => {
-		// start web panel
-		webPanel(botMaster)
-			.then(() => {
-				// login as bot
-				bot.login(DISCORD_TOKEN);
-			})
-			.catch((error) => {
-				// stop if web server fails to start
-				console.log(`Error starting web server: ${error}`);
-				process.exit();
-			});
 
+// start web panel
+webPanel(botMaster)
+	.then(() => {
+		// login as bot
+		bot.login(DISCORD_TOKEN);
 	})
 	.catch((error) => {
-		// stop if connection to database fails
-		console.log(`Error connecting to database: ${error}`);
+		// stop if web server fails to start
+		console.log(`Error starting web server: ${error}`);
 		process.exit();
 	});

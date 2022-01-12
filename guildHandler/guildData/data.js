@@ -1,8 +1,11 @@
-const { EventEmitter } = require('events');
+const { MongoClient } = require('mongodb');
 const fs = require('fs');
 const path = require('path');
+const guildComponent = require(path.join(__dirname, '..', 'guildComponent.js'));
 
-const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guilds';
+const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
+const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
+const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guilds';	// name of collection for guild data
 
 /**
  * GuildData
@@ -10,18 +13,17 @@ const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guil
  * Abstracts away database connection
  * Handles getting and setting guild settings
  */
-class GuildData extends EventEmitter {
+class GuildData extends guildComponent {
 	/**
-	 * @param {GuildHan} guildHandler - guild handler for guild this guildData object is responsible for
+	 * @param {GuildHandler} guildHandler - guild handler for guild this guildData object is responsible for
 	 * @param {string} id - discord guild id
-	 * @param {Db} db - mongodb database for bot data
+	 * @param {function} cb - callback for when done getting data
 	 */
-	constructor(guildHandler, id, db) {
-		super();
+	constructor(guildHandler, id, cb) {
+		super(guildHandler);
 		this.guildId = id;
-		this.collection = db.collection(GUILDDATA_COLLECTION_NAME);
-		this.log = guildHandler.log;
-		this.initData();
+
+		this.initData(1000, cb);
 	}
 
 	/**
@@ -34,22 +36,32 @@ class GuildData extends EventEmitter {
 	 * emits "ready" event when done
 	 * @param {number} wait - amount of time to wait before retrying in case of an error
 	 */
-	async initData(wait) {
+	async initData(wait, cb) {
 		if (!wait) { wait = 1000; }
 		if (wait > 60000) { wait = 60000; }
 		try {
+			this.debug('Connecting to mongodb database');
+
+			// connect to mongodb database
+			const dbClient = new MongoClient(MONGODB_URI);
+			await dbClient.connect();
+
+			const db = dbClient.db(MONGODB_DBNAME);
+			this.collection = db.collection(GUILDDATA_COLLECTION_NAME);
+
 			// try gettings data from temp files if 
 			var foundGuild;
 			try {
-				this.log('Checking temp folder for unsaved settings...');
+				this.debug('Checking temp folder for unsaved settings...');
 				await fs.promises.stat(path.join(__dirname, 'temp', this.guildId + '.json'));
 				foundGuild = require(path.join(__dirname, 'temp', this.guildId + '.json'));
-				this.log('Unsaved data found');
+				this.debug(`Unsaved data found at {location: ${path.join(__dirname, 'temp', this.guildId + '.json')}}`);
 			} catch (error) {
 				// grab guild data from the database
-				this.log('No unsaved data found, requesting settings from database');
+				this.debug('No unsaved data found, requesting settings from database');
 				foundGuild = await this.collection.findOne({ guildId: this.guildId });
 			}
+
 
 			if (foundGuild) {
 				this.configured = foundGuild.configured;
@@ -59,13 +71,14 @@ class GuildData extends EventEmitter {
 				this.playlists = foundGuild.playlists;
 				this.permissions = {};
 
-				this.log('Guild data retrieved');
+				this.debug('Guild data retrieved. {data: ');
 				for (let property in this.getData()) {
-					this.log(`${property}: ${this[property]}`);
+					this.debug(`\t{${property}: ${JSON.stringify(this[property])}}`);
 				}
+				this.debug('}');
 			}
 			else {
-				this.log('No guild data found, using defaults');
+				this.info('No guild data found, using defaults');
 				this.configured = false;
 				this.channelId = undefined;
 				this.prefix = '!miku ';
@@ -76,11 +89,10 @@ class GuildData extends EventEmitter {
 				await this.collection.insertOne(this.getData());
 			}
 
+			cb();			// call callback once done
 			this.saveData();
-
-			this.emit('ready');
 		} catch (error) {
-			this.log(`Error retrieving/saving data from database: ${error} trying again in ${wait} seconds`);
+			this.error(`{error: ${error}} retrieving/saving data from database. Trying again in ${wait} seconds...`);
 			setTimeout(() => {
 				this.initData(wait * 10);
 			}, wait);
@@ -95,17 +107,17 @@ class GuildData extends EventEmitter {
 	 */
 	async saveData() {
 		clearInterval(this.retrySave);
-		this.log('Saving data! First trying database...');
+		this.debug('Saving data! First trying database...');
 		const result = await this.collection.replaceOne({ guildId: this.guildId }, this.getData());
 
 		// check if save was successful or not
 		if (result.modifiedCount === 1) {
 			// delete temp file if needed
-			this.log('Database save successful');
+			this.debug('Database save successful');
 			try {
 				await fs.promises.stat(path.join(__dirname, 'temp', this.guildId + '.json'));
 				await fs.promises.unlink(path.join(__dirname, 'temp', this.guildId + '.json'));
-				this.log('Temporary file successfully deleted');
+				this.debug(`Temporary file at {location: ${path.join(__dirname, 'temp', this.guildId + '.json')}} successfully deleted`);
 			} catch { /* */ }
 		}
 		else {
@@ -128,7 +140,7 @@ class GuildData extends EventEmitter {
 	 * @param {boolean} configured - configured or not
 	 */
 	setConfigured(configured) {
-		this.log(`Guild data: configured set to ${configured}`);
+		this.debug(`Guild data: configured set to ${configured}`);
 		this.configured = configured;
 		this.saveData();
 	}
@@ -140,7 +152,7 @@ class GuildData extends EventEmitter {
 	 * @param {string} id - discord channel id string
 	 */
 	setChannel(id) {
-		this.log(`Guild data: channelId set to ${id}`);
+		this.debug(`Guild data: channelId set to ${id}`);
 		this.channelId = id;
 		this.saveData();
 	}
@@ -152,7 +164,7 @@ class GuildData extends EventEmitter {
 	 * @param {string} prefix - new prefix to use
 	 */
 	setPrefix(prefix) {
-		this.log(`Guild data: prefix set to ${prefix}`);
+		this.debug(`Guild data: prefix set to ${prefix}`);
 		this.prefix = prefix;
 		this.saveData();
 	}
@@ -164,7 +176,7 @@ class GuildData extends EventEmitter {
 	 * @param {object} permissions 
 	 */
 	setPermissions(permissions) {
-		this.log('Guild data: permissions set to ${permissions}');
+		this.debug('Guild data: permissions set to ${permissions}');
 		this.permissions = permissions;
 		this.saveData();
 	}

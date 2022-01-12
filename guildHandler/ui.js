@@ -1,4 +1,7 @@
+const path = require('path');
 const { MessageEmbed } = require('discord.js');
+
+const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
 
 /* eslint-disable */
 const GREY = '#373b3e';
@@ -14,13 +17,13 @@ const GD_BLUE = '#4688F4';
  * 
  * Handles creating and refreshing the main user interface of the bot
  */
-class UI {
+class UI extends GuildComponent {
 	/**
 	 * UI
 	 * @param {GuildHandler} guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */
 	constructor(guildHandler) {
-		this.guildHandler = guildHandler;
+		super(guildHandler);
 	}
 
 	/**
@@ -29,7 +32,7 @@ class UI {
 	 * Sends ui to channel
 	 */
 	sendUI() {
-		const channel = this.guildHandler.bot.channels.cache.get(this.guildHandler.guildData.channelId);
+		const channel = this.bot.channels.cache.get(this.data.channelId);
 		channel.send({ embeds: [this.createUI()] });
 	}
 
