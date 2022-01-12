@@ -1,1 +1,0 @@
-Stores guild data temporarily in case of a database failure
