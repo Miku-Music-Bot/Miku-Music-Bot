@@ -31,7 +31,7 @@ class GuildHander {
 	 * @param {string} id - discord guild id for GuildHander to be responsible for
 	 */
 	constructor(id) {
-		const logger = newLogger(path.join(__dirname, id));
+		const logger = newLogger(path.join(__dirname, 'logs', id));
 		this.logger = logger;
 		this.debug = (msg) => { logger.debug(msg); };
 		this.info = (msg) => { logger.info(msg); };
