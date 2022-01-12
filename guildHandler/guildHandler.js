@@ -146,7 +146,7 @@ class GuildHander {
 		if (wait > 60000) { wait = 60000; }
 		if (!channelId) { channelId = this.data.channelId; }
 
-		this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
+		this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
 		const error = new MessageEmbed()
 			.setColor(PINK)
 			.setDescription(message);
@@ -189,7 +189,7 @@ class GuildHander {
 			}
 		}
 
-		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
+		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
 		if (this.permissions.check(command, message)) {
@@ -222,9 +222,6 @@ class GuildHander {
 					break;
 				}
 			}
-		}
-		else {
-			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 		}
 	}
 }
