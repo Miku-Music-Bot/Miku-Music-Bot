@@ -50,16 +50,17 @@ bot.on('guildDelete', (guild) => {
 
 // when bot receives a message
 bot.on('messageCreate', (message) => {
-	if (message.author.id === bot.user.id) return; 		//npm ignore if message author is the bot
+	if (message.author.id === bot.user.id) return; 		// ignore if message author is the bot
 	if (!message.guildId) return;						// ignore if is a dm
 
 	let guild = botMaster.getGuild(message.guildId);
 	if (guild) { guild.messageHandler(message); }
 });
 
-// when bot receives a reaction
-bot.on('messageReactionAdd', (messageReaction, user) => {
-	botMaster.getGuild(messageReaction.guild.id).reactionHandler(messageReaction, user);
+// when bot receives an interaction
+bot.on('interactionCreate', interaction => {
+	if (!interaction.isButton()) return;				// ignore if not a button press
+	console.log(interaction);
 });
 
 // once ready, start handlers for all existing guilds

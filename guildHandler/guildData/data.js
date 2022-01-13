@@ -153,7 +153,7 @@ class GuildData extends guildComponent {
 	 * @param {object} permissions 
 	 */
 	setPermissions(permissions) {
-		this.debug(`Guild data: permissions set to ${permissions}`);
+		this.debug(`Guild data: permissions set to ${JSON.stringify(permissions)}`);
 		this.permissions = permissions;
 		this.saveData();
 	}

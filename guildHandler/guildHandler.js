@@ -1,5 +1,5 @@
 const path = require('path');
-const { Client, Intents, MessageEmbed } = require('discord.js');
+const { Client, Intents, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'ui.js'));
 const Data = require(path.join(__dirname, 'guildData', 'data.js'));
@@ -74,11 +74,8 @@ class GuildHander {
 	 * setup()
 	 * 
 	 * Handles the user setup for a brand new server
-	 * @param {number} wait - amount of time to wait before retrying in case of an error
 	 */
-	setup(wait) {
-		if (!wait) { wait = 1000; }
-		if (wait > 60000) { wait = 60000; }
+	setup() {
 		const defaultChannel = this.bot.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
 		this.debug(`Found default channel with {id: ${defaultChannel.id}} to send setup message to`);
 
@@ -96,10 +93,7 @@ class GuildHander {
 				this.debug(`Setup message sent, {messageId: ${message.id}}`);
 			})
 			.catch((error) => {
-				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec...`);
-				setTimeout(() => {
-					this.setup(wait * 10);
-				}, wait);
+				this.error(`{error: ${error}} sending setup message.`);
 			});
 	}
 
@@ -109,28 +103,32 @@ class GuildHander {
 	 * Sends a notification
 	 * @param {string} message - message you want to send
 	 * @param {string} channelId - discord channel id for text channel for message to be sent
-	 * @param {number} wait - amount of time to wait 
 	 */
-	sendNotification(message, channelId, wait) {
-		if (!wait) { wait = 1000; }
-		if (wait > 60000) { wait = 60000; }
+	async sendNotification(message, channelId) {
 		if (!channelId) { channelId = this.data.channelId; }
 
-		this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
-		const notification = new MessageEmbed()
-			.setColor(GREY)
-			.setDescription(message);
+		try {
+			this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
+			const notification = new MessageEmbed()
+				.setColor(GREY)
+				.setDescription(message);
 
-		this.bot.channels.cache.get(channelId).send({ embeds: [notification] })
-			.then((message) => {
-				this.debug(`Notification message sent, {messageId: ${message.id}}`);
-			})
-			.catch((error) => {
-				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec...`);
-				setTimeout(() => {
-					this.setup(wait * 10);
-				}, wait);
-			});
+
+			const row = new MessageActionRow()
+				.addComponents(
+					new MessageButton()					// remove button
+						.setCustomId('primary')
+						.setStyle('PRIMARY')
+						.setEmoji('❌')
+				);
+
+			const channel = await this.bot.channels.fetch(channelId);
+			const msg = await channel.send({ embeds: [notification], components: [row] });
+			this.debug(`Notification message sent, {messageId: ${msg.id}}`);
+		}
+		catch (error) {
+			this.error(`{error: ${error}} while creating/sending notification message.`);
+		}
 	}
 
 	/**
@@ -139,28 +137,23 @@ class GuildHander {
 	 * Sends a notification
 	 * @param {string} message - message you want to send
 	 * @param {string} channelId - discord channel id for text channel for message to be sent
-	 * @param {number} wait - amount of time to wait 
 	 */
-	sendError(message, channelId, wait) {
-		if (!wait) { wait = 1000; }
-		if (wait > 60000) { wait = 60000; }
+	async sendError(message, channelId) {
 		if (!channelId) { channelId = this.data.channelId; }
 
-		this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
-		const error = new MessageEmbed()
-			.setColor(PINK)
-			.setDescription(message);
+		try {
+			this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
+			const error = new MessageEmbed()
+				.setColor(PINK)
+				.setDescription(message);
 
-		this.bot.channels.cache.get(channelId).send({ embeds: [error] })
-			.then((message) => {
-				this.debug(`Error message sent, {messageId: ${message.id}}`);
-			})
-			.catch((error) => {
-				this.error(`{error: ${error}} sending setup message, trying again in ${wait} sec`);
-				setTimeout(() => {
-					this.setup(wait * 10);
-				}, wait);
-			});
+			const channel = await this.bot.channels.fetch(channelId);
+			const msg = await channel.send({ embeds: [error] });
+			this.debug(`Error message sent, {messageId: ${msg.id}}`);
+		}
+		catch (error) {
+			this.error(`{error: ${error}} while creating/sending error message.`);
+		}
 	}
 
 	/**
@@ -175,19 +168,13 @@ class GuildHander {
 
 		// split message into command and argument
 		let prefix = false;
-		let command = '';
-		let argument = '';
 		if (message.content.startsWith(this.data.prefix)) {
 			prefix = true;
 			message.content = message.content.slice(this.data.prefix.length, message.content.length);
 		}
 		let msg = message.content + ' ';
-		for (let i = 0; i < msg.length; i++) {
-			if (msg[i] === ' ') {
-				command = msg.slice(0, i);
-				argument = msg.slice(i + 1, msg.length);
-			}
-		}
+		let command = msg.slice(0, msg.indexOf(' '));
+		let argument = msg.slice(msg.indexOf(' ') + 1, msg.length);
 
 		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
@@ -209,7 +196,7 @@ class GuildHander {
 					break;
 				}
 				case ('join'): {
-					this.vcPlayer.join(message.member.voice.channelId);
+					this.vcPlayer.join(message.author).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
 					break;
 				}
 				case ('play'): {

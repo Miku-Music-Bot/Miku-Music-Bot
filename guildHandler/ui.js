@@ -32,6 +32,7 @@ class UI extends GuildComponent {
 	 * Sends ui to channel
 	 */
 	sendUI() {
+		// this needs to be improved to not use .get();
 		const channel = this.bot.channels.cache.get(this.data.channelId);
 		channel.send({ embeds: [this.createUI()] });
 	}

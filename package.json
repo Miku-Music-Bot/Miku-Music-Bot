@@ -7,7 +7,6 @@
 		"lint": "eslint . --ext .js --fix",
 		"pretest": "npm run lint",
 		"test": "nyc mocha ./tests/*.test.js --parallel",
-		"prestart": "npm test",
 		"start": "node main.js"
 	},
 	"repository": {
