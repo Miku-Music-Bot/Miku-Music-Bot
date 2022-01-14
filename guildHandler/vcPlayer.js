@@ -8,7 +8,6 @@ const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
  * 
  * Handles joining and playing a stream in a voice channel
  */
-
 class VCPlayer extends GuildComponent {
 	/**
 	 * VCPlayer

@@ -2,7 +2,7 @@ const path = require('path');
 const { Client, Intents, MessageEmbed, MessageEmbedFooter, MessageActionRow, MessageButton } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'ui.js'));
-const Data = require(path.join(__dirname, 'data.js'));
+const Data = require(path.join(__dirname, 'guildData', 'data.js'));
 const Permissions = require(path.join(__dirname, 'permissions.js'));
 const VCPlayer = require(path.join(__dirname, 'vcPlayer.js'));
 const newLogger = require(path.join(__dirname, 'logger.js'));
@@ -32,6 +32,7 @@ class GuildHander {
 	 * @param {string} id - discord guild id for GuildHander to be responsible for
 	 */
 	constructor(id) {
+		// set up logger
 		const logger = newLogger(path.join(__dirname, 'logs', id));
 		this.logger = logger;
 		this.debug = (msg) => { logger.debug(msg); };
@@ -49,14 +50,17 @@ class GuildHander {
 			]
 		});
 
+		this.ready = false;
 		this.bot.once('ready', () => {
+			// get the guild object
 			this.guild = this.bot.guilds.cache.get(this.data.guildId);
 
+			// set up guild components
 			this.ui = new UI(this);
 			this.vcPlayer = new VCPlayer(this);
 			this.permissions = new Permissions(this);
-			this.permissions.init();
 
+			this.ready = true;
 			this.info('Logged into discord, guild handler is ready!');
 
 			if (!this.data.configured) {
@@ -89,7 +93,7 @@ class GuildHander {
 
 			const row = new MessageActionRow()
 				.addComponents(
-					new MessageButton()					// remove button
+					new MessageButton()					// close button
 						.setCustomId('primary')
 						.setStyle('PRIMARY')
 						.setEmoji('❌')
@@ -148,6 +152,8 @@ class GuildHander {
 	messageHandler(message) {
 		// ignore if not in right channel
 		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
+		// ignore if bot isn't ready yet
+		if (!this.ready) return;
 
 		// split message into command and argument
 		let prefix = false;
@@ -163,22 +169,26 @@ class GuildHander {
 
 		// check permissions for command then handle each command
 		if (this.permissions.checkMessage(command, message)) {
-			this.debug(`Permission granted to command with {messageId: ${message.id}}`);
 			switch (command) {
 				case ('set-channel'): {
 					if (prefix) {
+						// set the channel, send ui, then notify user
 						this.data.setChannel(message.channelId);
 
 						this.ui.sendUI();
 
 						if (!this.data.configured) {
-							this.sendNotification('This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.');
+							this.sendNotification(`<@${message.author.id}> This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.`);
 							this.data.setConfigured(true);
 						}
+					}
+					else if (message.channelId === this.data.channelId) {
+						this.sendNotification(`<@${message.author.id}> Miku already lives here!`);
 					}
 					break;
 				}
 				case ('join'): {
+					// join the vc
 					this.vcPlayer.join(message.author).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
 					break;
 				}

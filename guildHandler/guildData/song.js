@@ -12,7 +12,6 @@ const BOT_DOMAIN = process.env.BOT_DOMAIN;
  */
 class Song extends GuildComponent {
 	/**
-	 * 
 	 * @param {GuildHandler} guildHandler
 	 * @param {string} type - type of source for the song, options: "google drive", "soundcloud", "youtube"
 	 * @param {string} link - url to the source of the song

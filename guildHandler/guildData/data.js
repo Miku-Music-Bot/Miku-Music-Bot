@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 const path = require('path');
 
-const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
+const GuildComponent = require(path.join(__dirname, '..', 'guildComponent.js'));
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -40,6 +40,7 @@ class GuildData extends GuildComponent {
 	async initData(wait, cb) {
 		if (!wait) { wait = 1000; }
 		if (wait > 60000) { wait = 60000; }
+
 		try {
 			this.debug('Connecting to mongodb database');
 
@@ -51,25 +52,26 @@ class GuildData extends GuildComponent {
 			this.collection = db.collection(GUILDDATA_COLLECTION_NAME);
 
 			// grab guild data from the database
-			this.debug('No unsaved data found, requesting settings from database');
+			this.debug('Requesting settings from database');
 			const foundGuild = await this.collection.findOne({ guildId: this.guildId });
 
-
 			if (foundGuild) {
+				// if guild data exists in database, set variables based on it
 				this.configured = foundGuild.configured;
 				this.channelId = foundGuild.channelId;
 				this.prefix = foundGuild.prefix;
 				this.filters = foundGuild.filters;
 				this.playlists = foundGuild.playlists;
-				this.permissions = {};
+				this.permissions = found.permissions;
 
-				this.debug('Guild data retrieved. {data: ');
+				this.debug('Guild data retrieved. {data:');
 				for (let property in this.getData()) {
 					this.debug(`\t{${property}: ${JSON.stringify(this[property])}}`);
 				}
 				this.debug('}');
 			}
 			else {
+				// if guild is not found in database, set defaults
 				this.info('No guild data found, using defaults');
 				this.configured = false;
 				this.channelId = undefined;
@@ -81,8 +83,7 @@ class GuildData extends GuildComponent {
 				await this.collection.insertOne(this.getData());
 			}
 
-			cb();			// call callback once done
-			this.saveData();
+			cb();				// call callback once done
 		} catch (error) {
 			this.error(`{error: ${error}} retrieving/saving data from database. Trying again in ${wait} seconds...`);
 			setTimeout(() => {

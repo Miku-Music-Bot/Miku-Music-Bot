@@ -18,23 +18,19 @@ class CommandPerm extends GuildComponent {
 			'play': [],
 			'pause': []
 		};
-	}
 
-	/**
-	 * init()
-	 * 
-	 * Gets all the discord roles from guild data and retrieves them to be used
-	 */
-	init() {
-		// this needs to be better <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		// if the database didn't have permissions saved, set to defaults
 		if (Object.keys(this.data.permissions).length === 0) {
 			this.info('Guild permissions have not been set, setting defaults.');
+
+			// find @everyone role id
 			let everyone = this.guild.roles.cache.filter(role => role.name === '@everyone').first();
 			this.debug(`Found @everyone role with {id: ${everyone.id}}`);
 
-			let defaults = ['join', 'play', 'pause'];
-			for (let i = 0; i < defaults.length; i++) {
-				this.addPermission(defaults[i], everyone.id);
+			// give the default @everyone permissions to each command
+			let defaultEveryone = ['join', 'play', 'pause'];
+			for (let i = 0; i < defaultEveryone.length; i++) {
+				this.addPermission(defaultEveryone[i], everyone.id);
 			}
 		}
 	}
@@ -46,9 +42,12 @@ class CommandPerm extends GuildComponent {
 	 * @param {string} roleId - discord role id for permissions you would like to add 
 	 */
 	addPermission(command, roleId) {
+		// remove the permission in case it already existed
 		this.removePermission(command, roleId);
 		this.permissions[command].push(roleId);
-		this.savePermissions();
+
+		// save to database
+		this.data.setPermissions(this.permissions);
 		this.info(`Added permission for {roleId: ${roleId}} for {command: ${command}}`);
 	}
 
@@ -59,22 +58,15 @@ class CommandPerm extends GuildComponent {
 	 * @param {string} roleId - discord role id for permissions you would like to add
 	 */
 	removePermission(command, roleId) {
-		if (!this.permissions[command]) { this.permissions[command] = []; }
+		// find location of the roleId in the permissions list
 		let location = this.permissions[command].indexOf(roleId);
+
 		if (location !== -1) {
+			// if found, remove it and save to database
 			this.permissions[command].splice(location, 1);
-			this.savePermissions();
+			this.data.setPermissions(this.permissions);
 			this.info(`Removed permission for {roleId: ${roleId}} for {command: ${command}}`);
 		}
-	}
-
-	/**
-	 * savePermission()
-	 * 
-	 * Saves the permissions to guild data
-	 */
-	savePermissions() {
-		this.data.setPermissions(this.permissions);
 	}
 
 	/**

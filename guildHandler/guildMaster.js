@@ -18,7 +18,6 @@ var guildList = {};		// stores all guilds
  */
 function getGuild(id) { return guildList[id]; }
 
-
 /**
  * newGuild()
  * 
