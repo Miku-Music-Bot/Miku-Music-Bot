@@ -84,14 +84,14 @@ class CommandPerm extends GuildComponent {
 	 * @param {Message} message - discord message object that requested the command
 	 * @returns {boolean} - true if user has permission to use the command, false if not
 	 */
-	async check(command, message) {
+	async checkMessage(command, message) {
 		try {
 			this.debug(`Checking permissions for {messageId: ${message.id}}`);
 
 			// if command doesn't exist, return false
 			if (!this.permissions[command]) {
-				this.debug(`Command from {messageId: ${message.id}} does not exist`);
-				this.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, message.channel.id);
+				this.debug(`Command from {messageId: ${message.id}} does not exist.`);
+				this.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, false, message.channel.id);
 				return false;
 			}
 
@@ -102,7 +102,7 @@ class CommandPerm extends GuildComponent {
 			}
 
 			// fetch guild member with role information
-			const member = await this.guild.members.fetch({ user: message.author.id, force: true });
+			const member = await this.guild.members.fetch({ user: message.author.id });
 			let found = false;
 			for (let i = 0; i < this.permissions[command].length; i++) {
 				if (member.roles.cache.get(this.permissions[command][i])) {
@@ -116,11 +116,10 @@ class CommandPerm extends GuildComponent {
 
 			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 			// if we get here, they don't have permission
-			this.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, message.channel.id);
+			this.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
 		}
 		catch (error) {
-			const errorId = Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);
-			this.sendError(`<@${message.author.id}> Sorry! There was an error while joining voice channel.\nError id: ${errorId}`);
+			const errorId = this.sendError(`<@${message.author.id}> Sorry! There was an error while joining voice channel.`, true);
 			this.error(`{error: ${error}} while checking permissions for {messageId: ${message.id}}. {errorId: ${errorId}}`);
 			return false;
 		}

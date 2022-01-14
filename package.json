@@ -32,7 +32,8 @@
 		"express": "^4.17.2",
 		"mongodb": "^4.2.2",
 		"winston-daily-rotate-file": "^4.5.5",
-		"ytdl-core": "^4.9.2"
+		"ytdl-core": "^4.10.0",
+		"ytsr": "^3.6.0"
 	},
 	"optionalDependencies": {
 		"bufferutil": "^4.0.5",

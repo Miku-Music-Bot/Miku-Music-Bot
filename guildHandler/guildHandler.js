@@ -1,12 +1,13 @@
 const path = require('path');
-const { Client, Intents, MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+const { Client, Intents, MessageEmbed, MessageEmbedFooter, MessageActionRow, MessageButton } = require('discord.js');
 
 const UI = require(path.join(__dirname, 'ui.js'));
-const Data = require(path.join(__dirname, 'guildData', 'data.js'));
+const Data = require(path.join(__dirname, 'data.js'));
 const Permissions = require(path.join(__dirname, 'permissions.js'));
 const VCPlayer = require(path.join(__dirname, 'vcPlayer.js'));
 const newLogger = require(path.join(__dirname, 'logger.js'));
 
+/* eslint-disable */														//<<<<<<<<<<<<<<<<<<<< remove this sometime
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL;
@@ -59,8 +60,7 @@ class GuildHander {
 			this.info('Logged into discord, guild handler is ready!');
 
 			if (!this.data.configured) {
-				this.info('This guild has not been configured, running setup...');
-				this.setup();
+				this.info('This guild has not been configured, waiting set-channel command');
 			}
 		});
 
@@ -68,33 +68,6 @@ class GuildHander {
 			this.info('Guild data ready, logging in to discord...');
 			this.bot.login(DISCORD_TOKEN);
 		});
-	}
-
-	/**
-	 * setup()
-	 * 
-	 * Handles the user setup for a brand new server
-	 */
-	setup() {
-		const defaultChannel = this.bot.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
-		this.debug(`Found default channel with {id: ${defaultChannel.id}} to send setup message to`);
-
-		const setupMessage = new MessageEmbed()
-			.setColor(TEAL)
-			.setImage(`${BOT_DOMAIN}/thumbnail_image.jpg`)
-			.setTitle('Set up Miku')
-			.setDescription(`
-				Miku needs an empty and dedicated text channel to use.\n
-				Create or choose one and type: "${this.data.prefix}set-channel" in that channel`
-			)
-			.setFooter({ text: `For help, email: ${SUPPORT_EMAIL}` });
-		defaultChannel.send({ embeds: [setupMessage] })
-			.then((message) => {
-				this.debug(`Setup message sent, {messageId: ${message.id}}`);
-			})
-			.catch((error) => {
-				this.error(`{error: ${error}} sending setup message.`);
-			});
 	}
 
 	/**
@@ -136,24 +109,34 @@ class GuildHander {
 	 * 
 	 * Sends a notification
 	 * @param {string} message - message you want to send
+	 * @param {boolean} saveErrorId - create an error id or not
 	 * @param {string} channelId - discord channel id for text channel for message to be sent
 	 */
-	async sendError(message, channelId) {
+	sendError(message, saveErrorId, channelId) {
 		if (!channelId) { channelId = this.data.channelId; }
 
-		try {
-			this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
-			const error = new MessageEmbed()
-				.setColor(PINK)
-				.setDescription(message);
+		const errorId = Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);
+		(async () => {
+			try {
+				this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
 
-			const channel = await this.bot.channels.fetch(channelId);
-			const msg = await channel.send({ embeds: [error] });
-			this.debug(`Error message sent, {messageId: ${msg.id}}`);
-		}
-		catch (error) {
-			this.error(`{error: ${error}} while creating/sending error message.`);
-		}
+				const error = new MessageEmbed()
+					.setColor(PINK)
+					.setDescription(message);
+
+				if (saveErrorId) {
+					error.setFooter(new MessageEmbedFooter(`Error id ${errorId}`));
+				}
+
+				const channel = await this.bot.channels.fetch(channelId);
+				const msg = await channel.send({ embeds: [error] });
+				this.debug(`Error message sent, {messageId: ${msg.id}}`);
+			}
+			catch (error) {
+				this.error(`{error: ${error}} while creating/sending error message.`);
+			}
+		})();
+		return errorId;
 	}
 
 	/**
@@ -172,14 +155,14 @@ class GuildHander {
 			prefix = true;
 			message.content = message.content.slice(this.data.prefix.length, message.content.length);
 		}
-		let msg = message.content + ' ';
-		let command = msg.slice(0, msg.indexOf(' '));
-		let argument = msg.slice(msg.indexOf(' ') + 1, msg.length);
+		const msg = message.content + ' ';
+		const command = msg.slice(0, msg.indexOf(' '));
+		const argument = msg.slice(msg.indexOf(' ') + 1, msg.length);
 
 		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
-		if (this.permissions.check(command, message)) {
+		if (this.permissions.checkMessage(command, message)) {
 			this.debug(`Permission granted to command with {messageId: ${message.id}}`);
 			switch (command) {
 				case ('set-channel'): {

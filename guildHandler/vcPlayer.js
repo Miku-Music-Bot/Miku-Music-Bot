@@ -30,7 +30,7 @@ class VCPlayer extends GuildComponent {
 			this.info(`Joining {userId: ${user.id}} in voice channel`);
 
 			// fetch guild member with voice info
-			this.guild.members.fetch({ user: user.id, force: true })
+			this.guild.members.fetch({ user: user.id })
 				.then((member) => {
 					// check if they are in a voice channel
 					if (member.voice.channelId) {
@@ -55,8 +55,7 @@ class VCPlayer extends GuildComponent {
 					}
 				})
 				.catch((error) => {
-					const errorId = Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);
-					this.sendError(`<@${user.id}> Sorry! There was an error joining you in the voice channel.\nError id: ${errorId}`);
+					const errorId = this.sendError(`<@${user.id}> Sorry! There was an error joining you in the voice channel.`, true);
 					this.error(`{error: ${error}} while joining {userId: ${user.id}} in voice channel. {errorId: ${errorId}}`);
 					reject();
 				});

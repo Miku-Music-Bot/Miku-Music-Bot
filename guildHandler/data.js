@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 const path = require('path');
-const guildComponent = require(path.join(__dirname, '..', 'guildComponent.js'));
+
+const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -12,7 +13,7 @@ const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guil
  * Abstracts away database connection
  * Handles getting and setting guild settings
  */
-class GuildData extends guildComponent {
+class GuildData extends GuildComponent {
 	/**
 	 * @param {GuildHandler} guildHandler - guild handler for guild this guildData object is responsible for
 	 * @param {string} id - discord guild id
