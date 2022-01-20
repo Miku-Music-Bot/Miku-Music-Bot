@@ -4,5 +4,4 @@
 /.env
 /test.env
 
-/built/guildHandler/logs
-/built/tests/test
+/built
