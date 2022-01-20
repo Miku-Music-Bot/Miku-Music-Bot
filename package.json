@@ -4,8 +4,8 @@
 	"description": "A fully featured discord music bot.",
 	"main": "main.js",
 	"scripts": {
-		"lint": "eslint . --ext .ts --fix",
-		"build": "tsc",
+		"lint": "eslint . --ext .ts",
+		"build": "tsc -b",
 		"pretest": "npm run build",
 		"test": "nyc mocha ./built/tests/*.test.js --parallel",
 		"prestart": "npm run build",
