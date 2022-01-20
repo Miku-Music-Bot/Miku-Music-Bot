@@ -4,5 +4,5 @@
 /.env
 /test.env
 
-/src/guildHandler/logs/*
-!/src/guildHandler/logs/logs.txt
+/built/guildHandler/logs
+/built/tests/test
