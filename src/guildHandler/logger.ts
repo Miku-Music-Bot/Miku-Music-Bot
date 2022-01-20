@@ -1,19 +1,18 @@
-const winston = require('winston');
-require('winston-daily-rotate-file');
+import * as winston from 'winston';
+import 'winston-daily-rotate-file';
 
 /**
  * logger.js
- * 
+ *
  * @param {string} logDir - directory to save logs
- * @returns {object} - winston logger object
+ * @return {object} - winston logger object
  */
-module.exports = function (logDir) {
+export function newLogger(logDir: string): winston.Logger {
 	const logLevels = {
-		fatal: 0,
-		error: 1,
-		warn: 2,
-		info: 3,
-		debug: 4
+		error: 0,
+		warn: 1,
+		info: 2,
+		debug: 3,
 	};
 
 	const logger = winston.createLogger({
@@ -32,7 +31,7 @@ module.exports = function (logDir) {
 					winston.format.timestamp(),
 					winston.format.json(),
 				),
-			})
+			}),
 		],
 		exitOnError: false,
 	});
@@ -43,16 +42,15 @@ module.exports = function (logDir) {
 			format: winston.format.combine(
 				winston.format.colorize(),
 				winston.format.simple(),
-			)
+			),
 		}));
 		winston.addColors({
 			debug: 'blue',
 			info: 'green',
 			warn: 'yellow',
-			error: 'magenta',
-			fatal: 'red'
+			error: 'red',
 		});
 	}
 
 	return logger;
-};
+}

@@ -1,22 +1,25 @@
-const path = require('path');
-const GuildComponent = require(path.join(__dirname, 'guildComponent.js'));
+import type * as Discord from 'discord.js';
+import { GuildComponent } from './guildComponent.js';
+import type { GuildHandler } from './guildHandler.js';
 
 /**
- * CommandPerm
- * 
+ * CommandPermissions
+ *
  * Checks if user has permission to use a certain command
  */
-class CommandPerm extends GuildComponent {
+export class CommandPermissions extends GuildComponent {
+	permissions: { [key: string]: Array<string> };
+
 	/**
-	 * @param {GuildHandler} guildHandler 
+	 * @param {GuildHandler} guildHandler
 	 */
-	constructor(guildHandler) {
+	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);
 		this.permissions = {
 			'set-channel': [],
 			'join': [],
 			'play': [],
-			'pause': []
+			'pause': [],
 		};
 
 		// if the database didn't have permissions saved, set to defaults
@@ -24,11 +27,11 @@ class CommandPerm extends GuildComponent {
 			this.info('Guild permissions have not been set, setting defaults.');
 
 			// find @everyone role id
-			let everyone = this.guild.roles.cache.filter(role => role.name === '@everyone').first();
+			const everyone = this.guild.roles.cache.filter((role: { name: string }) => role.name === '@everyone').first();
 			this.debug(`Found @everyone role with {id: ${everyone.id}}`);
 
 			// give the default @everyone permissions to each command
-			let defaultEveryone = ['join', 'play', 'pause'];
+			const defaultEveryone = ['join', 'play', 'pause'];
 			for (let i = 0; i < defaultEveryone.length; i++) {
 				this.addPermission(defaultEveryone[i], everyone.id);
 			}
@@ -37,11 +40,11 @@ class CommandPerm extends GuildComponent {
 
 	/**
 	 * addPermission()
-	 * 
+	 *
 	 * @param {string} command - command to change permissions for
-	 * @param {string} roleId - discord role id for permissions you would like to add 
+	 * @param {string} roleId - discord role id for permissions you would like to add
 	 */
-	addPermission(command, roleId) {
+	addPermission(command: string, roleId: string) {
 		// remove the permission in case it already existed
 		this.removePermission(command, roleId);
 		this.permissions[command].push(roleId);
@@ -53,13 +56,13 @@ class CommandPerm extends GuildComponent {
 
 	/**
 	 * removePermission()
-	 * 
+	 *
 	 * @param {string} command - command to change permissions for
 	 * @param {string} roleId - discord role id for permissions you would like to add
 	 */
-	removePermission(command, roleId) {
+	removePermission(command: string, roleId: string) {
 		// find location of the roleId in the permissions list
-		let location = this.permissions[command].indexOf(roleId);
+		const location = this.permissions[command].indexOf(roleId);
 
 		if (location !== -1) {
 			// if found, remove it and save to database
@@ -71,19 +74,19 @@ class CommandPerm extends GuildComponent {
 
 	/**
 	 * check()
-	 * 
+	 *
 	 * @param {string} command - command to test
-	 * @param {Message} message - discord message object that requested the command
-	 * @returns {boolean} - true if user has permission to use the command, false if not
+	 * @param {Discord.Message} message - discord message object that requested the command
+	 * @return {boolean} - true if user has permission to use the command, false if not
 	 */
-	async checkMessage(command, message) {
+	async checkMessage(command: string, message: Discord.Message): Promise<boolean> {
 		try {
 			this.debug(`Checking permissions for {messageId: ${message.id}}`);
 
 			// if command doesn't exist, return false
 			if (!this.permissions[command]) {
 				this.debug(`Command from {messageId: ${message.id}} does not exist.`);
-				this.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, false, message.channel.id);
+				this.ui.sendError(`<@${message.author.id}> ${message.content} is not valid command!`, false, message.channel.id);
 				return false;
 			}
 
@@ -94,7 +97,7 @@ class CommandPerm extends GuildComponent {
 			}
 
 			// fetch guild member with role information
-			const member = await this.guild.members.fetch({ user: message.author.id });
+			const member = await this.guild.members.fetch({user: message.author.id});
 			let found = false;
 			for (let i = 0; i < this.permissions[command].length; i++) {
 				if (member.roles.cache.get(this.permissions[command][i])) {
@@ -108,14 +111,12 @@ class CommandPerm extends GuildComponent {
 
 			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 			// if we get here, they don't have permission
-			this.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
-		}
-		catch (error) {
-			const errorId = this.sendError(`<@${message.author.id}> Sorry! There was an error while joining voice channel.`, true);
+			this.ui.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
+			return false;
+		} catch (error) {
+			const errorId = this.ui.sendError(`<@${message.author.id}> Sorry! There was an error while joining voice channel.`, true);
 			this.error(`{error: ${error}} while checking permissions for {messageId: ${message.id}}. {errorId: ${errorId}}`);
 			return false;
 		}
 	}
 }
-
-module.exports = CommandPerm;

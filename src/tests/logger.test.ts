@@ -1,12 +1,14 @@
-require('chai').should();
-const fs = require('fs');
-const path = require('path');
+import * as chai from 'chai';
+chai.should();
+import * as fs from 'fs';
+import * as path from 'path';
 
-require('dotenv').config({ path: path.join(__dirname, 'test.env') });
+import * as dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '..', 'test.env') });
 
 const testLocation = path.join(__dirname, 'test');
 
-before(function () {
+before(function() {
 	try {
 		fs.mkdirSync(testLocation);
 	} catch (error) {
@@ -14,17 +16,17 @@ before(function () {
 	}
 });
 
-var failed = false;
-afterEach(function () {
+let failed = false;
+afterEach(function() {
 	if (this.currentTest.state === 'failed') {
 		failed = true;
 	}
 });
 
-after(function () {
+after(function() {
 	try {
 		if (!failed) {
-			fs.rmSync(testLocation, { recursive: true, force: true });
+			fs.rmSync(testLocation, {recursive: true, force: true});
 		}
 	} catch (error) {
 		console.log(`Failed to remove test directory, error:\n${error}\nIf you don't remove the directory at "${testLocation}", future tests may fail`);
@@ -32,12 +34,13 @@ after(function () {
 });
 
 // create logger
-const logger = require('../guildHandler/logger.js')(testLocation);
+import { newLogger } from '../guildHandler/logger.js';
+const logger = newLogger(testLocation);
 
-describe('Write logs in JSON format', function () {
-	let logLocation;
+describe('Write logs in JSON format', function() {
+	let logLocation: string;
 
-	it('should create file with correct format in folder', function () {
+	it('should create file with correct format in folder', function() {
 		const files = fs.readdirSync(testLocation);
 
 		// find file with correct format
@@ -52,7 +55,7 @@ describe('Write logs in JSON format', function () {
 		found.should.equal(true);
 	});
 
-	it('should write debug logs to file', function () {
+	it('should write debug logs to file', function() {
 		const message = 'This is some debug';
 		logger.debug(message);
 
@@ -65,7 +68,7 @@ describe('Write logs in JSON format', function () {
 		info.timestamp.should.be.a('string');
 	});
 
-	it('should write info logs to file', function () {
+	it('should write info logs to file', function() {
 		const message = 'This is some info';
 		logger.info(message);
 
@@ -78,7 +81,7 @@ describe('Write logs in JSON format', function () {
 		info.timestamp.should.be.a('string');
 	});
 
-	it('should write warning logs to file', function () {
+	it('should write warning logs to file', function() {
 		const message = 'This is some warning';
 		logger.warn(message);
 
@@ -91,7 +94,7 @@ describe('Write logs in JSON format', function () {
 		warning.timestamp.should.be.a('string');
 	});
 
-	it('should write error logs to file', function () {
+	it('should write error logs to file', function() {
 		const message = 'This is some error';
 		logger.error(message);
 
@@ -102,18 +105,5 @@ describe('Write logs in JSON format', function () {
 		error.level.should.equal('error');
 		error.message.should.equal(message);
 		error.timestamp.should.be.a('string');
-	});
-
-	it('should write fatal logs to file', function () {
-		const message = 'This is some fatal error';
-		logger.fatal(message);
-
-		const log = fs.readFileSync(logLocation, 'utf-8');
-		const logs = log.split('\n');
-
-		const fatal = JSON.parse(logs[4]);
-		fatal.level.should.equal('fatal');
-		fatal.message.should.equal(message);
-		fatal.timestamp.should.be.a('string');
 	});
 });

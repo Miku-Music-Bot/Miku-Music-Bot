@@ -1,25 +1,28 @@
-const path = require('path');
-const { Client, Intents } = require('discord.js');
+import * as path from 'path';
+import * as Discord from 'discord.js';
 
 /**
  * main.js
- * 
+ *
  * Starts webserver
  * Connects to database and discord
  * Starts handlers for each guild
  * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
 
-require('dotenv').config();	// grab env variables
+import * as dotenv from 'dotenv';	// grab env variables
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const botMaster = require(path.join(__dirname, 'guildHandler', 'guildMaster.js'));
-const webPanel = require(path.join(__dirname, 'webPanel', 'webPanel.js'));
+import { BotMaster } from './guildHandler/guildMaster';
+import { startWebServer } from './webPanel/webPanel';
+
+const botMaster = new BotMaster();
 
 /**
  * checks guilds bot is in and adds handlers for all of them just in case
  */
 function refreshGuilds() {
-	const guildList = bot.guilds.cache.map(guild => guild.id);
+	const guildList = bot.guilds.cache.map((guild) => guild.id);
 	for (let i = 0; i < guildList.length; i++) {
 		botMaster.newGuild(guildList[i]);
 	}
@@ -28,12 +31,12 @@ function refreshGuilds() {
 // Set up discord events
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;		// discord bot token
 
-const bot = new Client({				// set intent flags for bot
+const bot = new Discord.Client({				// set intent flags for bot
 	intents: [
-		Intents.FLAGS.GUILDS,					// for guildCreate and guildDelete events
-		Intents.FLAGS.GUILD_MESSAGES,			// for creating and deleting messages
-		Intents.FLAGS.GUILD_MESSAGE_REACTIONS,	// for adding and removing message reactions
-	]
+		Discord.Intents.FLAGS.GUILDS,					// for guildCreate and guildDelete events
+		Discord.Intents.FLAGS.GUILD_MESSAGES,			// for creating and deleting messages
+		Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS,	// for adding and removing message reactions
+	],
 });
 
 // when bot joins a server
@@ -53,12 +56,14 @@ bot.on('messageCreate', (message) => {
 	if (message.author.id === bot.user.id) return; 		// ignore if message author is the bot
 	if (!message.guildId) return;						// ignore if is a dm
 
-	let guild = botMaster.getGuild(message.guildId);
-	if (guild) { guild.messageHandler(message); }
+	const guild = botMaster.getGuild(message.guildId);
+	if (guild) {
+		guild.messageHandler(message);
+	}
 });
 
 // when bot receives an interaction
-bot.on('interactionCreate', interaction => {
+bot.on('interactionCreate', (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
 	console.log(interaction);
 });
@@ -72,9 +77,8 @@ bot.once('ready', () => {
 	setInterval(refreshGuilds, 60000);
 });
 
-
 // start web panel
-webPanel(botMaster)
+startWebServer(botMaster)
 	.then(() => {
 		// login as bot
 		bot.login(DISCORD_TOKEN);

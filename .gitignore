@@ -1,10 +1,8 @@
 /node_modules
 /.nyc_output
 
-.env
-test.env
+/.env
+/test.env
 
-/tests/test
-
-/guildHandler/logs/*
-!/guildHandler/logs/logs.txt
+/src/guildHandler/logs/*
+!/src/guildHandler/logs/logs.txt

@@ -1,0 +1,14 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\Ben1324\\Documents\\GitHub\\Miku-DiscordMusicBot\\built\\guildHandler\\logs\\922232335049568266\\.32d182e6c4a72880361653614b989cd05da169d9-audit.json",
+    "files": [
+        {
+            "date": 1642656099854,
+            "name": "C:\\Users\\Ben1324\\Documents\\GitHub\\Miku-DiscordMusicBot\\built\\guildHandler\\logs\\922232335049568266\\2022-01-19.log",
+            "hash": "40da3cfebddd81b6673e829cf51d15b3"
+        }
+    ]
+}

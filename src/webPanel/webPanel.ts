@@ -1,16 +1,18 @@
-const path = require('path');
-const express = require('express');
+import * as path from 'path';
+import * as express from 'express';
+
+import type { BotMaster } from '../guildHandler/guildMaster';
 
 const PORT = process.env.PORT || 8080;
 
 /**
  * webPanel.js
- * 
+ *
  * Handles webserver for bot
  * @param {object} botMaster - bot master object
- * @returns {Promise} - resolves once web server is ready
+ * @return {Promise<Void>} - resolves once web server is ready
  */
-module.exports = function (botMaster) {
+export function startWebServer (botMaster: BotMaster): Promise<void> {
 	botMaster;					// delete this later plz <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 	const app = express();
@@ -27,7 +29,8 @@ module.exports = function (botMaster) {
 				resolve();
 			});
 		} catch (error) {
-			reject(error);
+			console.log(error);
+			reject();
 		}
 	});
-};
+}
