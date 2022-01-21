@@ -1,27 +1,15 @@
 import * as path from 'path';
 import * as Discord from 'discord.js';
-
 import * as winston from 'winston';
 
 import { UI } from './ui';
 import { GuildData } from './guildData/data';
 import { CommandPermissions } from './permissions';
 import { VCPlayer } from './vcPlayer';
+import { Queue } from './queue';
 import { newLogger } from './logger';
 
-/* eslint-disable */														//<<<<<<<<<<<<<<<<<<<< remove this sometime
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL;
-
-/* eslint-disable */
-const GREY = '#5a676b';			// colors to be used
-const TEAL = '#86cecb';
-const PINK = '#e12885';
-const YT_RED = '#FF0000';
-const SC_ORANGE = '#FE5000';
-const GD_BLUE = '#4688F4';
-/* eslint-enable */
 
 /**
  * GuildHander
@@ -41,6 +29,7 @@ export class GuildHandler {
 	ui: UI;
 	data: GuildData;
 	vcPlayer: VCPlayer;
+	queue: Queue;
 	permissions: CommandPermissions;
 
 	/**
@@ -73,6 +62,7 @@ export class GuildHandler {
 			// set up guild components
 			this.ui = new UI(this);
 			this.vcPlayer = new VCPlayer(this);
+			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
 
 			this.ready = true;
@@ -95,7 +85,7 @@ export class GuildHandler {
 	 * Handles all messages the bot recieves
 	 * @param {Discord.Message} message - discord message object
 	 */
-	messageHandler(message: Discord.Message) {
+	async messageHandler(message: Discord.Message) {
 		// ignore if not in right channel
 		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
 		// ignore if bot isn't ready yet
@@ -114,7 +104,7 @@ export class GuildHandler {
 		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
-		if (this.permissions.checkMessage(command, message)) {
+		if (await this.permissions.checkMessage(command, message)) {
 			switch (command) {
 				case ('set-channel'): {
 					if (prefix) {
@@ -134,7 +124,8 @@ export class GuildHandler {
 				}
 				case ('join'): {
 					// join the vc
-					this.vcPlayer.join(message.author).catch(() => {/* vcPlayer.join() handles notifying user to nothing to do here */ });
+					this.vcPlayer.join(message.author)
+						.catch(() => {/* vcPlayer.join() handles notifying user to nothing to do here */ });
 					break;
 				}
 				case ('play'): {

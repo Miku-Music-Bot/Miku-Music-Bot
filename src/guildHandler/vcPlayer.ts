@@ -10,6 +10,8 @@ import type { GuildHandler } from './guildHandler.js';
  * Handles joining and playing a stream in a voice channel
  */
 export class VCPlayer extends GuildComponent {
+	voiceConnection: Voice.VoiceConnection;
+
 	/**
 	 * VCPlayer
 	 * @param {GuildHander} - guildHandler for this vcplayer
@@ -36,13 +38,16 @@ export class VCPlayer extends GuildComponent {
 				// if they are join it and send notification that join was successful
 				this.debug(`Found that {userId: ${user.id}} is in {channelId: ${member.voice.channelId}}`);
 
-				Voice.joinVoiceChannel({
+				this.voiceConnection = Voice.joinVoiceChannel({
 					channelId: member.voice.channelId,
 					guildId: this.guild.id,
 					selfMute: false,
 					selfDeaf: true,
-					adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
+					adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 				});
+
+				const audioplayer = Voice.createAudioPlayer();
+				this.voiceConnection.subscribe(audioplayer);
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
 				this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
@@ -55,9 +60,24 @@ export class VCPlayer extends GuildComponent {
 			}
 		}
 		catch (error) {
-			const errorId = this.ui.sendError(`<@${user.id}> Sorry! There was an error joining you in the voice channel.`, true);
+			const errorId = this.ui.sendError(`<@${user.id}> Sorry! There was an error joining the voice channel.`, true);
 			this.error(`{error: ${error}} while joining {userId: ${user.id}} in voice channel. {errorId: ${errorId}}`);
 			return false;
+		}
+	}
+
+	/**
+	 * leave()
+	 * 
+	 * Leaves the currently connected voice connection
+	 */
+	leave() {
+		try {
+			this.voiceConnection.destroy();
+			this.voiceConnection = undefined;
+		}
+		catch (error) {
+			this.error(`{error: ${error}} while leaving voice channel`);
 		}
 	}
 }

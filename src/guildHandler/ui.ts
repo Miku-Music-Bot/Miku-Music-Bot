@@ -4,13 +4,17 @@ import { GuildComponent } from './guildComponent';
 import type { GuildHandler } from './guildHandler';
 
 /* eslint-disable */
-const GREY = '#373b3e';
-const TEAL = '#137a7f';
+const BOT_DOMAIN = process.env.BOT_DOMAIN;
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL;
+
+const GREY = '#5a676b';			// colors to be used
+const TEAL = '#86cecb';
 const PINK = '#e12885';
 const YT_RED = '#FF0000';
 const SC_ORANGE = '#FE5000';
 const GD_BLUE = '#4688F4';
 /* eslint-enable */
+
 
 /**
  * UI
@@ -35,7 +39,7 @@ export class UI extends GuildComponent {
 		// this needs to be improved to not use .get();
 		const channel = this.bot.channels.cache.get(this.data.channelId);
 		if (channel instanceof Discord.TextChannel) {
-			channel.send({ embeds: [this.createUI()] });
+			channel.send({ embeds: [ this.createUI() ] });
 		}
 	}
 

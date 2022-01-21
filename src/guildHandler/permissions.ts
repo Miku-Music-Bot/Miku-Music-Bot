@@ -15,12 +15,6 @@ export class CommandPermissions extends GuildComponent {
 	 */
 	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);
-		this.permissions = {
-			'set-channel': [],
-			'join': [],
-			'play': [],
-			'pause': [],
-		};
 
 		// if the database didn't have permissions saved, set to defaults
 		if (Object.keys(this.data.permissions).length === 0) {
@@ -36,6 +30,7 @@ export class CommandPermissions extends GuildComponent {
 				this.addPermission(defaultEveryone[i], everyone.id);
 			}
 		}
+		this.permissions = JSON.parse(JSON.stringify(this.data.permissions));
 	}
 
 	/**
@@ -73,7 +68,7 @@ export class CommandPermissions extends GuildComponent {
 	}
 
 	/**
-	 * check()
+	 * checkMessage()
 	 *
 	 * @param {string} command - command to test
 	 * @param {Discord.Message} message - discord message object that requested the command
@@ -100,7 +95,7 @@ export class CommandPermissions extends GuildComponent {
 			const member = await this.guild.members.fetch({user: message.author.id});
 			let found = false;
 			for (let i = 0; i < this.permissions[command].length; i++) {
-				if (member.roles.cache.get(this.permissions[command][i])) {
+				if (member.roles.cache.get(this.permissions[command][i]).id === this.permissions[command][i]) {
 					found = true;
 				}
 			}
@@ -109,8 +104,8 @@ export class CommandPermissions extends GuildComponent {
 				return true;
 			}
 
-			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 			// if we get here, they don't have permission
+			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
 			this.ui.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
 			return false;
 		} catch (error) {
