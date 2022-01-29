@@ -1,7 +1,7 @@
 import * as mongoDb from 'mongodb';
 
-import { GuildComponent } from '../guildComponent.js';
-import type { GuildHandler } from '../guildHandler.js';
+import { GuildComponent } from './GuildComponent.js';
+import type { GuildHandler } from './GuildHandler.js';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database

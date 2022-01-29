@@ -1,7 +1,7 @@
 import * as Discord from 'discord.js';
 
-import { GuildComponent } from './guildComponent';
-import type { GuildHandler } from './guildHandler';
+import { GuildComponent } from './GuildComponent';
+import type { GuildHandler } from './GuildHandler';
 
 /* eslint-disable */
 const BOT_DOMAIN = process.env.BOT_DOMAIN;

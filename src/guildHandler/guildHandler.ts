@@ -2,12 +2,12 @@ import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
 
-import { UI } from './ui';
-import { GuildData } from './guildData/data';
-import { CommandPermissions } from './permissions';
-import { VCPlayer } from './vcPlayer';
-import { Queue } from './queue';
-import { newLogger } from './logger';
+import { UI } from './UI';
+import { GuildData } from './Data';
+import { CommandPermissions } from './Permissions';
+import { VCPlayer } from './VCPlayer/VCPlayer';
+import { Queue } from './VCPlayer/Queue';
+import { newLogger } from './Logger';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 

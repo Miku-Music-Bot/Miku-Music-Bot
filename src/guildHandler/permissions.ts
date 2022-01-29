@@ -1,6 +1,6 @@
 import type * as Discord from 'discord.js';
-import { GuildComponent } from './guildComponent.js';
-import type { GuildHandler } from './guildHandler.js';
+import { GuildComponent } from './GuildComponent.js';
+import type { GuildHandler } from './GuildHandler.js';
 
 /**
  * CommandPermissions

@@ -1,4 +1,4 @@
-import type { GuildHandler } from './guildHandler';
+import type { GuildHandler } from './GuildHandler';
 
 /**
  * Guild Component

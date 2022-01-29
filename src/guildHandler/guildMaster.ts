@@ -1,4 +1,4 @@
-import { GuildHandler } from './guildHandler';
+import { GuildHandler } from './GuildHandler';
 
 /**
  * BotMaster

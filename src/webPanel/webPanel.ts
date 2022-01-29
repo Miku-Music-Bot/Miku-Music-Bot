@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as express from 'express';
 
-import type { BotMaster } from '../guildHandler/guildMaster';
+import type { BotMaster } from '../guildHandler/GuildMaster';
 
 const PORT = process.env.PORT || 8080;
 
