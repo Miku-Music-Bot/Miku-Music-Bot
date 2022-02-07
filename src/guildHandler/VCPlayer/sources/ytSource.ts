@@ -7,7 +7,9 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { PassThrough } from 'stream';
 
-import type { Song } from '../Song.js';
+import { AudioSource } from './AudioSource'
+import type { Song } from '../Song';
+import type { GuildHandler } from '../../GuildHandler';
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 
@@ -18,7 +20,7 @@ ffmpeg.setFfmpegPath(ffmpegPath.path);
  *
  * Handles getting audio from a yt source
  */
-export class YTSource extends EventEmitter {
+export class YTSource extends GuildComponent implements Source {
 	song: Song;
 
 	buffering: boolean;
@@ -43,9 +45,10 @@ export class YTSource extends EventEmitter {
 	/**
 	 * @param song - Song object for song to create source from
 	 */
-	constructor(song: Song) {
-		super();
+	constructor(guildComponent: GuildComponent, song: Song) {
+		super(guildComponent);
 		this.song = song;
+		this.events = new EventEmitter();			// set up event emitter
 
 		this.buffering = false;						// currently getting stream or not, to prevent 2 bufferStream() functions from running at the same time
 
@@ -68,9 +71,9 @@ export class YTSource extends EventEmitter {
 		// wait for buffer to be ready, resolve once ready, rejects if error occurs while buffering
 		this.bufferReady = new Promise((resolve, reject) => {
 			this.errored = false;
-			this.emit('debugLog', `Buffer ready for song with {url: ${this.song.url}}`);
-			this.on('bufferReady', resolve);
-			this.on('fatalEvent', reject);
+			this.debug(`Buffer ready for song with {url: ${this.song.url}}`);
+			this.events.on('bufferReady', resolve);
+			this.events.on('fatalEvent', reject);
 		});
 	}
 
@@ -109,7 +112,7 @@ export class YTSource extends EventEmitter {
 			this.bufferingTimeout = setTimeout(() => {
 				this.errorMsg += 'Fetching song from youtube took too long\n';
 				this.errored = true;
-				this.emit('errorLog', `Buffering stream took more than 10 seconds for song with {url: ${this.song.url}}`);
+				this.error(`Buffering stream took more than 10 seconds for song with {url: ${this.song.url}}`);
 				this.bufferStream(attempts);
 			}, 10000);
 
@@ -120,7 +123,7 @@ export class YTSource extends EventEmitter {
 				try {
 					// obtain stream from youtube
 					const source = await play.stream(this.song.url, { discordPlayerCompatibility: true });
-					this.emit('debugLog', `Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
+					this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
 					// use ffmpeg to convert to raw pcm data
 					this.audioConverter = ffmpeg(source.stream)
@@ -152,7 +155,7 @@ export class YTSource extends EventEmitter {
 
 									// also clear timeout for bufferStream and emit bufferReady event
 									clearTimeout(this.bufferingTimeout);
-									this.emit('bufferReady');
+									this.events.emit('bufferReady');
 								}
 								else {
 									try {
@@ -162,7 +165,7 @@ export class YTSource extends EventEmitter {
 									catch (e) {
 										// fatal error if this fails
 										this.errorMsg += 'Failed to write song to disk\n';
-										this.emit('errorLog', `{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
+										this.error(`{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
 										this.emit('fatalEvent');
 									}
 								}
@@ -171,8 +174,8 @@ export class YTSource extends EventEmitter {
 						.on('error', (e) => {
 							this.errored = true;
 							this.errorMsg += 'Error while converting song to raw pcm data\n';
-							this.emit('errorLog', `FFmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
-							this.emit('fatalEvent');
+							this.error(`FFmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
+							this.events.emit('fatalEvent');
 						})
 						.on('end', async () => {
 							this.chunkCount++;
@@ -183,15 +186,15 @@ export class YTSource extends EventEmitter {
 							catch (e) {
 								// fatal error if this fails
 								this.errorMsg += 'Failed to write song to disk\n';
-								this.emit('errorLog', `{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
-								this.emit('fatalEvent');
+								this.error(`{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
+								this.events.emit('fatalEvent');
 							}
-							this.emit('debugLog', `Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
+							this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 						});
 				}
 				catch (err) {
 					this.errorMsg += `Attempt: ${attempts} - Failed to get song from youtube\n`;
-					this.emit('errorLog', `{error: ${err}} while getting audio stream for song with {url: ${this.song.url}}`);
+					this.warn(`{error: ${err}} while getting audio stream for song with {url: ${this.song.url}}`);
 
 					this.buffering = false;
 					this.bufferStream(attempts);
@@ -199,16 +202,16 @@ export class YTSource extends EventEmitter {
 			}
 			catch (error) {
 				this.errorMsg += `Attempt: ${attempts} - Failed to create a temp directory for song on disk\n`;
-				this.emit('errorLog', `{error: ${error}} while creating temp directory while downloading song with {url: ${this.song.url}}`);
+				this.warn(`{error: ${error}} while creating temp directory while downloading song with {url: ${this.song.url}}`);
 
 				this.buffering = false;
 				this.bufferStream(attempts);
 			}
 		}
 		else if (!this.buffering) {
-			this.emit('errorLog', `Tried buffering song with {url: ${this.song.url}} 5 times, failed all 5 times, giving up`);
+			this.error(`Tried buffering song with {url: ${this.song.url}} 5 times, failed all 5 times, giving up`);
 			this.errored = true;
-			this.emit('fatalEvent');
+			this.events.emit('fatalEvent', this.errorMsg);
 		}
 	}
 
@@ -233,14 +236,14 @@ export class YTSource extends EventEmitter {
 			}
 			catch (error) {
 				this.errorMsg += `Attempt: ${attempts} - Failed to read song from disk\n`;
-				this.emit('errorLog', `{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
+				this.warn(`{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
 				setTimeout(() => { this.queueChunk(chunkNum, attempts); }, 1000);
 			}
 		}
 		else {
 			this.errored = true;
-			this.emit('errorLog', `Tried 5 times to read {chunkNum: ${chunkNum}} from disk for song with {url: ${this.song.url}}`);
-			this.emit('fatalEvent');
+			this.error(`Tried 5 times to read {chunkNum: ${chunkNum}} from disk for song with {url: ${this.song.url}}`);
+			this.events.emit('fatalEvent');
 		}
 	}
 

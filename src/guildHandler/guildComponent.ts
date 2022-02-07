@@ -22,6 +22,7 @@ export class GuildComponent {
 	 */
 	constructor(guildHandler: GuildHandler) {
 		// guildHandler objects
+		this.guildHandler = guildHandler;
 		this.bot = guildHandler.bot;
 		this.guild = guildHandler.guild;
 		this.data = guildHandler.data;

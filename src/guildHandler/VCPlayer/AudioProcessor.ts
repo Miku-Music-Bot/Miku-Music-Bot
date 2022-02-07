@@ -2,7 +2,7 @@ import { PassThrough } from 'stream';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 
-import type { AudioSettings } from './AudioSettings.js';
+import type { AudioSettings } from './AudioSettings';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
