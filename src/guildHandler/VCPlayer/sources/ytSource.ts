@@ -7,7 +7,8 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { PassThrough } from 'stream';
 
-import { AudioSource } from './AudioSource'
+import { AudioSource } from './AudioSource';
+import { GuildComponent } from '../../GuildComponent';
 import type { Song } from '../Song';
 import type { GuildHandler } from '../../GuildHandler';
 
@@ -20,8 +21,9 @@ ffmpeg.setFfmpegPath(ffmpegPath.path);
  *
  * Handles getting audio from a yt source
  */
-export class YTSource extends GuildComponent implements Source {
+export class YTSource extends GuildComponent implements AudioSource {
 	song: Song;
+	events: EventEmitter;
 
 	buffering: boolean;
 	bufferingTimeout: NodeJS.Timeout;
@@ -45,8 +47,8 @@ export class YTSource extends GuildComponent implements Source {
 	/**
 	 * @param song - Song object for song to create source from
 	 */
-	constructor(guildComponent: GuildComponent, song: Song) {
-		super(guildComponent);
+	constructor(guildHandler: GuildHandler, song: Song) {
+		super(guildHandler);
 		this.song = song;
 		this.events = new EventEmitter();			// set up event emitter
 
@@ -106,13 +108,13 @@ export class YTSource extends GuildComponent implements Source {
 
 		// if buffering is not currently occuring, try to start buffer
 		if (!this.buffering && attempts < 5) {
-			this.emit('debugLog', `{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
+			this.debug(`{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
 			this.buffering = true;
 			attempts++;
 			this.bufferingTimeout = setTimeout(() => {
 				this.errorMsg += 'Fetching song from youtube took too long\n';
 				this.errored = true;
-				this.error(`Buffering stream took more than 10 seconds for song with {url: ${this.song.url}}`);
+				this.warn(`Buffering stream took more than 10 seconds for song with {url: ${this.song.url}}`);
 				this.bufferStream(attempts);
 			}, 10000);
 
@@ -166,7 +168,7 @@ export class YTSource extends GuildComponent implements Source {
 										// fatal error if this fails
 										this.errorMsg += 'Failed to write song to disk\n';
 										this.error(`{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
-										this.emit('fatalEvent');
+										this.events.emit('fatalEvent', this.errorMsg);
 									}
 								}
 							}
@@ -175,7 +177,7 @@ export class YTSource extends GuildComponent implements Source {
 							this.errored = true;
 							this.errorMsg += 'Error while converting song to raw pcm data\n';
 							this.error(`FFmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
-							this.events.emit('fatalEvent');
+							this.events.emit('fatalEvent', this.errorMsg);
 						})
 						.on('end', async () => {
 							this.chunkCount++;
@@ -187,13 +189,13 @@ export class YTSource extends GuildComponent implements Source {
 								// fatal error if this fails
 								this.errorMsg += 'Failed to write song to disk\n';
 								this.error(`{error: ${e}} while saving chunk with {chunkCount: ${this.chunkCount}} for song with {url: ${this.song.url}}`);
-								this.events.emit('fatalEvent');
+								this.events.emit('fatalEvent', this.errorMsg);
 							}
 							this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 						});
 				}
 				catch (err) {
-					this.errorMsg += `Attempt: ${attempts} - Failed to get song from youtube\n`;
+					this.errorMsg += `Buffer Stream Attempt: ${attempts} - Failed to get song from youtube\n`;
 					this.warn(`{error: ${err}} while getting audio stream for song with {url: ${this.song.url}}`);
 
 					this.buffering = false;
@@ -201,7 +203,7 @@ export class YTSource extends GuildComponent implements Source {
 				}
 			}
 			catch (error) {
-				this.errorMsg += `Attempt: ${attempts} - Failed to create a temp directory for song on disk\n`;
+				this.errorMsg += `Buffer Stream Attempt: ${attempts} - Failed to create a temp directory for song on disk\n`;
 				this.warn(`{error: ${error}} while creating temp directory while downloading song with {url: ${this.song.url}}`);
 
 				this.buffering = false;
@@ -235,7 +237,7 @@ export class YTSource extends GuildComponent implements Source {
 				await fs.promises.unlink(path.join(this.tempLocation, chunkNum.toString() + '.pcm'));
 			}
 			catch (error) {
-				this.errorMsg += `Attempt: ${attempts} - Failed to read song from disk\n`;
+				this.errorMsg += `Read Attempt: ${attempts} - Failed to read song from disk\n`;
 				this.warn(`{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
 				setTimeout(() => { this.queueChunk(chunkNum, attempts); }, 1000);
 			}
@@ -243,7 +245,7 @@ export class YTSource extends GuildComponent implements Source {
 		else {
 			this.errored = true;
 			this.error(`Tried 5 times to read {chunkNum: ${chunkNum}} from disk for song with {url: ${this.song.url}}`);
-			this.events.emit('fatalEvent');
+			this.events.emit('fatalEvent', this.errorMsg);
 		}
 	}
 

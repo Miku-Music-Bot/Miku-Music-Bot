@@ -51,7 +51,7 @@ export class VCPlayer extends GuildComponent {
 					adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 				});
 
-				const source = new YTSource({} as unknown as Song);
+				const source = new YTSource(this.guildHandler, {} as unknown as Song);
 				this.play(source); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);

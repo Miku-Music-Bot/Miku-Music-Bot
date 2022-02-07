@@ -6,6 +6,7 @@ import type { GuildHandler } from './GuildHandler';
  * Makes functions for guild compontents easier to use
  */
 export class GuildComponent {
+	guildHandler: GuildHandler;
 	bot: GuildHandler['bot'];
 	guild: GuildHandler['guild'];
 	data: GuildHandler['data'];
