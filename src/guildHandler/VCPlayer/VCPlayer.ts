@@ -19,7 +19,7 @@ export class VCPlayer extends GuildComponent {
 
 	/**
 	 * VCPlayer
-	 * @param - guildHandler for this vcplayer
+	 * @param guildHandler - guildHandler for this vcplayer
 	 */
 	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);
@@ -51,7 +51,8 @@ export class VCPlayer extends GuildComponent {
 					adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 				});
 
-				this.play(new YTSource({} as unknown as Song)); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
+				const source = new YTSource({} as unknown as Song);
+				this.play(source); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
 				this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
@@ -93,10 +94,14 @@ export class VCPlayer extends GuildComponent {
 	 * If already playing something, stops previous stream and plays new stream
 	 * @param source - source to play from
 	 */
-	play(source: YTSource) {
-		this.nowPlaying.destroy();
+	async play(source: YTSource) {
+		if (this.nowPlaying) {
+			this.nowPlaying.destroy();
+		}
 		this.nowPlaying = source;
+		source.getStream();
 
+		
 		// create audio player for this song
 		if (this.subscription) {
 			this.subscription.unsubscribe();
@@ -105,7 +110,7 @@ export class VCPlayer extends GuildComponent {
 		this.subscription = this.voiceConnection.subscribe(this.audioPlayer);
 
 		// create and play the resource
-		//const resource = Voice.createAudioResource(this.nowPlaying.getStream());
-		//this.audioPlayer.play(resource);
+		const resource = Voice.createAudioResource(await this.nowPlaying.getStream());
+		this.audioPlayer.play(resource);
 	}
 }

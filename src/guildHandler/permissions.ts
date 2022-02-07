@@ -92,7 +92,7 @@ export class CommandPermissions extends GuildComponent {
 			}
 
 			// fetch guild member with role information
-			const member = await this.guild.members.fetch({user: message.author.id});
+			const member = await this.guild.members.fetch({ user: message.author.id });
 			let found = false;
 			for (let i = 0; i < this.permissions[command].length; i++) {
 				if (member.roles.cache.get(this.permissions[command][i]).id === this.permissions[command][i]) {

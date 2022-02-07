@@ -26,6 +26,7 @@ export class GuildHandler {
 	ready: boolean;
 	bot: Discord.Client;
 	guild: Discord.Guild;
+	
 	ui: UI;
 	data: GuildData;
 	vcPlayer: VCPlayer;
@@ -46,15 +47,14 @@ export class GuildHandler {
 		this.error = (msg) => { logger.error(msg); };
 
 		this.info(`Creating guild handler for guild {id: ${id}}`);
-
-		this.bot = new Discord.Client({				// set intent flags for bot
+		this.bot = new Discord.Client({						// set intent flags for bot
 			intents: [
 				Discord.Intents.FLAGS.GUILDS,					// for accessing guild roles
 				Discord.Intents.FLAGS.GUILD_VOICE_STATES,		// for checking who is in vc and connecting to vc
 			],
 		});
 
-		this.ready = false;
+		this.ready = false;									// bot ready or not to prevent messages from being processed before bot is ready to do so
 		this.bot.once('ready', () => {
 			// get the guild object
 			this.guild = this.bot.guilds.cache.get(this.data.guildId);
@@ -65,14 +65,15 @@ export class GuildHandler {
 			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
 
+			// bot is now ready
 			this.ready = true;
 			this.info('Logged into discord, guild handler is ready!');
 
-			if (!this.data.configured) {
-				this.info('This guild has not been configured, waiting set-channel command');
-			}
+			// if not configured, log for helping debugging
+			if (!this.data.configured) { this.info('This guild has not been configured, waiting set-channel command'); }
 		});
 
+		// get guild data, once data is ready, log into discord
 		this.data = new GuildData(this, id, () => {
 			this.info('Guild data ready, logging in to discord...');
 			this.bot.login(DISCORD_TOKEN);
@@ -86,10 +87,10 @@ export class GuildHandler {
 	 * @param {Discord.Message} message - discord message object
 	 */
 	async messageHandler(message: Discord.Message) {
-		// ignore if not in right channel
-		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
 		// ignore if bot isn't ready yet
 		if (!this.ready) return;
+		// ignore if not in right channel
+		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
 
 		// split message into command and argument
 		let prefix = false;
@@ -100,7 +101,6 @@ export class GuildHandler {
 		const msg = message.content + ' ';
 		const command = msg.slice(0, msg.indexOf(' '));
 		const argument = msg.slice(msg.indexOf(' ') + 1, msg.length);
-
 		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
@@ -140,7 +140,12 @@ export class GuildHandler {
 		}
 	}
 
+	/**
+	 * removeGuild()
+	 * 
+	 * Call to stop the guild handler and clean up
+	 */
 	removeGuild() {
-		// stops the handler
+		//
 	}
 }
