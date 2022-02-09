@@ -106,7 +106,8 @@ export class YTSource extends GuildComponent implements AudioSource {
 	 * Starts downloading video from youtube and saving to file
 	 * @param attempts - number of attempts to buffer song
 	 */
-	async bufferStream(attempts: number | void) {
+	async bufferStream(attempts?: number, seek?: number) {
+		if (!seek) { seek = 0; }
 		if (!attempts) { attempts = 0; }
 
 		// if buffering is not currently occuring, try to start buffer
@@ -116,56 +117,74 @@ export class YTSource extends GuildComponent implements AudioSource {
 			this.debug(`{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
 
 			try {
+				this.sourceGetter.kill();
+			} catch { /* nothing to do */ }
+
+			try {
 				// make directory for buffer
 				await fs.promises.mkdir(this.tempLocation, { recursive: true });
 
 				this.sourceGetter = fork(path.join(__dirname, 'ytSourceGetter.js'));
-				this.sourceGetter.send({ url: this.song.url, tempLocation: this.tempLocation });
+				this.sourceGetter.send({ url: this.song.url, tempLocation: this.tempLocation, seek, chunkCount: this.chunkCount });
 
+				let dataTimeout: NodeJS.Timeout;
 				// handle all messages that could come from child
 				this.sourceGetter.on('message', (msg: { type: string, content?: string }) => {
 					switch (msg.type) {
 						// increasing chunkCount
-						case('chunkCount'): {
-							this.chunkCount++;
+						case ('chunkCount'): {
+							this.chunkCount = parseInt(msg.content);
+
+							// restart download if no data for 10 seconds
+							clearTimeout(dataTimeout);
+							dataTimeout = setTimeout(() => {
+								if (!this.song.live) {
+									this.debug(`No data was recieved for 10 seconds on song with {url: ${this.song.url}}, restarting download from {seek: ${this.chunkCount}}`);
+									this.buffering = false;
+									this.bufferStream(attempts - 1, this.chunkCount);
+								}
+							}, 10000);
 							break;
 						}
 						// debug log
-						case('debug'): {
+						case ('debug'): {
 							this.debug(msg.content);
 							break;
 						}
 						// warn log
-						case('warn'): {
+						case ('warn'): {
 							this.warn(msg.content);
 							break;
 						}
 						// error log
-						case('error'): {
+						case ('error'): {
 							this.error(msg.content);
 							break;
 						}
 						// add to errorMsg
-						case('addError'): {
+						case ('addError'): {
 							this.errorMsg += msg.content;
 							break;
 						}
 						// when buffer is ready
-						case('bufferReady'): {
+						case ('bufferReady'): {
 							this.events.emit('bufferReady');
 							break;
 						}
 						// in case of a fatal event
-						case('fatalEvent'): {
+						case ('fatalEvent'): {
+							clearTimeout(dataTimeout);
 							this.events.emit('fatalEvent', this.errorMsg);
 							break;
 						}
 						// finished buffering song
-						case('finishedBuffering'): {
+						case ('finishedBuffering'): {
+							clearTimeout(dataTimeout);
 							this.finishedBuffering = true;
 							break;
 						}
-						case('failed'): {
+						case ('failed'): {
+							clearTimeout(dataTimeout);
 							this.sourceGetter.kill();
 							this.buffering = false;
 							this.bufferStream(attempts);
@@ -203,7 +222,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < 6) {
+		if (attempts < 11) {
 			try {
 				this.chunkBuffer.push(...this.bufferToChunks(await fs.promises.readFile(path.join(this.tempLocation, chunkNum.toString() + '.pcm')), 19200));
 				await fs.promises.unlink(path.join(this.tempLocation, chunkNum.toString() + '.pcm'));
@@ -211,11 +230,11 @@ export class YTSource extends GuildComponent implements AudioSource {
 			catch (error) {
 				this.errorMsg += `Read Attempt: ${attempts} - Failed to read song from disk\n`;
 				this.warn(`{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
-				setTimeout(() => { this.queueChunk(chunkNum, attempts); }, 100);
+				setTimeout(() => { this.queueChunk(chunkNum, attempts); }, 1000);
 			}
 		}
 		else {
-			this.error(`Tried 5 times to read {chunkNum: ${chunkNum}} from disk for song with {url: ${this.song.url}}`);
+			this.error(`Tried 10 times to read {chunkNum: ${chunkNum}} from disk for song with {url: ${this.song.url}}`);
 
 			if (!this.finishedBuffering) {
 				this.errorMsg += 'Source stream was to slow to mantain buffer. Playback stopped prematurely.';
@@ -305,7 +324,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 				this.sourceGetter.kill();
 			}
 			catch { /* nothing to be done */ }
-			
+
 			clearInterval(this.audioWriter);
 			this.pcmPassthrough.end();
 

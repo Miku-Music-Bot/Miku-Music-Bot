@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as play from 'play-dl';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import { OpusEncoder } from '@discordjs/opus';
+import { PassThrough } from 'stream';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
@@ -34,33 +36,44 @@ function addError(msg: string) {
 	});
 }
 
-process.on('message', async (settings: { url: string, tempLocation: string, attempts: number }) => {
+process.on('message', async (settings: { url: string, tempLocation: string, attempts: number, seek: number, chunkCount: number }) => {
+	const convertedStream = new PassThrough();
 	try {
 		// obtain stream from youtube
-		const source = await play.stream(settings.url, { discordPlayerCompatibility: true });
+		const info = await play.video_info(settings.url);
+		if (settings.seek >= info.video_details.durationInSec) {
+			process.send({ type: 'finishedBuffering' });
+			debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
+			process.exit();
+		}
+		const source = await play.stream_from_info(info, { seek: settings.seek });
 		debug(`Audio stream obtained for song with {url: ${settings.url}}, starting conversion to pcm`);
 
-		// use ffmpeg to convert to raw pcm data
-		const audioConverter = ffmpeg(source.stream)
-			.audioChannels(2)							// 2 channels
-			.audioFrequency(48000)						// audio freq of 48000 Hz
-			.format('s16le')							// bitDepth of 16 bits
-			.on('error', (e) => {
-				if (e.toString().indexOf('SIGINT') == -1) {
+		// convert song to pcm using @discordjs/opus
+		const opus = new OpusEncoder(48000, 2);
+		source.stream
+			.on('data', (data) => {
+				try {
+					convertedStream.write(opus.decode(data));
+				} catch (error) {
 					addError('Error while converting song to raw pcm data\n');
-					error(`FFmpeg encountered {error: ${e}} while converting song with {url: ${settings.url}} to raw pcm`);
+					error(`{error: ${error}} while converting song with {url: ${settings.url}} to raw pcm`);
 					process.send({ type: 'fatalEvent' });
 				}
+			})
+			.on('end', () => {
+				convertedStream.end();
 			});
 
+
 		// split into and save even chunks of 1 sec each
-		let chunkCount = -1;
+		let chunkCount = settings.chunkCount;
 		let currentBuffer = Buffer.alloc(0);
 		let ready = false;
-		audioConverter.pipe()
-			// want to turn stream into a stream with equal sized chunks for duration counting
-			// Size in bytes per second: sampleRate * (bitDepth / 8) * channelCount
-			// 192000 bytes for 1 sec of raw pcm data at 48000Hz, 16 bits, 2 channels
+		// want to turn stream into a stream with equal sized chunks for duration counting
+		// Size in bytes per second: sampleRate * (bitDepth / 8) * channelCount
+		// 192000 bytes for 1 sec of raw pcm data at 48000Hz, 16 bits, 2 channels
+		convertedStream
 			.on('data', async (data) => {
 				// add to currentBuffer
 				currentBuffer = Buffer.concat([currentBuffer, data]);
@@ -72,7 +85,7 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 					currentBuffer = currentBuffer.slice(192000);
 
 					chunkCount++;
-					process.send({ type: 'chunkCount' });
+					process.send({ type: 'chunkCount', content: chunkCount });
 					try {
 						// save the chunk as <chunkNumber>.pcm
 						await fs.promises.writeFile(path.join(settings.tempLocation, chunkCount.toString() + '.pcm'), save);
@@ -83,10 +96,10 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 							process.send({ type: 'bufferReady' });
 						}
 					}
-					catch (e) {
+					catch (error) {
 						// fatal error if write fails
 						addError('Failed to write song to disk\n');
-						error(`{error: ${e}} while saving chunk with {chunkCount: ${chunkCount}} for song with {url: ${settings.url}}`);
+						error(`{error: ${error}} while saving chunk with {chunkCount: ${chunkCount}} for song with {url: ${settings.url}}`);
 						process.send({ type: 'fatalEvent' });
 					}
 
