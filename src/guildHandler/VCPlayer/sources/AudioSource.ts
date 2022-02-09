@@ -12,6 +12,7 @@ export abstract class AudioSource extends GuildComponent {
 	song: Song;										// should be a song object
 	events: EventEmitter;							// should have a 'fatalEvent' event that is called when the song is not played fully that returns string with user friendly error log
 	playDuration: number;							// should be able to get how many seconds have been played
+	chunkTiming: number;							// should be able to change chunkTiming for nightcore (10 0.1sec chunks per second vs 13.33 0.1 chunks per second aka 100ms vs 75ms delay between chunks)
 	abstract bufferStream(): void;					// should start buffering song to local file
 	abstract getStream(): Promise<PassThrough>;		// should start buffer if not started and return promise resolving to passthrough stream of pcm data
 	abstract pause(): void;							// should pause stream by playing silence

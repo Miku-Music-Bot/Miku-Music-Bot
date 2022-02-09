@@ -17,6 +17,7 @@ export class Song extends GuildComponent {
 	thumbnailURL: string;
 	type: string;
 	url: string;
+	live: boolean;
 	optional: object;
 
 	/**
@@ -25,7 +26,7 @@ export class Song extends GuildComponent {
 	 * @param link - url to the source of the song
 	 * @param optional - any additional options needed
 	 */
-	constructor(guildHandler: GuildHandler, type: string, url: string, optional: object) {
+	constructor(guildHandler: GuildHandler, type: string, url: string, live?: boolean, optional?: object) {
 		super(guildHandler);
 
 		// set defaults for song
@@ -35,6 +36,7 @@ export class Song extends GuildComponent {
 		this.thumbnailURL = `${BOT_DOMAIN}/default-thumbnail.jpg`;
 		this.type = type;
 		this.url = url;
+		this.live = live ? live : false;
 		this.optional = optional;
 	}
 

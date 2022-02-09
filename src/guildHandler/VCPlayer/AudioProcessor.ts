@@ -6,6 +6,7 @@ import { EventEmitter } from 'events';
 import type { AudioSettings } from './AudioSettings';
 import type { GuildHandler } from '../GuildHandler';
 import { GuildComponent } from '../GuildComponent';
+import type { AudioSource } from './sources/AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
@@ -20,6 +21,7 @@ export class AudioProcessor extends GuildComponent {
 	audioSettings: AudioSettings;
 	ffmpeg: ffmpeg.FfmpegCommand;
 	shouldWrite: boolean;
+	source: AudioSource;
 	ffmpegPassthrough: PassThrough;
 	opusPassthrough: PassThrough;
 
@@ -40,45 +42,60 @@ export class AudioProcessor extends GuildComponent {
 	 */
 	newFFmpeg() {
 		this.shouldWrite = false;
+
+		// change bitrate in case of nightcore setting
+		let bitrate = this.audioSettings.bitrate;
+		this.source.chunkTiming = 100;
+		if (this.audioSettings.nightcore && !this.source.song.live) {
+			bitrate = 64000;
+			this.source.chunkTiming = 75;
+		}
+
+		// kill old ffmpeg process
 		try {
-			this.ffmpeg.kill('SIGKILL');
+			this.ffmpeg.kill('SIGINT');
 		} catch { /* */ }
 
+		// create new passthrough stream for ffmpeg
 		this.ffmpegPassthrough.end();
 		this.ffmpegPassthrough = new PassThrough();
 
+		// create new ffmpeg process with new settings
 		this.ffmpeg = ffmpeg(this.ffmpegPassthrough)
 			.inputOptions([
 				'-f s16le',
-				`-ar ${this.audioSettings.bitrate}`,
+				`-ar ${bitrate}`,
 				'-ac 2'
 			])
-			.outputFormat('ogg')
+			.audioFilters('loudnorm=I=-32')
+			.audioCodec('libopus')
+			.outputFormat('opus')
 			.on('start', () => {
 				this.shouldWrite = true;
+			})
+			.on('error', (error) => {
+				if (error.toString().indexOf('SIGINT') == -1) {
+					this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song using {audioSettings: ${JSON.stringify(this.audioSettings)}}`);
+					this.events.emit('fatalEvent', 'Error while applying audio effects and converting pcm to opus');
+				}
 			});
 
 		this.ffmpeg.pipe()
 			.on('data', (data) => {
-				console.log(data);
 				this.opusPassthrough.write(data);
-			})
-			.on('error', (error) => {
-				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song using {audioSettings: ${JSON.stringify(this.audioSettings)}}`);
-				this.events.emit('fatalEvent', 'Error while applying audio effects and converting pcm to opus');
 			});
 	}
 
 	/**
 	 * processStream()
 	 * 
-	 * @param pcmPassthrough - Passthrough stream of s16le encoded pcm data with 2 audio channels and freqency of 44100
+	 * @param pcmPassthrough - Passthrough stream of s16le encoded pcm data with 2 audio channels and freqency of 48000
+	 * @param source - AudioSource for where the stream is coming from
 	 * @returns Passthrough stream of processed opus data
 	 */
-	processStream(pcmPassthrough: PassThrough) {
-		pcmPassthrough.on('data', (data) => {
-			if (this.shouldWrite) { this.ffmpegPassthrough.write(data); }
-		});
+	processStream(pcmPassthrough: PassThrough, source: AudioSource) {
+		this.source = source;
+		pcmPassthrough.on('data', (data) => { if (this.shouldWrite) { this.ffmpegPassthrough.write(data); } });
 
 		this.newFFmpeg();
 
@@ -97,7 +114,7 @@ export class AudioProcessor extends GuildComponent {
 	 */
 	destroy() {
 		try {
-			this.ffmpeg.kill('SIGKILL');
+			this.ffmpeg.kill('SIGINT');
 		} catch { /* */ }
 
 		this.ffmpegPassthrough.end();

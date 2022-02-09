@@ -10,17 +10,19 @@ export class AudioSettings extends EventEmitter {
 	volume: number;
 	bitrate: number;
 	normalize: boolean;
+	nightcore: boolean;
 	eq: Array<{ [key: string]: number }>;
 
 	/**
 	 * @param settings - object containing audio settings
 	 */
-	constructor(settings: { volume?: number | undefined, bitrate?: number | undefined, normalize?: boolean | undefined, eq?: Array<{ [key: string]: number }> | undefined }) {
+	constructor(settings: { volume?: number | undefined, bitrate?: number | undefined, normalize?: boolean | undefined, eq?: Array<{ [key: string]: number }> | undefined, nightcore?: boolean }) {
 		super();
 		this.volume = settings.volume ? settings.volume : 1;
-		this.bitrate = settings.bitrate ? settings.bitrate : 44100;
+		this.bitrate = settings.bitrate ? settings.bitrate : 48000;
 		this.normalize = settings.normalize ? settings.normalize : true;
 		this.eq =  settings.eq ? settings.eq : [];
+		this.nightcore = settings.nightcore ? settings.nightcore : false;
 	}
 
 	/**
@@ -44,8 +46,9 @@ export class AudioSettings extends EventEmitter {
 	 */
 	resetDefaults() {
 		this.volume = 1;
-		this.bitrate = 44100;
+		this.bitrate = 48000;
 		this.normalize = true;
 		this.eq = [];
+		this.nightcore = false;
 	}
 }

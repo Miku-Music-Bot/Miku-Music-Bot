@@ -7,6 +7,7 @@ import type { GuildHandler } from '../GuildHandler';
 import { YTSource } from './sources/YTSource';
 import { AudioProcessor } from './AudioProcessor';
 import { AudioSettings } from './AudioSettings';
+import type { AudioSource } from './sources/AudioSource';
 
 /**
  * VCPlayer
@@ -18,7 +19,7 @@ export class VCPlayer extends GuildComponent {
 	audioPlayer: Voice.AudioPlayer;
 	subscription: Voice.PlayerSubscription;
 	currentAudioProcessor: AudioProcessor;
-	currentSource: YTSource;
+	currentSource: AudioSource;
 
 	/**
 	 * VCPlayer
@@ -54,8 +55,11 @@ export class VCPlayer extends GuildComponent {
 					adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 				});
 
+				await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
+
+				//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
 				const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=AAwJ0_uqhb4&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=1' } as unknown as Song);
-				this.play(source); //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
+				this.play(source);
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
 				this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
@@ -99,26 +103,34 @@ export class VCPlayer extends GuildComponent {
 	 * If already playing something, stops previous stream and plays new stream
 	 * @param source - source to play from
 	 */
-	async play(source: YTSource) {
+	async play(source: AudioSource) {
 		// set currentSource
 		if (this.currentSource) { this.currentSource.destroy(); }
 		this.currentSource = source;
 
 		// create new audio processor
 		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({}));
+		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: true }));
 
 		// create audio player for this song
 		if (this.subscription) { this.subscription.unsubscribe(); }
 		this.audioPlayer = Voice.createAudioPlayer();
 		this.subscription = this.voiceConnection.subscribe(this.audioPlayer);
 
+		this.currentSource.events.on('fatalEvent', (error) => {
+			const errorId = this.ui.sendError(
+				`There was an error playing song: ${this.currentSource.song.title}\n
+				The following might give a hint as to why:\n${error}`
+			);
+			this.error(`{error: ${error}} while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
+			this.currentSource.destroy();
+			this.currentAudioProcessor.destroy();
+		});
+
 		// create and play the resource
 		const pcmStream = await this.currentSource.getStream();
-		const opusStream = this.currentAudioProcessor.processStream(pcmStream);
-		const resource = Voice.createAudioResource(opusStream, {
-			inputType:Voice.StreamType.Arbitrary
-		});
+		const opusStream = this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
+		const resource = Voice.createAudioResource(opusStream);
 		this.audioPlayer.play(resource);
 	}
 }
