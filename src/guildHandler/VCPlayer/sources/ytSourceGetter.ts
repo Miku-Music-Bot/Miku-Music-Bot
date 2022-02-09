@@ -41,7 +41,7 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 	try {
 		// obtain stream from youtube
 		const info = await play.video_info(settings.url);
-		if (settings.seek >= info.video_details.durationInSec) {
+		if (settings.seek >= info.video_details.durationInSec - 1) {
 			process.send({ type: 'finishedBuffering' });
 			debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
 			process.exit();
@@ -53,6 +53,12 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 		const opus = new OpusEncoder(48000, 2);
 		source.stream
 			.on('data', (data) => {
+				if (chunkCount >= info.video_details.durationInSec - 1) {
+					process.send({ type: 'finishedBuffering' });
+					debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
+					process.exit();
+				}
+
 				try {
 					convertedStream.write(opus.decode(data));
 				} catch (error) {
