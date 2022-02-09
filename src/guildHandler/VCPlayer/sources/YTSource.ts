@@ -116,16 +116,11 @@ export class YTSource extends GuildComponent implements AudioSource {
 			this.debug(`{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
 
 			try {
-				this.sourceGetter.kill();
-			} catch { /* don't do anything */ }
-
-			try {
 				// make directory for buffer
 				await fs.promises.mkdir(this.tempLocation, { recursive: true });
 
 				this.sourceGetter = fork(path.join(__dirname, 'ytSourceGetter.js'));
 				this.sourceGetter.send({ url: this.song.url, tempLocation: this.tempLocation });
-				this.sourceGetter.on('exit', () => { this.bufferStream(attempts); });
 
 				// handle all messages that could come from child
 				this.sourceGetter.on('message', (msg: { type: string, content?: string }) => {
@@ -168,6 +163,12 @@ export class YTSource extends GuildComponent implements AudioSource {
 						// finished buffering song
 						case('finishedBuffering'): {
 							this.finishedBuffering = true;
+							break;
+						}
+						case('failed'): {
+							this.sourceGetter.kill();
+							this.buffering = false;
+							this.bufferStream(attempts);
 							break;
 						}
 					}

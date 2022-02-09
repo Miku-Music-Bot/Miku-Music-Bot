@@ -15,7 +15,7 @@ function debug(msg: string) {
 
 function warn(msg: string) {
 	process.send({
-		type: 'debug',
+		type: 'warn',
 		content: msg
 	});
 }
@@ -121,6 +121,6 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 	catch (err) {
 		addError(`Buffer Stream Attempt: ${settings.attempts} - Failed to get song from youtube\n`);
 		warn(`{error: ${err}} while getting audio stream for song with {url: ${settings.url}}`);
-		process.exit();
+		process.send({ type: 'failed' });
 	}
 });
