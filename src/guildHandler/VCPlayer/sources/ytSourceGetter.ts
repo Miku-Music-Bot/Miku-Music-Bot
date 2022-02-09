@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as play from 'play-dl';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import { OpusEncoder } from '@discordjs/opus';
 import { PassThrough } from 'stream';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
@@ -41,36 +40,26 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 	try {
 		// obtain stream from youtube
 		const info = await play.video_info(settings.url);
-		if (settings.seek >= info.video_details.durationInSec - 1) {
+		if (settings.seek >= info.video_details.durationInSec - 1 && !info.video_details.live) {
 			process.send({ type: 'finishedBuffering' });
 			debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
 			process.exit();
 		}
-		const source = await play.stream_from_info(info, { seek: settings.seek });
+		const source = await play.stream_from_info(info, { seek: settings.seek, discordPlayerCompatibility: true });
 		debug(`Audio stream obtained for song with {url: ${settings.url}}, starting conversion to pcm`);
 
 		// convert song to pcm using @discordjs/opus
-		const opus = new OpusEncoder(48000, 2);
-		source.stream
-			.on('data', (data) => {
-				if (chunkCount >= info.video_details.durationInSec - 1) {
-					process.send({ type: 'finishedBuffering' });
-					debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
-					process.exit();
-				}
-
-				try {
-					convertedStream.write(opus.decode(data));
-				} catch (error) {
-					addError('Error while converting song to raw pcm data\n');
-					error(`{error: ${error}} while converting song with {url: ${settings.url}} to raw pcm`);
-					process.send({ type: 'fatalEvent' });
-				}
-			})
-			.on('end', () => {
-				convertedStream.end();
+		const audioConverter = ffmpeg(source.stream)
+			.audioChannels(2)
+			.audioFrequency(48000)
+			.format('s16le')
+			.on('error', (e) => {
+				addError('Error while converting stream to raw pcm\n');
+				error(`Ffmpeg encountered {error: ${e}} while converting song with {url: ${settings.url}} to raw pcm`);
+				process.send({ type: 'fatalEvent' });
 			});
-
+		
+		audioConverter.pipe(convertedStream);
 
 		// split into and save even chunks of 1 sec each
 		let chunkCount = settings.chunkCount;
@@ -102,13 +91,19 @@ process.on('message', async (settings: { url: string, tempLocation: string, atte
 							process.send({ type: 'bufferReady' });
 						}
 					}
-					catch (error) {
+					catch (e) {
 						// fatal error if write fails
 						addError('Failed to write song to disk\n');
-						error(`{error: ${error}} while saving chunk with {chunkCount: ${chunkCount}} for song with {url: ${settings.url}}`);
+						error(`{error: ${e}} while saving chunk with {chunkCount: ${chunkCount}} for song with {url: ${settings.url}}`);
 						process.send({ type: 'fatalEvent' });
 					}
 
+				}
+
+				if (chunkCount >= info.video_details.durationInSec - 1 && !info.video_details.live) {
+					process.send({ type: 'finishedBuffering' });
+					debug(`Stream for song with {url: ${settings.url}}, fully converted to pcm`);
+					process.exit();
 				}
 			})
 			.on('end', async () => {

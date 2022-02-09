@@ -58,7 +58,7 @@ export class VCPlayer extends GuildComponent {
 				await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
 
 				//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
-				const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=AAwJ0_uqhb4&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=1' } as unknown as Song);
+				const source = new YTSource(this.guildHandler, { url: 'https://youtu.be/5qap5aO4i9A' } as unknown as Song);
 				this.play(source);
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
@@ -110,7 +110,7 @@ export class VCPlayer extends GuildComponent {
 
 		// create new audio processor
 		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: true }));
+		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: false }));
 
 		// create audio player for this song
 		if (this.subscription) { this.subscription.unsubscribe(); }
