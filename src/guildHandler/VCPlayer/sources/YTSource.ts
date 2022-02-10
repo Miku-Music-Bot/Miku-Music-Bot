@@ -311,10 +311,14 @@ export class YTSource extends GuildComponent implements AudioSource {
 			if (this.paused) { return; }
 			// if there are chunks in the buffer, play them
 			else if (this.chunkBuffer[0]) {
+				if (this.chunkBuffer.length > 1000) {
+					for (let i = 0; i < 500; i++) {
+						this.chunkBuffer.shift();
+					}
+				}
 				// small chunks are equal to 0.1sec of music, divide their count by 10 to get seconds played
 				this.playDuration = Math.floor(this.smallChunkNum / 10);
-				this.pcmPassthrough.write(this.chunkBuffer[0]);
-				this.chunkBuffer.shift();
+				this.pcmPassthrough.write(this.chunkBuffer.shift());
 
 				if (this.smallChunkNum % 100 === 0 && !live) {
 					this.queueChunk((this.smallChunkNum / 100) + 2);
