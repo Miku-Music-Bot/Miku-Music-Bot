@@ -6,6 +6,7 @@ import { Readable, PassThrough } from 'stream';
 import * as ytdl from 'ytdl-core';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import * as play from 'play-dl';
 
 import { AudioSource } from './AudioSource';
 import { GuildComponent } from '../../GuildComponent';
@@ -346,7 +347,18 @@ export class YTSource extends GuildComponent implements AudioSource {
 		// if song is live, handle stream directly
 		if (this.song.live) {
 			this.convertedStream = new PassThrough();
-			this.audioConverter = ffmpeg(ytdl(this.song.url))
+
+			let source;
+			try {
+				source = await play.stream(this.song.url, { discordPlayerCompatibility: true });
+			}
+			catch (e) {
+				this.errorMsg += 'Failed to get stream from youtube';
+				this.error(`{error: ${e}} getting youtube stream for song with {url: ${this.song.url}}`);
+				this.events.emit('fatalEvent', this.errorMsg);
+				return this.pcmPassthrough;
+			}
+			this.audioConverter = ffmpeg(source.stream)
 				.noVideo()
 				.audioChannels(2)
 				.audioFrequency(48000)
