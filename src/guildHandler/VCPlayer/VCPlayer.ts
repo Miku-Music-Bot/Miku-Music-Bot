@@ -20,6 +20,7 @@ export class VCPlayer extends GuildComponent {
 	subscription: Voice.PlayerSubscription;
 	currentAudioProcessor: AudioProcessor;
 	currentSource: AudioSource;
+	resetLinkTimeout: NodeJS.Timeout;
 
 	/**
 	 * VCPlayer
@@ -58,7 +59,7 @@ export class VCPlayer extends GuildComponent {
 				await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
 
 				//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
-				const source = new YTSource(this.guildHandler, { url: 'https://youtu.be/5qap5aO4i9A' } as unknown as Song);
+				const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt' } as unknown as Song);
 				this.play(source);
 
 				this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
@@ -104,13 +105,14 @@ export class VCPlayer extends GuildComponent {
 	 * @param source - source to play from
 	 */
 	async play(source: AudioSource) {
+		clearTimeout(this.resetLinkTimeout);
 		// set currentSource
 		if (this.currentSource) { this.currentSource.destroy(); }
 		this.currentSource = source;
 
 		// create new audio processor
 		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: false }));
+		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: true }));
 
 		// create audio player for this song
 		if (this.subscription) { this.subscription.unsubscribe(); }
@@ -120,12 +122,20 @@ export class VCPlayer extends GuildComponent {
 		this.currentSource.events.on('fatalEvent', (error) => {
 			const errorId = this.ui.sendError(
 				`There was an error playing song: ${this.currentSource.song.title}\n
-				The following might give a hint as to why:\n${error}`
+				The following might give a hint as to why:\n\`\`\`${error}\`\`\``
 			);
 			this.error(`{error: ${error}} while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
 			this.currentSource.destroy();
 			this.currentAudioProcessor.destroy();
 		});
+
+		if (this.currentSource.song.live && this.currentSource.song.type === 'yt') {
+			this.resetLinkTimeout = setTimeout(() => {
+				this.ui.sendNotification(`Livestream: ${this.currentSource.song.title} will be restarted to keep youtube stream link valid.`);
+				this.debug(`Restarting song with {url: ${this.currentSource.song.url}}`);
+				this.play(new YTSource(this.guildHandler, this.currentSource.song));
+			}, 18000000);
+		}
 
 		// create and play the resource
 		const pcmStream = await this.currentSource.getStream();

@@ -22,7 +22,7 @@ export class Song extends GuildComponent {
 
 	/**
 	 * @param guildHandler
-	 * @param type - type of source for the song, options: "google drive", "soundcloud", "youtube"
+	 * @param type - type of source for the song, options: "gd", "yt"
 	 * @param link - url to the source of the song
 	 * @param optional - any additional options needed
 	 */

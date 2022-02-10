@@ -44,7 +44,7 @@ export class AudioProcessor extends GuildComponent {
 		this.shouldWrite = false;
 
 		// change bitrate in case of nightcore setting
-		let bitrate = this.audioSettings.bitrate;
+		let bitrate = 48000;
 		this.source.chunkTiming = 100;
 		if (this.audioSettings.nightcore && !this.source.song.live) {
 			bitrate = 64000;
@@ -52,9 +52,7 @@ export class AudioProcessor extends GuildComponent {
 		}
 
 		// kill old ffmpeg process
-		try {
-			this.ffmpeg.kill('SIGINT');
-		} catch { /* */ }
+		try { this.ffmpeg.kill('SIGINT'); } catch { /* */ }
 
 		// create new passthrough stream for ffmpeg
 		this.ffmpegPassthrough.end();
@@ -74,15 +72,18 @@ export class AudioProcessor extends GuildComponent {
 				this.shouldWrite = true;
 			})
 			.on('error', (error) => {
-				if (error.toString().indexOf('SIGINT') == -1) {
-					this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song using {audioSettings: ${JSON.stringify(this.audioSettings)}}`);
-					this.events.emit('fatalEvent', 'Error while applying audio effects and converting pcm to opus');
-				}
+				if (error.toString().indexOf('SIGINT') !== -1) return;
+
+				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song using {audioSettings: ${JSON.stringify(this.audioSettings)}}`);
+				this.events.emit('fatalEvent', 'Error while applying audio effects and converting pcm to opus');
 			});
 
 		this.ffmpeg.pipe()
 			.on('data', (data) => {
 				this.opusPassthrough.write(data);
+			})
+			.on('end', () => {
+				this.opusPassthrough.end();
 			});
 	}
 
@@ -95,7 +96,12 @@ export class AudioProcessor extends GuildComponent {
 	 */
 	processStream(pcmPassthrough: PassThrough, source: AudioSource) {
 		this.source = source;
-		pcmPassthrough.on('data', (data) => { if (this.shouldWrite) { this.ffmpegPassthrough.write(data); } });
+		pcmPassthrough.on('data', (data) => {
+			if (this.shouldWrite) { this.ffmpegPassthrough.write(data); }
+		});
+		pcmPassthrough.on('end', () => {
+			this.ffmpegPassthrough.end();
+		});
 
 		this.newFFmpeg();
 
