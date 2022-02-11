@@ -36,9 +36,7 @@
 		"express": "^4.17.2",
 		"ffmpeg-static": "^4.4.1",
 		"fluent-ffmpeg": "^2.1.2",
-		"libsodium-wrappers": "^0.7.9",
 		"mongodb": "^4.2.2",
-		"play-dl": "^1.8.2",
 		"sodium": "^3.0.2",
 		"winston-daily-rotate-file": "^4.5.5",
 		"youtube-dl-exec": "^2.0.3",
@@ -47,6 +45,9 @@
 	"optionalDependencies": {
 		"bufferutil": "^4.0.5",
 		"erlpack": "github:discord/erlpack",
+		"libsodium-wrappers": "^0.7.9",
+		"opusscript": "^0.0.8",
+		"tweetnacl": "^1.0.3",
 		"utf-8-validate": "^5.0.7",
 		"zlib-sync": "^0.1.7"
 	}

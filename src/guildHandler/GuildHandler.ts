@@ -23,10 +23,10 @@ export class GuildHandler {
 	warn: (msg: string) => void;
 	error: (msg: string) => void;
 
-	ready: boolean;
+	private _ready: boolean;
 	bot: Discord.Client;
 	guild: Discord.Guild;
-	
+
 	ui: UI;
 	data: GuildData;
 	vcPlayer: VCPlayer;
@@ -54,7 +54,7 @@ export class GuildHandler {
 			],
 		});
 
-		this.ready = false;									// bot ready or not to prevent messages from being processed before bot is ready to do so
+		this._ready = false;									// bot ready or not to prevent messages from being processed before bot is ready to do so
 		this.bot.once('ready', () => {
 			// get the guild object
 			this.guild = this.bot.guilds.cache.get(this.data.guildId);
@@ -66,7 +66,7 @@ export class GuildHandler {
 			this.permissions = new CommandPermissions(this);
 
 			// bot is now ready
-			this.ready = true;
+			this._ready = true;
 			this.info('Logged into discord, guild handler is ready!');
 
 			// if not configured, log for helping debugging
@@ -88,7 +88,7 @@ export class GuildHandler {
 	 */
 	async messageHandler(message: Discord.Message) {
 		// ignore if bot isn't ready yet
-		if (!this.ready) return;
+		if (!this._ready) return;
 		// ignore if not in right channel
 		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
 
@@ -124,16 +124,38 @@ export class GuildHandler {
 				}
 				case ('join'): {
 					// join the vc
-					this.vcPlayer.join(message.author)
-						.catch(() => {/* vcPlayer.join() handles notifying user to nothing to do here */ });
+					this.vcPlayer.join(message.author).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
 					break;
 				}
 				case ('play'): {
+					// if there is an argument, means to play/add song to queue
 					if (argument) {
-						// do something
-					} else {
-						// do something else
+						// start queue song process
+						break;
 					}
+
+					// if no arguments, check if already playing a song
+					// if so, should resume
+					if (this.vcPlayer.playing) {
+						this.vcPlayer.resume();
+						break;
+					}
+
+					// should start playing from autoplay
+					break;
+				}
+				case ('pause'): {
+					if (this.vcPlayer.playing) { this.vcPlayer.pause(); }
+					else { this.ui.sendError('Nothing to pause!'); }
+					break;
+				}
+				case ('resume'): {
+					if (this.vcPlayer.playing) { this.vcPlayer.resume(); }
+					else { this.ui.sendError('Nothing to resume!'); }
+					break;
+				}
+				case('stop'): {
+					this.vcPlayer.leave();
 					break;
 				}
 			}

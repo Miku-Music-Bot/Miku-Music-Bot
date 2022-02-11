@@ -6,10 +6,10 @@ import { GuildHandler } from './GuildHandler';
  * Handles adding, getting, and removing guild handlers
  */
 export class BotMaster {
-	guildList: { [key: string]: GuildHandler };		// stores all guilds
+	private _guildList: { [key: string]: GuildHandler };		// stores all guilds
 
 	constructor() {
-		this.guildList = {};
+		this._guildList = {};
 	}
 
 	/**
@@ -20,7 +20,7 @@ export class BotMaster {
 	 * @return guildHandler or undefined if not found
 	 */
 	getGuild(id: string): GuildHandler | undefined {
-		return this.guildList[id];
+		return this._guildList[id];
 	}
 
 	/**
@@ -33,7 +33,7 @@ export class BotMaster {
 	newGuild(id: string) {
 		if (!this.getGuild(id)) {
 			const newGuild = new GuildHandler(id);
-			this.guildList[id] = newGuild;
+			this._guildList[id] = newGuild;
 		}
 	}
 
@@ -44,7 +44,7 @@ export class BotMaster {
 	 * @param id - discord guild id string
 	 */
 	removeGuild(id: string): void {
-		this.guildList[id].removeGuild();
-		this.guildList[id] = undefined;
+		this._guildList[id].removeGuild();
+		this._guildList[id] = undefined;
 	}
 }

@@ -21,7 +21,7 @@ export class GuildData extends GuildComponent {
 	prefix: string;
 	playlists: Array<string>;
 	permissions: { [key: string]: Array<string> };
-	retrySave: NodeJS.Timer;
+	private _retrySave: NodeJS.Timer;
 
 	/**
 	 * @param guildHandler - guild handler for guild this guildData object is responsible for
@@ -32,7 +32,7 @@ export class GuildData extends GuildComponent {
 		super(guildHandler);
 		this.guildId = id;
 
-		this.initData(1000, cb);
+		this._initData(1000, cb);
 	}
 
 	/**
@@ -46,7 +46,7 @@ export class GuildData extends GuildComponent {
 	 * @param wait - amount of time to wait before retrying in case of an error
 	 * @param cb - callback for when done getting data
 	 */
-	async initData(wait: number, cb: () => void) {
+	private async _initData(wait: number, cb: () => void) {
 		if (!wait) {
 			wait = 1000;
 		}
@@ -93,7 +93,7 @@ export class GuildData extends GuildComponent {
 		} catch (error) {
 			this.error(`{error: ${error}} retrieving/saving data from database. Trying again in ${wait} seconds...`);
 			setTimeout(() => {
-				this.initData(wait * 10, cb);
+				this._initData(wait * 10, cb);
 			}, wait);
 		}
 	}
@@ -104,7 +104,7 @@ export class GuildData extends GuildComponent {
 	 * Saves guildData to database
 	 */
 	async saveData() {
-		clearInterval(this.retrySave);
+		clearInterval(this._retrySave);
 		this.debug('Saving data!');
 		const result = await this.collection.replaceOne({ guildId: this.guildId }, this.getData());
 
@@ -113,7 +113,7 @@ export class GuildData extends GuildComponent {
 			this.debug('Data save successful');
 		} else {
 			this.error('Data save failed, retrying in 1 min');
-			this.retrySave = setInterval(() => this.saveData(), 60000);
+			this._retrySave = setInterval(() => this.saveData(), 60000);
 		}
 	}
 

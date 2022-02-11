@@ -45,10 +45,10 @@ export class AudioProcessor extends GuildComponent {
 
 		// change bitrate in case of nightcore setting
 		let bitrate = 48000;
-		this.source.chunkTiming = 100;
+		this.source.setChunkTiming(100);
 		if (this.audioSettings.nightcore && !this.source.song.live) {
 			bitrate = 64000;
-			this.source.chunkTiming = 75;
+			this.source.setChunkTiming(75);
 		}
 
 		// kill old ffmpeg process

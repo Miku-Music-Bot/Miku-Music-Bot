@@ -7,10 +7,6 @@ import type { GuildHandler } from './GuildHandler';
  */
 export class GuildComponent {
 	guildHandler: GuildHandler;
-	bot: GuildHandler['bot'];
-	guild: GuildHandler['guild'];
-	data: GuildHandler['data'];
-	ui: GuildHandler['ui'];
 
 	logger: GuildHandler['logger'];
 	debug: GuildHandler['debug'];
@@ -22,13 +18,7 @@ export class GuildComponent {
 	 * @param guildHandler
 	 */
 	constructor(guildHandler: GuildHandler) {
-		// guildHandler objects
 		this.guildHandler = guildHandler;
-		this.bot = guildHandler.bot;
-		this.guild = guildHandler.guild;
-		this.data = guildHandler.data;
-		this.ui = guildHandler.ui;
-
 		// logging
 		this.logger = guildHandler.logger;
 		this.debug = guildHandler.debug;
@@ -36,4 +26,10 @@ export class GuildComponent {
 		this.warn = guildHandler.warn;
 		this.error = guildHandler.error;
 	}
+
+	bot() { return this.guildHandler['bot']; }
+	guild() { return this.guildHandler['guild']; }
+	data() { return this.guildHandler['data']; }
+	ui() { return this.guildHandler['ui']; }
+	queue() { return this.guildHandler['queue']; }
 }

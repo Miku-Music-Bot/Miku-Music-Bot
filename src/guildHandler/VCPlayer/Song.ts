@@ -40,6 +40,11 @@ export class Song extends GuildComponent {
 		this.optional = optional;
 	}
 
+	/**
+	 * fetchData()
+	 * 
+	 * Grabs updated 
+	 */
 	async fetchData(): Promise<void> {
 		//
 	}
