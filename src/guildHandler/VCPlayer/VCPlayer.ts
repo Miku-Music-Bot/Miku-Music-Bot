@@ -67,7 +67,7 @@ export class VCPlayer extends GuildComponent {
 			await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
 
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
-			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=AAwJ0_uqhb4', live: false, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
+			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 			this.play(source);
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
