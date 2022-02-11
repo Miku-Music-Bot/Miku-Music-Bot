@@ -13,7 +13,7 @@ export class BotMaster {
 	}
 
 	/**
-	 * getGuild()
+	 * getguild
 	 *
 	 * Returns GuildHandler for guild with matching id
 	 * @param id - discord guild id string
@@ -24,7 +24,7 @@ export class BotMaster {
 	}
 
 	/**
-	 * newGuild()
+	 * newguild
 	 *
 	 * checks if guild already has a handler
 	 * if not, creates a handler
@@ -38,7 +38,7 @@ export class BotMaster {
 	}
 
 	/**
-	 * removeGuild()
+	 * removeguild
 	 *
 	 * Removes guild handler with matching id
 	 * @param id - discord guild id string

@@ -36,7 +36,7 @@ export class GuildData extends GuildComponent {
 	}
 
 	/**
-	 * initData()
+	 * initdata
 	 *
 	 * Initiallizes GuildData
 	 * connects to database and tries to get data
@@ -99,11 +99,11 @@ export class GuildData extends GuildComponent {
 	}
 
 	/**
-	 * saveData()
+	 * savedata
 	 *
 	 * Saves guildData to database
 	 */
-	async saveData() {
+	private async _saveData() {
 		clearInterval(this._retrySave);
 		this.debug('Saving data!');
 		const result = await this.collection.replaceOne({ guildId: this.guildId }, this.getData());
@@ -113,7 +113,7 @@ export class GuildData extends GuildComponent {
 			this.debug('Data save successful');
 		} else {
 			this.error('Data save failed, retrying in 1 min');
-			this._retrySave = setInterval(() => this.saveData(), 60000);
+			this._retrySave = setInterval(() => this._saveData(), 60000);
 		}
 	}
 
@@ -126,7 +126,7 @@ export class GuildData extends GuildComponent {
 	setConfigured(configured: boolean) {
 		this.debug(`Guild data: configured set to ${configured}`);
 		this.configured = configured;
-		this.saveData();
+		this._saveData();
 	}
 
 	/**
@@ -138,7 +138,7 @@ export class GuildData extends GuildComponent {
 	setChannel(id: string) {
 		this.debug(`Guild data: channelId set to ${id}`);
 		this.channelId = id;
-		this.saveData();
+		this._saveData();
 	}
 
 	/**
@@ -150,7 +150,7 @@ export class GuildData extends GuildComponent {
 	setPrefix(prefix: string) {
 		this.debug(`Guild data: prefix set to ${prefix}`);
 		this.prefix = prefix;
-		this.saveData();
+		this._saveData();
 	}
 
 	/**
@@ -162,11 +162,11 @@ export class GuildData extends GuildComponent {
 	setPermissions(permissions: { [key: string]: Array<string> }) {
 		this.debug(`Guild data: permissions set to ${JSON.stringify(permissions)}`);
 		this.permissions = permissions;
-		this.saveData();
+		this._saveData();
 	}
 
 	/**
-	 * getData()
+	 * getdata
 	 *
 	 * @return object containing bot settings
 	 */

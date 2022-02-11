@@ -20,6 +20,7 @@ export class VCPlayer extends GuildComponent {
 	subscription: Voice.PlayerSubscription;
 	currentAudioProcessor: AudioProcessor;
 	currentSource: AudioSource;
+	_finishedSongCheck: NodeJS.Timer;
 	playing: boolean;
 	paused: boolean;
 
@@ -43,13 +44,13 @@ export class VCPlayer extends GuildComponent {
 		this.info(`Joining {userId: ${user.id}} in voice channel`);
 
 		try {
-			const member = await this.guild().members.fetch({ user: user.id });
+			const member = await this.guild.members.fetch({ user: user.id });
 
 			// check if they are in a voice channel
 			if (!member.voice.channelId) {
 				// if they aren't send and error message
 				this.info(`{userId: ${user.id}} was not found in a voice channel`);
-				this.ui().sendError(`<@${user.id}> Join a voice channel first!`);
+				this.ui.sendError(`<@${user.id}> Join a voice channel first!`);
 				return false;
 			}
 			// if they are join it and send notification that join was successful
@@ -57,26 +58,26 @@ export class VCPlayer extends GuildComponent {
 
 			this.voiceConnection = Voice.joinVoiceChannel({
 				channelId: member.voice.channelId,
-				guildId: this.guild().id,
+				guildId: this.guild.id,
 				selfMute: false,
 				selfDeaf: true,
-				adapterCreator: this.guild().voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
+				adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 			});
 
 			await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
 
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
-			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=AAwJ0_uqhb4', live: false, type: 'yt', fetchData: async () => {/**/ } } as unknown as Song);
+			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=AAwJ0_uqhb4', live: false, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 			this.play(source);
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 			this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
-			this.ui().sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
+			this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
 
 			return true;
 		}
 		catch (error) {
-			const errorId = this.ui().sendError(`<@${user.id}> Sorry! There was an error joining the voice channel.`, true);
+			const errorId = this.ui.sendError(`<@${user.id}> Sorry! There was an error joining the voice channel.`, true);
 			this.error(`{error: ${error}} while joining {userId: ${user.id}} in voice channel. {errorId: ${errorId}}`);
 			return false;
 		}
@@ -89,7 +90,9 @@ export class VCPlayer extends GuildComponent {
 	 */
 	leave() {
 		try {
+			clearInterval(this._finishedSongCheck);
 			this.playing = false;
+			this.paused = false;
 			if (this.currentSource) { this.currentSource.destroy(); }
 			this.currentSource = null;
 			if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
@@ -104,6 +107,59 @@ export class VCPlayer extends GuildComponent {
 		catch (error) {
 			this.error(`{error: ${error}} while leaving voice channel`);
 		}
+	}
+
+	/**
+	 * pause()
+	 * 
+	 * Pauses currently playing song
+	 */
+	pause() {
+		if (!this.currentSource || !this.audioPlayer) return;
+
+		if (this.currentSource.song.live) {
+			this.ui.sendError('Livestreams cannot be paused!');
+			return;
+		}
+
+		this.paused = true;
+		this.currentSource.pause();
+		this.audioPlayer.pause();
+	}
+
+	/**
+	 * resume()
+	 * 
+	 * Resumes currently playing song
+	 */
+	resume() {
+		if (!this.currentSource || !this.audioPlayer) return;
+
+		this.paused = false;
+		this.paused = false;
+		this.currentSource.resume();
+		this.audioPlayer.unpause();
+	}
+
+	/**
+	 * finishedSong()
+	 * 
+	 * Call to clean up current song and call nextSong on this.queue
+	 */
+	finishedSong() {
+		clearInterval(this._finishedSongCheck);
+		this.playing = false;
+		this.paused = false;
+		if (this.currentSource) { this.currentSource.destroy(); }
+		this.currentSource = null;
+		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
+		this.currentAudioProcessor = null;
+		if (this.audioPlayer) { this.audioPlayer.stop(); }
+		this.audioPlayer = null;
+		if (this.subscription) { this.subscription.unsubscribe(); }
+		this.subscription = null;
+
+		this.queue.nextSong();
 	}
 
 	/**
@@ -129,17 +185,13 @@ export class VCPlayer extends GuildComponent {
 		this.audioPlayer = Voice.createAudioPlayer();
 		this.subscription = this.voiceConnection.subscribe(this.audioPlayer);
 
-		// catch error and finished playing event
+		// catch error event
 		this.currentSource.events.on('error', (error) => {
-			const errorId = this.ui().sendError(
+			const errorId = this.ui.sendError(
 				`There was an error playing song: ${this.currentSource.song.title}\n
 				The following might give a hint as to why:\n\`\`\`${error}\`\`\``
 			);
 			this.error(`Error while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
-			this.finishedSong();
-		});
-		this.currentSource.events.on('finished', () => {
-			this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
 			this.finishedSong();
 		});
 
@@ -149,57 +201,18 @@ export class VCPlayer extends GuildComponent {
 			const opusStream = this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
 			const resource = Voice.createAudioResource(opusStream);
 			this.audioPlayer.play(resource);
+
+			// catch finished stream event
+			opusStream.on('end', () => {
+				this._finishedSongCheck = setInterval(() => {
+					if (resource.ended) {
+						this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
+						this.finishedSong();
+						clearInterval(this._finishedSongCheck);
+					}
+				}, 100);
+			});
 		}
 		catch { /* */ }
-	}
-
-	/**
-	 * pause()
-	 * 
-	 * Pauses currently playing song
-	 */
-	pause() {
-		if (!this.currentSource || !this.audioPlayer) return;
-
-		if (this.currentSource.song.live) { 
-			this.ui().sendError('Livestreams cannot be paused!');
-			return;
-		}
-
-		this.paused = true;
-		this.currentSource.pause();
-		this.audioPlayer.pause();
-	}
-
-	/**
-	 * resume()
-	 * 
-	 * Resumes currently playing song
-	 */
-	resume() {
-		if (!this.currentSource || !this.audioPlayer) return;
-
-		this.paused = false;
-		this.currentSource.resume();
-		this.audioPlayer.unpause();
-	}
-
-	/**
-	 * finishedSong()
-	 * 
-	 * Call to clean up current song and call nextSong on this.queue()
-	 */
-	finishedSong() {
-		this.playing = false;
-		if (this.currentSource) { this.currentSource.destroy(); }
-		this.currentSource = null;
-		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = null;
-		if (this.audioPlayer) { this.audioPlayer.stop(); }
-		this.audioPlayer = null;
-		if (this.subscription) { this.subscription.unsubscribe(); }
-		this.subscription = null;
-
-		this.queue().nextSong();
 	}
 }

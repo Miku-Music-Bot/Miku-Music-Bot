@@ -30,25 +30,25 @@ export class UI extends GuildComponent {
 	}
 
 	/**
-	 * sendUI()
+	 * sendui
 	 *
 	 * Sends ui to channel
 	 */
 	sendUI() {
 		// this needs to be improved to not use .get();
-		const channel = this.bot().channels.cache.get(this.data().channelId);
+		const channel = this.bot.channels.cache.get(this.data.channelId);
 		if (channel instanceof Discord.TextChannel) {
-			channel.send({ embeds: [ this.createUI() ] });
+			channel.send({ embeds: [ this._createUI() ] });
 		}
 	}
 
 	/**
-	 * createUI()
+	 * createui
 	 *
 	 * Creates discord messageEmbed for UI
 	 * @return Discord message embed
 	 */
-	createUI(): Discord.MessageEmbed {
+	private _createUI(): Discord.MessageEmbed {
 		const userInterface = new Discord.MessageEmbed()
 			.setDescription('hi');
 
@@ -64,7 +64,7 @@ export class UI extends GuildComponent {
 	 */
 	async sendNotification(message: string, channelId: string | void): Promise<void> {
 		if (!channelId) {
-			channelId = this.data().channelId;
+			channelId = this.data.channelId;
 		}
 
 		try {
@@ -82,7 +82,7 @@ export class UI extends GuildComponent {
 						.setEmoji('❌'),
 				);
 
-			const channel = await this.bot().channels.fetch(channelId);
+			const channel = await this.bot.channels.fetch(channelId);
 			if (channel instanceof Discord.TextChannel) {
 				const msg = await channel.send({ embeds: [notification], components: [row] });
 				this.debug(`Notification message sent, {messageId: ${msg.id}}`);
@@ -106,7 +106,7 @@ export class UI extends GuildComponent {
 	 */
 	sendError(message: string, saveErrorId: boolean | void, channelId: string | void): number {
 		if (!channelId) {
-			channelId = this.data().channelId;
+			channelId = this.data.channelId;
 		}
 
 		const errorId = (Date.now() * 1000) + Math.floor(Math.random() * (9999 - 1000) + 1000);		// Unix Timestamp + random number between 1000-9999
@@ -122,7 +122,7 @@ export class UI extends GuildComponent {
 					error.setFooter({ text: `Error id ${errorId}` });
 				}
 
-				const channel = await this.bot().channels.fetch(channelId);
+				const channel = await this.bot.channels.fetch(channelId);
 				if (channel instanceof Discord.TextChannel) {
 					const msg = await channel.send({ embeds: [error] });
 					this.debug(`Error message sent, {messageId: ${msg.id}}`);

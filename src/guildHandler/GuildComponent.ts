@@ -27,9 +27,9 @@ export class GuildComponent {
 		this.error = guildHandler.error;
 	}
 
-	bot() { return this.guildHandler['bot']; }
-	guild() { return this.guildHandler['guild']; }
-	data() { return this.guildHandler['data']; }
-	ui() { return this.guildHandler['ui']; }
-	queue() { return this.guildHandler['queue']; }
+	get bot() { return this.guildHandler['bot']; }
+	get guild() { return this.guildHandler['guild']; }
+	get data() { return this.guildHandler.data; }
+	get ui() { return this.guildHandler.ui; }
+	get queue() { return this.guildHandler['queue']; }
 }

@@ -34,7 +34,7 @@ export class GuildHandler {
 	permissions: CommandPermissions;
 
 	/**
-	 * Creates data object and once data is ready, calls startBot()
+	 * Creates data object and once data is ready, calls startbot
 	 * @param id - discord guild id for GuildHander to be responsible for
 	 */
 	constructor(id: string) {
@@ -163,7 +163,7 @@ export class GuildHandler {
 	}
 
 	/**
-	 * removeGuild()
+	 * removeguild
 	 * 
 	 * Call to stop the guild handler and clean up
 	 */

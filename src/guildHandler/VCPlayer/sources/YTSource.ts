@@ -24,7 +24,6 @@ ffmpeg.setFfmpegPath(ffmpegPath.path);
 export class YTSource extends GuildComponent implements AudioSource {
 	song: Song;
 	events: EventEmitter;
-	playDuration: number;
 
 	private errorMsg: string;
 
@@ -60,7 +59,6 @@ export class YTSource extends GuildComponent implements AudioSource {
 		this.events = new EventEmitter();			// set up event emitter
 		this.errorMsg = '';							// user friendly msg for why error occured
 
-		this.playDuration = 0;						// number of seconds
 		this._paused = false;						// paused or not
 		this._destroyed = false;					// cleaned up or not
 
@@ -114,7 +112,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 	 * @param attempts - attempt number
 	 */
 	private async _bufferVideo(attempts: number) {
-		this.song.fetchData();
+		this.song.fetchdata;
 
 		// make directory for buffer
 		try { await fs.promises.mkdir(this._tempLocation, { recursive: true }); }
@@ -242,7 +240,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 	 * @param attempts - attempt number
 	 */
 	private async _bufferLive(attempts: number) {
-		this.song.fetchData();
+		this.song.fetchdata;
 		try {
 			this._ytdlSource = ytdl(this.song.url, { liveBuffer: 10000, filter: format => format.isHLS });
 			this._ytdlSource.on('error', (error) => {
@@ -440,8 +438,6 @@ export class YTSource extends GuildComponent implements AudioSource {
 						this._chunkBuffer.shift();
 					}
 				}
-				// small chunks are equal to 0.1sec of music, divide their count by 10 to get seconds played
-				this.playDuration = Math.floor(this._smallChunkNum / 10);
 				this._pcmPassthrough.write(this._chunkBuffer.shift());
 
 				if (this._smallChunkNum % 100 === 0 && !live) {
@@ -456,7 +452,6 @@ export class YTSource extends GuildComponent implements AudioSource {
 			// if finished playing, end stream
 			else {
 				this._pcmPassthrough.end();
-				this.events.emit('finished');
 				clearTimeout(this._audioWriter);
 			}
 		}, milliseconds);

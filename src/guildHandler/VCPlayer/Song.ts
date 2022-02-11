@@ -41,11 +41,11 @@ export class Song extends GuildComponent {
 	}
 
 	/**
-	 * fetchData()
+	 * fetchdata
 	 * 
 	 * Grabs updated 
 	 */
-	async fetchData(): Promise<void> {
+	async fetchdata(): Promise<void> {
 		//
 	}
 }

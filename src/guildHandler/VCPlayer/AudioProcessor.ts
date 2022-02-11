@@ -79,12 +79,8 @@ export class AudioProcessor extends GuildComponent {
 			});
 
 		this.ffmpeg.pipe()
-			.on('data', (data) => {
-				this.opusPassthrough.write(data);
-			})
-			.on('end', () => {
-				this.opusPassthrough.end();
-			});
+			.on('data', (data) => { this.opusPassthrough.write(data); })
+			.on('end', () => { this.opusPassthrough.end(); });
 	}
 
 	/**
@@ -99,9 +95,7 @@ export class AudioProcessor extends GuildComponent {
 		pcmPassthrough.on('data', (data) => {
 			if (this.shouldWrite) { this.ffmpegPassthrough.write(data); }
 		});
-		pcmPassthrough.on('end', () => {
-			this.ffmpegPassthrough.end();
-		});
+		pcmPassthrough.on('end', () => { this.ffmpegPassthrough.end(); });
 
 		this.newFFmpeg();
 
