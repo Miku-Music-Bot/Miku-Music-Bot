@@ -85,7 +85,7 @@ export class UI extends GuildComponent {
 			const channel = await this.bot.channels.fetch(channelId);
 			if (channel instanceof Discord.TextChannel) {
 				const msg = await channel.send({ embeds: [notification], components: [row] });
-				this.debug(`Notification message sent, {messageId: ${msg.id}}`);
+				this.debug(`Notification message with {message: ${message} sent, {messageId: ${msg.id}}`);
 			}
 			else {
 				this.debug(`Channel with {channelId: ${channelId}} was not a text channel, notification with {message: ${message}} was not sent`);
@@ -105,11 +105,10 @@ export class UI extends GuildComponent {
 	 * @return randomized error id
 	 */
 	sendError(message: string, saveErrorId: boolean | void, channelId: string | void): number {
-		if (!channelId) {
-			channelId = this.data.channelId;
-		}
+		if (!channelId) { channelId = this.data.channelId; }
 
-		const errorId = (Date.now() * 1000) + Math.floor(Math.random() * (9999 - 1000) + 1000);		// Unix Timestamp + random number between 1000-9999
+		// Unix Timestamp + random number between 100000000000000-999999999999999
+		const errorId = (Date.now() * 1000) + Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);
 		(async () => {
 			try {
 				this.debug(`Sending error message with {message: ${message}} to {channelId: ${channelId}}`);
@@ -125,7 +124,7 @@ export class UI extends GuildComponent {
 				const channel = await this.bot.channels.fetch(channelId);
 				if (channel instanceof Discord.TextChannel) {
 					const msg = await channel.send({ embeds: [error] });
-					this.debug(`Error message sent, {messageId: ${msg.id}}`);
+					this.debug(`Error message with {message: ${message}} sent, {messageId: ${msg.id}}`);
 				}
 				else {
 					this.debug(`Channel with {channelId: ${channelId}} was not a text channel, error with {message: ${message}} was not sent`);

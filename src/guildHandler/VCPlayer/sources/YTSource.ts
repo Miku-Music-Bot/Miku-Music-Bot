@@ -24,6 +24,7 @@ ffmpeg.setFfmpegPath(ffmpegPath.path);
 export class YTSource extends GuildComponent implements AudioSource {
 	song: Song;
 	events: EventEmitter;
+	playingSilence: boolean;
 
 	private errorMsg: string;
 
@@ -56,6 +57,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 	constructor(guildHandler: GuildHandler, song: Song) {
 		super(guildHandler);
 		this.song = song;
+		this.playingSilence = false;				// if currently playing silence while waiting for youtube, set to true
 		this.events = new EventEmitter();			// set up event emitter
 		this.errorMsg = '';							// user friendly msg for why error occured
 
@@ -242,7 +244,7 @@ export class YTSource extends GuildComponent implements AudioSource {
 	private async _bufferLive(attempts: number) {
 		this.song.fetchdata;
 		try {
-			this._ytdlSource = ytdl(this.song.url, { liveBuffer: 10000, filter: format => format.isHLS });
+			this._ytdlSource = ytdl(this.song.url, { liveBuffer: 10000, quality: [96, 95, 94, 93, 92, 132, 151] });
 			this._ytdlSource.on('error', (error) => {
 				this.errorMsg += 'Error on stream from youtube\n';
 				this.error(`{error: ${error}} on stream from youtube for song with {url: ${this.song.url}}`);
@@ -260,11 +262,12 @@ export class YTSource extends GuildComponent implements AudioSource {
 			this.bufferStream(attempts);
 		}
 
+		// restart stream every 5 hours
 		this._liveTimeout = setTimeout(() => {
 			this.debug(`Restarting buffer for song with {url: ${this.song.url}} to ensure youtube link is valid`);
 			this._buffering = false;
 			this.bufferStream(attempts);
-		}, Math.random() * 10000 + 290000);
+		}, 1800000);
 
 		// convert song to pcm using ffmpeg
 		this._convertedStream = new PassThrough();
@@ -309,8 +312,9 @@ export class YTSource extends GuildComponent implements AudioSource {
 
 			this._chunkBuffer.push(...this._bufferToChunks(currentBuffer, 19200));
 			this.events.emit('bufferReady');
-			attempts = 0;
+			
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
+			this._finishedReading = true;
 		};
 
 		// want to turn stream into a stream with equal sized chunks for duration counting
@@ -433,20 +437,21 @@ export class YTSource extends GuildComponent implements AudioSource {
 			if (this._paused) { return; }
 			// if there are chunks in the buffer, play them
 			else if (this._chunkBuffer[0]) {
-				if (this._chunkBuffer.length > 1000) {
-					for (let i = 0; i < 500; i++) {
-						this._chunkBuffer.shift();
-					}
-				}
+				this.playingSilence = false;
+
 				this._pcmPassthrough.write(this._chunkBuffer.shift());
 
-				if (this._smallChunkNum % 100 === 0 && !live) {
-					this._queueChunk((this._smallChunkNum / 100) + 2);
-				}
+				if (this._smallChunkNum % 100 === 0 && !live) { this._queueChunk((this._smallChunkNum / 100) + 2); }
 				this._smallChunkNum++;
+
+				if (this._chunkBuffer.length > 300 && live) {
+					this.debug('Stream is now 30 sec behind, clearing chunk buffer to catch up');
+					this._chunkBuffer = [];
+				}
 			}
 			// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
 			else if (!this._finishedReading || live) {
+				this.playingSilence = true;
 				this._pcmPassthrough.write(Buffer.alloc(19200));
 			}
 			// if finished playing, end stream
