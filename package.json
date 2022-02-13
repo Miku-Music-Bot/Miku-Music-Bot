@@ -39,7 +39,6 @@
 		"mongodb": "^4.2.2",
 		"sodium": "^3.0.2",
 		"winston-daily-rotate-file": "^4.5.5",
-		"youtube-dl-exec": "^2.0.3",
 		"ytdl-core": "^4.10.1"
 	},
 	"optionalDependencies": {

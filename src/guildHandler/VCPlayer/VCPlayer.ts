@@ -34,6 +34,44 @@ export class VCPlayer extends GuildComponent {
 	}
 
 	/**
+	 * 
+	 * @param channelId - channel id of voice channel to join
+	 */
+	private async _joinChannelId(channelId: string) {
+		try {
+			this.voiceConnection = Voice.joinVoiceChannel({
+				channelId: channelId,
+				guildId: this.guild.id,
+				selfMute: false,
+				selfDeaf: true,
+				adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
+			});
+		} catch (error) {
+			this.debug(`Error while joining voice channel with {channelId: ${channelId}}`);
+		}
+
+		this.voiceConnection.on(Voice.VoiceConnectionStatus.Disconnected, async () => {
+			this.debug(`Voice connection for {channelId: ${channelId}} disconnected`);
+			try {
+				await Promise.race([
+					Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Signalling, 5000),
+					Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Connecting, 5000),
+				]);
+
+				this.debug(`Voice connection for {channelId: ${channelId}} seems to be recoverable, attempting to rejoin...`);
+				await this._joinChannelId(channelId);
+				this.debug(`Successfully rejoined voice {channelId: ${channelId}}`);
+			}
+			catch (error) {
+				this.debug(`{error: ${error}} Unable to recover voice connection to {channelId: ${channelId}}, closing connection`);
+				this.leave();
+			}
+		});
+
+		return Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 5000);
+	}
+
+	/**
 	 * join()
 	 *
 	 * Joins the voice channel specified
@@ -56,23 +94,14 @@ export class VCPlayer extends GuildComponent {
 			// if they are join it and send notification that join was successful
 			this.debug(`Found that {userId: ${user.id}} is in {channelId: ${member.voice.channelId}}`);
 
-			this.voiceConnection = Voice.joinVoiceChannel({
-				channelId: member.voice.channelId,
-				guildId: this.guild.id,
-				selfMute: false,
-				selfDeaf: true,
-				adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
-			});
-
-			await Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 30e3);
+			await this._joinChannelId(member.voice.channelId);
+			this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
+			this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
 
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
 			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 			this.play(source);
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-			this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
-			this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
 
 			return true;
 		}
@@ -101,6 +130,7 @@ export class VCPlayer extends GuildComponent {
 			this.audioPlayer = null;
 			if (this.subscription) { this.subscription.unsubscribe(); }
 			this.subscription = null;
+
 			this.voiceConnection.destroy();
 			this.voiceConnection = null;
 		}
@@ -199,19 +229,22 @@ export class VCPlayer extends GuildComponent {
 			// create and play the resource
 			const pcmStream = await this.currentSource.getStream();
 			const opusStream = this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
-			const resource = Voice.createAudioResource(opusStream);
+			const resource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
 			this.audioPlayer.play(resource);
 
 			// catch finished stream event
 			opusStream.on('end', () => {
-				this._finishedSongCheck = setInterval(() => {
-					if (resource.ended) {
-						this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
-						this.finishedSong();
-						clearInterval(this._finishedSongCheck);
-					}
-				}, 100);
+				this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
+				this.finishedSong();
+				clearInterval(this._finishedSongCheck);
 			});
+			this._finishedSongCheck = setInterval(() => {
+				if (resource.ended) {
+					this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
+					this.finishedSong();
+					clearInterval(this._finishedSongCheck);
+				}
+			}, 100);
 		}
 		catch { /* */ }
 	}
