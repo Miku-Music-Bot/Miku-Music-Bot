@@ -1,11 +1,11 @@
-import type { GuildHandler } from './GuildHandler';
+import type GuildHandler from './GuildHandler';
 
 /**
  * Guild Component
  *
  * Makes functions for guild compontents easier to use
  */
-export class GuildComponent {
+export default class GuildComponent {
 	guildHandler: GuildHandler;
 
 	logger: GuildHandler['logger'];
@@ -27,9 +27,10 @@ export class GuildComponent {
 		this.error = guildHandler.error;
 	}
 
-	get bot() { return this.guildHandler['bot']; }
-	get guild() { return this.guildHandler['guild']; }
+	get bot() { return this.guildHandler.bot; }
+	get guild() { return this.guildHandler.guild; }
 	get data() { return this.guildHandler.data; }
 	get ui() { return this.guildHandler.ui; }
-	get queue() { return this.guildHandler['queue']; }
+	get queue() { return this.guildHandler.queue; }
+	get vcPlayer() { return this.guildHandler.vcPlayer; }
 }

@@ -7,7 +7,7 @@ import 'winston-daily-rotate-file';
  * @param logDir - directory to save logs
  * @return winston logger object
  */
-export function newLogger(logDir: string): winston.Logger {
+export default function newLogger(logDir: string): winston.Logger {
 	const logLevels = {
 		error: 0,
 		warn: 1,

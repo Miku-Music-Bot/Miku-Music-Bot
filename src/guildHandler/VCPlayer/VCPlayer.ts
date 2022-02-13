@@ -1,20 +1,22 @@
 import * as Voice from '@discordjs/voice';
 import type * as Discord from 'discord.js';
 
-import { GuildComponent } from '../GuildComponent';
-import { Song } from './Song';
-import type { GuildHandler } from '../GuildHandler';
-import { YTSource } from './sources/YTSource';
-import { AudioProcessor } from './AudioProcessor';
-import { AudioSettings } from './AudioSettings';
-import type { AudioSource } from './sources/AudioSource';
+import GuildComponent from '../GuildComponent';
+import Song from './Song';
+import type GuildHandler from '../GuildHandler';
+import AudioProcessor from './AudioProcessor';
+import AudioSettings from './AudioSettings';
+import type AudioSource from './sources/AudioSource';
+
+
+import YTSource from './sources/YTSource'; //<<<<<<<<<<<<<<<<<<<For testing
 
 /**
  * VCPlayer
  *
  * Handles joining and playing a stream in a voice channel
  */
-export class VCPlayer extends GuildComponent {
+export default class VCPlayer extends GuildComponent {
 	voiceConnection: Voice.VoiceConnection;
 	audioPlayer: Voice.AudioPlayer;
 	subscription: Voice.PlayerSubscription;
@@ -68,6 +70,11 @@ export class VCPlayer extends GuildComponent {
 			}
 		});
 
+		this.voiceConnection.on('error', (error) => {
+			this.error(`{error; ${error}} on voice connection to {channelId: ${channelId}}`);
+			this.leave();
+		});
+
 		return Voice.entersState(this.voiceConnection, Voice.VoiceConnectionStatus.Ready, 5000);
 	}
 
@@ -99,7 +106,7 @@ export class VCPlayer extends GuildComponent {
 			this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
 
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<for testing
-			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
+			const source = new YTSource(this.guildHandler, { url: 'https://www.youtube.com/watch?v=zREufEpj0zM', live: false, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 			this.play(source);
 			//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -193,6 +200,16 @@ export class VCPlayer extends GuildComponent {
 	}
 
 	/**
+	 * pauseAudioPlayer()
+	 * 
+	 * Only pauses audio player, used while changing audio settings and waiting for ffmpeg to start
+	 */
+	pauseAudioPlayer() {
+		if (!this.currentSource || !this.audioPlayer) return;
+		this.audioPlayer.pause();
+	}
+
+	/**
 	 * play()
 	 * 
 	 * Plays from given stream to voice channel if connected
@@ -208,18 +225,30 @@ export class VCPlayer extends GuildComponent {
 
 		// create new audio processor
 		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: true }));
+		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: false }));
 
 		// create audio player for this song
 		if (this.subscription) { this.subscription.unsubscribe(); }
 		this.audioPlayer = Voice.createAudioPlayer();
 		this.subscription = this.voiceConnection.subscribe(this.audioPlayer);
+		this.audioPlayer.on('error', (error) => {
+			this.error(`{error: ${error}} on audioPlayer while playing song with {url: ${this.currentSource.song.url}}`);
+			this.finishedSong();
+		});
 
-		// catch error event
+		// catch error events
 		this.currentSource.events.on('error', (error) => {
 			const errorId = this.ui.sendError(
 				`There was an error playing song: ${this.currentSource.song.title}\n
-				The following might give a hint as to why:\n\`\`\`${error}\`\`\``
+				The following might tell you why:\n\`\`\`${error}\`\`\``
+			);
+			this.error(`Error while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
+			this.finishedSong();
+		});
+		this.currentAudioProcessor.events.on('error', (error) => {
+			const errorId = this.ui.sendError(
+				`There was an error playing song: ${this.currentSource.song.title}\n
+				The following might tell you why:\n\`\`\`${error}\`\`\``
 			);
 			this.error(`Error while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
 			this.finishedSong();
@@ -228,22 +257,26 @@ export class VCPlayer extends GuildComponent {
 		try {
 			// create and play the resource
 			const pcmStream = await this.currentSource.getStream();
-			const opusStream = this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
+			const opusStream = await this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
 			const resource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
 			this.audioPlayer.play(resource);
 
 			// catch finished stream event
 			opusStream.on('end', () => {
-				this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
-				this.finishedSong();
 				clearInterval(this._finishedSongCheck);
-			});
-			this._finishedSongCheck = setInterval(() => {
-				if (resource.ended) {
+				try {
 					this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
 					this.finishedSong();
-					clearInterval(this._finishedSongCheck);
-				}
+				} catch {/* */ }
+			});
+			this._finishedSongCheck = setInterval(() => {
+				if (!resource.ended) return;
+
+				clearInterval(this._finishedSongCheck);
+				try {
+					this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);
+					this.finishedSong();
+				} catch {/* */ }
 			}, 100);
 		}
 		catch { /* */ }

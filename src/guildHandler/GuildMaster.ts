@@ -1,11 +1,11 @@
-import { GuildHandler } from './GuildHandler';
+import GuildHandler from './GuildHandler';
 
 /**
  * BotMaster
  *
  * Handles adding, getting, and removing guild handlers
  */
-export class BotMaster {
+export default class BotMaster {
 	private _guildList: { [key: string]: GuildHandler };		// stores all guilds
 
 	constructor() {

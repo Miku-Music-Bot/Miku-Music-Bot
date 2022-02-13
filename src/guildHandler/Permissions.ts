@@ -1,13 +1,14 @@
 import type * as Discord from 'discord.js';
-import { GuildComponent } from './GuildComponent.js';
-import type { GuildHandler } from './GuildHandler.js';
+
+import GuildComponent from './GuildComponent.js';
+import type GuildHandler from './GuildHandler.js';
 
 /**
  * CommandPermissions
  *
  * Checks if user has permission to use a certain command
  */
-export class CommandPermissions extends GuildComponent {
+export default class CommandPermissions extends GuildComponent {
 	private _permissions: { [key: string]: Array<string> };
 
 	/**

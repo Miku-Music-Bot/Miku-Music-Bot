@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as express from 'express';
 
-import type { BotMaster } from '../guildHandler/GuildMaster';
+import type BotMaster from '../guildHandler/GuildMaster';
 
 const PORT = process.env.PORT || 8080;
 
@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 8080;
  * @param botMaster - bot master object
  * @return promise that resolves once web server is ready
  */
-export function startWebServer (botMaster: BotMaster): Promise<void> {
+export default function startWebServer (botMaster: BotMaster): Promise<void> {
 	botMaster;					// delete this later plz <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 	const app = express();

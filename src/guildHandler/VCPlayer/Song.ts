@@ -1,7 +1,7 @@
 
 
-import { GuildComponent } from '../GuildComponent.js';
-import type { GuildHandler } from '../GuildHandler.js';
+import GuildComponent from '../GuildComponent.js';
+import type GuildHandler from '../GuildHandler.js';
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 
@@ -10,7 +10,7 @@ const BOT_DOMAIN = process.env.BOT_DOMAIN;
  *
  * Represents a song
  */
-export class Song extends GuildComponent {
+export default class Song extends GuildComponent {
 	title: string;
 	duration: number;
 	artist: string;

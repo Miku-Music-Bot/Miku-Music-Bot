@@ -1,7 +1,7 @@
 import * as Discord from 'discord.js';
 
-import { GuildComponent } from './GuildComponent';
-import type { GuildHandler } from './GuildHandler';
+import GuildComponent from './GuildComponent';
+import type GuildHandler from './GuildHandler';
 
 /* eslint-disable */
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
@@ -21,7 +21,7 @@ const GD_BLUE = '#4688F4';
  *
  * Handles creating and refreshing the user interface of the bot in discord
  */
-export class UI extends GuildComponent {
+export default class UI extends GuildComponent {
 	/**
 	 * @param guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */

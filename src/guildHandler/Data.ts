@@ -1,7 +1,7 @@
 import * as mongoDb from 'mongodb';
 
-import { GuildComponent } from './GuildComponent.js';
-import type { GuildHandler } from './GuildHandler.js';
+import GuildComponent from './GuildComponent.js';
+import type GuildHandler from './GuildHandler.js';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -13,7 +13,7 @@ const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guil
  * Abstracts away database connection
  * Handles getting and setting guild settings
  */
-export class GuildData extends GuildComponent {
+export default class GuildData extends GuildComponent {
 	guildId: string;
 	collection: mongoDb.Collection;
 	configured: boolean;

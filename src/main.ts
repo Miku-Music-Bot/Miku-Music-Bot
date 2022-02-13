@@ -14,8 +14,8 @@ import * as Discord from 'discord.js';
 import * as dotenv from 'dotenv';	// grab env variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import { BotMaster } from './guildHandler/GuildMaster';
-import { startWebServer } from './webPanel/webPanel';
+import BotMaster from './guildHandler/GuildMaster';
+import startWebServer from './webPanel/webPanel';
 
 const botMaster = new BotMaster();
 

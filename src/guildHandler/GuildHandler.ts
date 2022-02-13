@@ -2,12 +2,12 @@ import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
 
-import { UI } from './UI';
-import { GuildData } from './Data';
-import { CommandPermissions } from './Permissions';
-import { VCPlayer } from './VCPlayer/VCPlayer';
-import { Queue } from './VCPlayer/Queue';
-import { newLogger } from './Logger';
+import UI from './UI';
+import GuildData from './Data';
+import CommandPermissions from './Permissions';
+import VCPlayer from './VCPlayer/VCPlayer';
+import Queue from './VCPlayer/Queue';
+import newLogger from './Logger';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
@@ -16,7 +16,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
  *
  * Handles all bot functions for a specific guild
  */
-export class GuildHandler {
+export default class GuildHandler {
 	logger: winston.Logger;
 	debug: (msg: string) => void;
 	info: (msg: string) => void;
