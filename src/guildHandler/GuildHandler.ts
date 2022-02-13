@@ -7,6 +7,7 @@ import GuildData from './Data';
 import CommandPermissions from './Permissions';
 import VCPlayer from './VCPlayer/VCPlayer';
 import Queue from './VCPlayer/Queue';
+import AudioSettings from './VCPlayer/AudioSettings';
 import newLogger from './Logger';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -32,6 +33,7 @@ export default class GuildHandler {
 	vcPlayer: VCPlayer;
 	queue: Queue;
 	permissions: CommandPermissions;
+	audioSettings: AudioSettings;
 
 	/**
 	 * Creates data object and once data is ready, calls startbot
@@ -64,6 +66,7 @@ export default class GuildHandler {
 			this.vcPlayer = new VCPlayer(this);
 			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
+			this.audioSettings = new AudioSettings(this);
 
 			// bot is now ready
 			this._ready = true;
@@ -109,13 +112,13 @@ export default class GuildHandler {
 				case ('set-channel'): {
 					if (prefix) {
 						// set the channel, send ui, then notify user
-						this.data.setChannel(message.channelId);
+						this.data.channelId = message.channelId;
 
 						this.ui.sendUI();
 
 						if (!this.data.configured) {
 							this.ui.sendNotification(`<@${message.author.id}> This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.`);
-							this.data.setConfigured(true);
+							this.data.configured = true;
 						}
 					} else if (message.channelId === this.data.channelId) {
 						this.ui.sendNotification(`<@${message.author.id}> Miku already lives here!`);

@@ -4,10 +4,10 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { EventEmitter } from 'events';
 
-import type AudioSettings from './AudioSettings';
-import type GuildHandler from '../GuildHandler';
-import GuildComponent from '../GuildComponent';
-import type AudioSource from './sources/AudioSource';
+import type AudioSettings from '../AudioSettings';
+import type GuildHandler from '../../GuildHandler';
+import GuildComponent from '../../GuildComponent';
+import type AudioSource from './AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
@@ -76,7 +76,7 @@ export default class AudioProcessor extends GuildComponent {
 			.on('error', (error) => {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
 
-				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this._audioSettings)}}`);
+				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this._audioSettings, null, 4)}}`);
 				this.events.emit('error', 'Error while applying audio effects');
 			});
 
@@ -125,7 +125,7 @@ export default class AudioProcessor extends GuildComponent {
 		this._audioConverter.pipe(this._opusPassthrough);
 
 		// if new audioSettings are applied restart ffmpeg
-		this._audioSettings.on('newSettings', () => {
+		this._audioSettings.events.on('newSettings', () => {
 			this.debug('New audio settings, restarting ffmpeg...');
 			this.newFFmpeg();
 		});
@@ -149,6 +149,5 @@ export default class AudioProcessor extends GuildComponent {
 		this.events.removeAllListeners();
 		this._source = null;
 		this._audioSettings = null;
-		this.events = null;
 	}
 }

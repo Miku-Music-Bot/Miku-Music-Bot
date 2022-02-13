@@ -4,8 +4,6 @@ import type * as Discord from 'discord.js';
 import GuildComponent from '../GuildComponent';
 import Song from './Song';
 import type GuildHandler from '../GuildHandler';
-import AudioProcessor from './AudioProcessor';
-import AudioSettings from './AudioSettings';
 import type AudioSource from './sources/AudioSource';
 
 
@@ -20,7 +18,6 @@ export default class VCPlayer extends GuildComponent {
 	voiceConnection: Voice.VoiceConnection;
 	audioPlayer: Voice.AudioPlayer;
 	subscription: Voice.PlayerSubscription;
-	currentAudioProcessor: AudioProcessor;
 	currentSource: AudioSource;
 	_finishedSongCheck: NodeJS.Timer;
 	playing: boolean;
@@ -131,8 +128,6 @@ export default class VCPlayer extends GuildComponent {
 			this.paused = false;
 			if (this.currentSource) { this.currentSource.destroy(); }
 			this.currentSource = null;
-			if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-			this.currentAudioProcessor = null;
 			if (this.audioPlayer) { this.audioPlayer.stop(); }
 			this.audioPlayer = null;
 			if (this.subscription) { this.subscription.unsubscribe(); }
@@ -189,8 +184,6 @@ export default class VCPlayer extends GuildComponent {
 		this.paused = false;
 		if (this.currentSource) { this.currentSource.destroy(); }
 		this.currentSource = null;
-		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = null;
 		if (this.audioPlayer) { this.audioPlayer.stop(); }
 		this.audioPlayer = null;
 		if (this.subscription) { this.subscription.unsubscribe(); }
@@ -223,10 +216,6 @@ export default class VCPlayer extends GuildComponent {
 		if (this.currentSource) { this.currentSource.destroy(); }
 		this.currentSource = source;
 
-		// create new audio processor
-		if (this.currentAudioProcessor) { this.currentAudioProcessor.destroy(); }
-		this.currentAudioProcessor = new AudioProcessor(this.guildHandler, new AudioSettings({ nightcore: false }));
-
 		// create audio player for this song
 		if (this.subscription) { this.subscription.unsubscribe(); }
 		this.audioPlayer = Voice.createAudioPlayer();
@@ -245,24 +234,15 @@ export default class VCPlayer extends GuildComponent {
 			this.error(`Error while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
 			this.finishedSong();
 		});
-		this.currentAudioProcessor.events.on('error', (error) => {
-			const errorId = this.ui.sendError(
-				`There was an error playing song: ${this.currentSource.song.title}\n
-				The following might tell you why:\n\`\`\`${error}\`\`\``
-			);
-			this.error(`Error while playing song with {url: ${this.currentSource.song.url}}. {errorId: ${errorId}}`);
-			this.finishedSong();
-		});
 
 		try {
 			// create and play the resource
-			const pcmStream = await this.currentSource.getStream();
-			const opusStream = await this.currentAudioProcessor.processStream(pcmStream, this.currentSource);
-			const resource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
+			const stream = await this.currentSource.getStream();
+			const resource = Voice.createAudioResource(stream, { inputType: Voice.StreamType.OggOpus });
 			this.audioPlayer.play(resource);
 
 			// catch finished stream event
-			opusStream.on('end', () => {
+			stream.on('end', () => {
 				clearInterval(this._finishedSongCheck);
 				try {
 					this.debug(`Finished playing song with {url: ${this.currentSource.song.url}}`);

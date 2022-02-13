@@ -3,6 +3,10 @@ import type * as Discord from 'discord.js';
 import GuildComponent from './GuildComponent.js';
 import type GuildHandler from './GuildHandler.js';
 
+// default command permissionss
+const defaultEveryone = ['join', 'play', 'pause', 'resume', 'stop'];
+const defaultAdmin = ['set-channel'];
+
 /**
  * CommandPermissions
  *
@@ -19,8 +23,6 @@ export default class CommandPermissions extends GuildComponent {
 		this._permissions = {};
 
 		// if the database didn't have permissions saved, set to defaults
-		const defaultEveryone = ['join', 'play', 'pause', 'resume', 'stop'];
-		const defaultAdmin = ['set-channel'];
 		if (Object.keys(this.data.permissions).length < defaultEveryone.length + defaultAdmin.length) {
 			this.info('Guild permissions have not been set, setting defaults.');
 
@@ -37,7 +39,8 @@ export default class CommandPermissions extends GuildComponent {
 			// create default permissions for admins
 			for (let i = 0; i < defaultAdmin.length; i++) { this._permissions[defaultAdmin[i]] = []; }
 		}
-		this._permissions = JSON.parse(JSON.stringify(this.data.permissions));
+
+		this._permissions = Object.assign(this._permissions, this.data.permissions);
 	}
 
 	/**
@@ -52,7 +55,7 @@ export default class CommandPermissions extends GuildComponent {
 		this._permissions[command].push(roleId);
 
 		// save to database
-		this.data.setPermissions(this._permissions);
+		this.data.permissions = this._permissions;
 		this.info(`Added permission for {roleId: ${roleId}} for {command: ${command}}`);
 	}
 
@@ -69,7 +72,7 @@ export default class CommandPermissions extends GuildComponent {
 		if (location !== -1) {
 			// if found, remove it and save to database
 			this._permissions[command].splice(location, 1);
-			this.data.setPermissions(this._permissions);
+			this.data.permissions = this._permissions;
 			this.info(`Removed permission for {roleId: ${roleId}} for {command: ${command}}`);
 		}
 	}
@@ -114,7 +117,7 @@ export default class CommandPermissions extends GuildComponent {
 			this.ui.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
 			return false;
 		} catch (error) {
-			const errorId = this.ui.sendError(`<@${message.author.id}> Sorry! There was an error while joining voice channel.`, true);
+			const errorId = this.ui.sendError(`<@${message.author.id}> Sorry! There was an error while checking permissions for your command.`, true);
 			this.error(`{error: ${error}} while checking permissions for {messageId: ${message.id}}. {errorId: ${errorId}}`);
 			return false;
 		}
