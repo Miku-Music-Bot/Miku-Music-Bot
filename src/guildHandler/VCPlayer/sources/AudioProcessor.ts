@@ -4,7 +4,6 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { EventEmitter } from 'events';
 
-import type AudioSettings from '../AudioSettings';
 import type GuildHandler from '../../GuildHandler';
 import GuildComponent from '../../GuildComponent';
 import type AudioSource from './AudioSource';
@@ -19,7 +18,6 @@ ffmpeg.setFfmpegPath(ffmpegPath.path);
  */
 export default class AudioProcessor extends GuildComponent {
 	events: EventEmitter;
-	private _audioSettings: AudioSettings;
 	private _source: AudioSource;
 
 	private _shouldEnd: boolean;
@@ -33,10 +31,9 @@ export default class AudioProcessor extends GuildComponent {
 	 * @param guildHandler - guildHandler object
 	 * @param audioSettings - settings that the audio processor should start with
 	 */
-	constructor(guildHandler: GuildHandler, audioSettings: AudioSettings) {
+	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);
 		this.events = new EventEmitter();
-		this._audioSettings = audioSettings;
 		this._shouldEnd = true;
 		this.events.on('error', () => { this.destroy(); });
 	}
@@ -55,7 +52,7 @@ export default class AudioProcessor extends GuildComponent {
 		// change bitrate in case of nightcore setting
 		let bitrate = 48000;
 		this._source.setChunkTiming(100);
-		if (this._audioSettings.nightcore && !this._source.song.live) {
+		if (this.audioSettings.nightcore && !this._source.song.live) {
 			bitrate = 64000;
 			this._source.setChunkTiming(75);
 		}
@@ -76,7 +73,7 @@ export default class AudioProcessor extends GuildComponent {
 			.on('error', (error) => {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
 
-				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this._audioSettings, null, 4)}}`);
+				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this.audioSettings, null, 4)}}`);
 				this.events.emit('error', 'Error while applying audio effects');
 			});
 
@@ -84,6 +81,7 @@ export default class AudioProcessor extends GuildComponent {
 			.once('data', () => {
 				if (!this.vcPlayer.paused) { this.vcPlayer.resume(); }
 				else { this._source.pause(); }
+				this._shouldEnd = true;
 			})
 			.on('data', (data) => { this._audioConverterInput.write(data); })
 			.on('end', () => {
@@ -99,7 +97,7 @@ export default class AudioProcessor extends GuildComponent {
 	 * @param source - AudioSource for where the stream is coming from
 	 * @returns Passthrough stream of processed opus data
 	 */
-	async processStream(pcmPassthrough: PassThrough, source: AudioSource) {
+	processStream(pcmPassthrough: PassThrough, source: AudioSource) {
 		this._source = source;
 		this._audioFilterInput = new PassThrough();
 		this._audioConverterInput = new PassThrough();
@@ -125,7 +123,7 @@ export default class AudioProcessor extends GuildComponent {
 		this._audioConverter.pipe(this._opusPassthrough);
 
 		// if new audioSettings are applied restart ffmpeg
-		this._audioSettings.events.on('newSettings', () => {
+		this.audioSettings.events.on('newSettings', () => {
 			this.debug('New audio settings, restarting ffmpeg...');
 			this.newFFmpeg();
 		});
@@ -148,6 +146,5 @@ export default class AudioProcessor extends GuildComponent {
 		this._opusPassthrough.end();
 		this.events.removeAllListeners();
 		this._source = null;
-		this._audioSettings = null;
 	}
 }

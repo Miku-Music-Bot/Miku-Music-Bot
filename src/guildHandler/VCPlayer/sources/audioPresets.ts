@@ -2,7 +2,7 @@ type eqPreset = {
 	name: string,
 	eq: [
 		{
-			// do this later
+			//
 		}
 	]
 };
@@ -12,6 +12,13 @@ const defaultSettings = {
 	volume: 1,
 	normalize: true,
 	nightcore: false
+};
+
+const eqDefault: eqPreset = {
+	name: 'Default Eq',
+	eq: [
+		{}
+	]
 };
 
 const bassBoost: eqPreset = {
@@ -25,6 +32,7 @@ const presets = {
 	default: defaultSettings,
 
 	eqPresets: {
+		eqDefault: eqDefault,
 		bassBoost: bassBoost
 	}
 };

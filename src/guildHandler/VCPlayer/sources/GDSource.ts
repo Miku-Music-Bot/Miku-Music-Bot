@@ -10,7 +10,7 @@ import type GuildHandler from '../../GuildHandler';
 export class GDSource extends GuildComponent implements AudioSource {
 	song: Song;
 	events: EventEmitter;
-	playDuration: number;
+	destroyed: boolean;
 
 	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);

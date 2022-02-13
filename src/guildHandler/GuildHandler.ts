@@ -12,6 +12,8 @@ import newLogger from './Logger';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
+import YTSource from './VCPlayer/sources/YTSource';
+import Song from './VCPlayer/Song';
 /**
  * GuildHander
  *
@@ -35,6 +37,8 @@ export default class GuildHandler {
 	permissions: CommandPermissions;
 	audioSettings: AudioSettings;
 
+
+	source: YTSource;
 	/**
 	 * Creates data object and once data is ready, calls startbot
 	 * @param id - discord guild id for GuildHander to be responsible for
@@ -68,6 +72,11 @@ export default class GuildHandler {
 			this.permissions = new CommandPermissions(this);
 			this.audioSettings = new AudioSettings(this);
 
+
+
+
+			this.source = new YTSource(this, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
+			this.source.bufferStream();
 			// bot is now ready
 			this._ready = true;
 			this.info('Logged into discord, guild handler is ready!');
@@ -145,6 +154,7 @@ export default class GuildHandler {
 					}
 
 					// should start playing from autoplay
+					this.vcPlayer.play(this.source);
 					break;
 				}
 				case ('pause'): {

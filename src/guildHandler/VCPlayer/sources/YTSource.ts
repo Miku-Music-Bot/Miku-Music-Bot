@@ -31,7 +31,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _errorMsg: string;
 
 	private _paused: boolean;
-	private _destroyed: boolean;
+	destroyed: boolean;
 
 	private _bufferingTimeout: NodeJS.Timeout;
 	private _buffering: boolean;
@@ -66,7 +66,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._errorMsg = '';							// user friendly msg for why error occured
 
 		this._paused = false;						// paused or not
-		this._destroyed = false;					// cleaned up or not
+		this.destroyed = false;					// cleaned up or not
 
 		this._buffering = false;					// currently getting stream or not, to prevent 2 bufferStream() functions from running at the same time
 		this._finishedBuffering = false;			// whether or not song has finished downloading
@@ -95,7 +95,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * bufferToChunks()
+	 * _bufferToChunks()
 	 * 
 	 * Splits a buffer into an array of chucks of a given size
 	 * @param buffer - buffer to split
@@ -112,7 +112,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * bufferVideo()
+	 * _bufferVideo()
 	 * 
 	 * Handles downloading a normal (non live) video, emits fatalEvent if something terrible happens, calls bufferStream(attempts) if recoverable 
 	 * @param attempts - attempt number
@@ -240,7 +240,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * bufferLive()
+	 * _bufferLive()
 	 * 
 	 * Handles downloading a live video, calls bufferStream(attempts) if recoverable 
 	 * @param attempts - attempt number
@@ -345,7 +345,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	bufferStream(attempts?: number) {
 		if (!attempts) { attempts = 0; }
 
-		if (this._destroyed) return;
+		if (this.destroyed) return;
 		if (this._buffering) return;			// avoid starting 2 bufferStream functions at the same time
 
 		if (attempts > 5) {						// stop trying after 5 attempts to get buffer
@@ -422,7 +422,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * writeChunkIn()
+	 * _writeChunkIn()
 	 * 
 	 * Recursive function ONLY CALL THIS EXTERNALLY ONCE
 	 * Calculates delay until nextChunkTime to ensure chunks are writeen as close to the required time as possible
@@ -516,8 +516,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * Ends streams, kills ffmpeg processes, and removes temp directory
 	 */
 	async destroy() {
-		if (this._destroyed) return;
-		this._destroyed = true;
+		if (this.destroyed) return;
+		this.destroyed = true;
 
 		if (this._ytdlSource) { this._ytdlSource.destroy(); }
 		if (this._audioConverter) { this._audioConverter.kill('SIGINT'); }

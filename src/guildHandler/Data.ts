@@ -2,7 +2,8 @@ import * as mongoDb from 'mongodb';
 
 import GuildComponent from './GuildComponent';
 import type GuildHandler from './GuildHandler';
-import type { AudioSettingsConfig } from './VCPlayer/AudioSettings';
+import type { PermissionsConfig } from './Permissions';
+import type { AudioConfig } from './VCPlayer/AudioSettings';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -10,12 +11,12 @@ const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guil
 
 // type for guild data
 type guildDataConfig = {
-	configured: boolean,
-	channelId: string,
-	prefix: string,
-	playlists: Array<string>,
-	permissions: { [key: string]: Array<string> },
-	audioSettings: AudioSettingsConfig
+	configured?: boolean,
+	channelId?: string,
+	prefix?: string,
+	playlists?: Array<string>,
+	permissions?: { [key: string]: Array<string> },
+	audioSettings?: AudioConfig
 }
 
 // defualt settings for guilds
@@ -82,8 +83,9 @@ export default class GuildData extends GuildComponent {
 			const foundGuild = await this.collection.findOne({ guildId: this.guildId });
 
 			// assume default settings
+			this._guildData = {};
 			Object.assign(this._guildData, DEFAULTCONFIG);
-			
+
 			// if guild data exists in database, set variables based on it 
 			if (foundGuild) { Object.assign(this._guildData, foundGuild); }
 			// if guild is not found in database, save defaults to database
@@ -124,9 +126,9 @@ export default class GuildData extends GuildComponent {
 	get playlists() { return this._guildData.playlists; }
 	set playlists(playlists: Array<string>) { this._guildData.playlists = playlists; this._saveData(); }
 
-	get permissions() { return this._guildData.permissions; }
-	set permissions(permissions: { [key: string]: Array<string> }) { this._guildData.permissions = permissions; this._saveData(); }
+	get permissionsConfig() { return this._guildData.permissions; }
+	set permissionsConfig(permissions: PermissionsConfig) { this._guildData.permissions = permissions; this._saveData(); }
 
-	get audioSettings() { return this._guildData.audioSettings; }
-	set audioSettings(audioSettings: AudioSettingsConfig) { this._guildData.audioSettings = audioSettings; this._saveData(); }
+	get audioConfig() { return this._guildData.audioSettings; }
+	set audioConfig(audioSettings: AudioConfig) { this._guildData.audioSettings = audioSettings; this._saveData(); }
 }

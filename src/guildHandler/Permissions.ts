@@ -7,13 +7,18 @@ import type GuildHandler from './GuildHandler.js';
 const defaultEveryone = ['join', 'play', 'pause', 'resume', 'stop'];
 const defaultAdmin = ['set-channel'];
 
+// type for permissions config
+export type PermissionsConfig = {
+	[key: string]: Array<string>;
+};
+
 /**
  * CommandPermissions
  *
  * Checks if user has permission to use a certain command
  */
 export default class CommandPermissions extends GuildComponent {
-	private _permissions: { [key: string]: Array<string> };
+	private _permissions: PermissionsConfig;
 
 	/**
 	 * @param guildHandler - guild handler for guild this permissions object is responsible for
@@ -23,7 +28,7 @@ export default class CommandPermissions extends GuildComponent {
 		this._permissions = {};
 
 		// if the database didn't have permissions saved, set to defaults
-		if (Object.keys(this.data.permissions).length < defaultEveryone.length + defaultAdmin.length) {
+		if (Object.keys(this.data.permissionsConfig).length < defaultEveryone.length + defaultAdmin.length) {
 			this.info('Guild permissions have not been set, setting defaults.');
 
 			// find @everyone role id
@@ -40,7 +45,7 @@ export default class CommandPermissions extends GuildComponent {
 			for (let i = 0; i < defaultAdmin.length; i++) { this._permissions[defaultAdmin[i]] = []; }
 		}
 
-		this._permissions = Object.assign(this._permissions, this.data.permissions);
+		this._permissions = Object.assign(this._permissions, this.data.permissionsConfig);
 	}
 
 	/**
@@ -55,7 +60,7 @@ export default class CommandPermissions extends GuildComponent {
 		this._permissions[command].push(roleId);
 
 		// save to database
-		this.data.permissions = this._permissions;
+		this.data.permissionsConfig = this._permissions;
 		this.info(`Added permission for {roleId: ${roleId}} for {command: ${command}}`);
 	}
 
@@ -72,7 +77,7 @@ export default class CommandPermissions extends GuildComponent {
 		if (location !== -1) {
 			// if found, remove it and save to database
 			this._permissions[command].splice(location, 1);
-			this.data.permissions = this._permissions;
+			this.data.permissionsConfig = this._permissions;
 			this.info(`Removed permission for {roleId: ${roleId}} for {command: ${command}}`);
 		}
 	}
