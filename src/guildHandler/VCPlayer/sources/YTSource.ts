@@ -8,6 +8,7 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 
 import AudioSource from './AudioSource';
+import AudioProcessor from './AudioProcessor';
 import GuildComponent from '../../GuildComponent';
 import type Song from '../Song';
 import type GuildHandler from '../../GuildHandler';
@@ -41,6 +42,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _ytdlSource: Readable;
 	private _audioConverter: ffmpeg.FfmpegCommand;
 	private _convertedStream: PassThrough;
+	private _audioProcessor: AudioProcessor;
 
 	private _chunkCount: number;
 	private _tempLocation: string;
@@ -333,7 +335,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this.error(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
 
 				// add 3 sec of silence on if there is an error
-				this._chunkBuffer.push(...this._bufferToChunks(Buffer.alloc(57600));
+				this._chunkBuffer.push(...this._bufferToChunks(Buffer.alloc(57600)));
 				this._finishedReading = false;
 				this._buffering = false;
 				this.bufferStream(attempts);
@@ -474,7 +476,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	/**
 	 * getStream()
 	 * 
-	 * @returns Passthrough stream with s16le encoded raw pcm data with 2 audio channels and frequency of 48000Hz
+	 * ONLY CALL THIS ONCE
+	 * @returns Passthrough stream with opus data for discord
 	 */
 	async getStream() {
 		try {
@@ -488,7 +491,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		}
 		catch { /* nothing needs to happen */ }
 
-		return this._pcmPassthrough;
+
+		this._audioProcessor = new AudioProcessor(this.guildHandler);
+		this._audioProcessor.on('error', (msg) => {
+			this._errorMsg += msg;
+			this.events.emit('error', this._errorMsg);
+		});
+
+		return this._audioProcessor.processStream(this._pcmPassthrough);
 	}
 
 	/**
@@ -510,9 +520,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * 
 	 * @returns number of seconds played
 	 */
-	getPlayedDuration() {
-		return this._secPlayed;
-	}
+	getPlayedDuration() { return this._secPlayed; }
 
 	/**
 	 * destroy()
@@ -526,9 +534,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		if (this._ytdlSource) { this._ytdlSource.destroy(); }
 		if (this._audioConverter) { this._audioConverter.kill('SIGINT'); }
 		if (this._convertedStream) { this._convertedStream.removeAllListeners(); }
+		if (this._audioProcessor) { this._audioProcessor.destroy(); }
 		this._ytdlSource = null;
 		this._audioConverter = null;
 		this._convertedStream = null;
+		this._audioProcessor = null;
 
 		clearTimeout(this._liveTimeout);
 		clearInterval(this._audioWriter);
