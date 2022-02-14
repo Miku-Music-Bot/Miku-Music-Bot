@@ -4,7 +4,6 @@ import type * as Discord from 'discord.js';
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../GuildHandler';
 import type AudioSource from './sources/AudioSource';
-import AudioProcessor from './sources/AudioProcessor';
 
 /**
  * VCPlayer
@@ -15,7 +14,6 @@ export default class VCPlayer extends GuildComponent {
 	private _voiceConnection: Voice.VoiceConnection;
 	private _audioPlayer: Voice.AudioPlayer;
 	private _subscription: Voice.PlayerSubscription;
-	private _audioProcessor: AudioProcessor;
 	private _currentSource: AudioSource;
 	private _finishedSongCheck: NodeJS.Timer;
 	private _connected: boolean;
@@ -124,8 +122,6 @@ export default class VCPlayer extends GuildComponent {
 			this.paused = false;
 			if (this._currentSource) { this._currentSource.destroy(); }
 			this._currentSource = null;
-			if (this._audioProcessor) { this._audioProcessor.destroy(); }
-			this._audioProcessor = null;
 			if (this._audioPlayer) { this._audioPlayer.stop(); }
 			this._audioPlayer = null;
 			if (this._subscription) { this._subscription.unsubscribe(); }
@@ -182,8 +178,6 @@ export default class VCPlayer extends GuildComponent {
 		this.paused = false;
 		if (this._currentSource) { this._currentSource.destroy(); }
 		this._currentSource = null;
-		if (this._audioProcessor) { this._audioProcessor.destroy(); }
-		this._audioProcessor = null;
 		if (this._audioPlayer) { this._audioPlayer.stop(); }
 		this._audioPlayer = null;
 		if (this._subscription) { this._subscription.unsubscribe(); }
@@ -227,9 +221,6 @@ export default class VCPlayer extends GuildComponent {
 			this.finishedSong();
 		});
 
-		if (this._audioProcessor) { this._audioProcessor.destroy(); }
-		this._audioProcessor = new AudioProcessor(this.guildHandler);
-
 		// catch error events
 		this._currentSource.events.on('error', (error) => {
 			const errorId = this.ui.sendError(
@@ -242,8 +233,7 @@ export default class VCPlayer extends GuildComponent {
 
 		try {
 			// create and play the resource
-			const pcmStream = await this._currentSource.getStream();
-			const opusStream = this._audioProcessor.processStream(pcmStream, this._currentSource);
+			const opusStream = await this._currentSource.getStream();
 			const resource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
 			this._audioPlayer.play(resource);
 
