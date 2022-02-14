@@ -536,17 +536,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		if (this._audioConverter) { this._audioConverter.kill('SIGINT'); }
 		if (this._convertedStream) { this._convertedStream.removeAllListeners(); }
 		if (this._audioProcessor) { this._audioProcessor.destroy(); }
-		this._ytdlSource = null;
-		this._audioConverter = null;
-		this._convertedStream = null;
-		this._audioProcessor = null;
 
 		clearTimeout(this._liveTimeout);
 		clearInterval(this._audioWriter);
 		this._pcmPassthrough.end();
 
-		this._pcmPassthrough = null;
-		this._chunkBuffer = null;
 		this.events.removeAllListeners();
 
 		try { await fs.promises.rm(this._tempLocation, { recursive: true }); } catch { /* */ }
