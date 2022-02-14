@@ -65,7 +65,7 @@ export default class VCPlayer extends GuildComponent {
 		});
 
 		this._voiceConnection.on('error', (error) => {
-			this.error(`{error; ${error}} on voice connection to {channelId: ${channelId}}`);
+			this.error(`{error: ${error}} on voice connection to {channelId: ${channelId}}`);
 			this.leave();
 		});
 
