@@ -335,7 +335,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this.error(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
 
 				// add 3 sec of silence on if there is an error
-				this._chunkBuffer.push(...this._bufferToChunks(Buffer.alloc(57600)));
+				this._chunkBuffer.push(...this._bufferToChunks(Buffer.alloc(57600), 19200));
 				this._finishedReading = false;
 				this._buffering = false;
 				this.bufferStream(attempts);
@@ -493,12 +493,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 
 		this._audioProcessor = new AudioProcessor(this.guildHandler);
-		this._audioProcessor.on('error', (msg) => {
+		this._audioProcessor.events.on('error', (msg) => {
 			this._errorMsg += msg;
 			this.events.emit('error', this._errorMsg);
 		});
 
-		return this._audioProcessor.processStream(this._pcmPassthrough);
+		const opusPassthrough = this._audioProcessor.processStream(this._pcmPassthrough, this);
+		return opusPassthrough;
 	}
 
 	/**
