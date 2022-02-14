@@ -288,6 +288,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
 				this.error(`Ffmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
 
+				this._finishedReading = false;
 				this._buffering = false;
 				this.bufferStream(attempts);
 			});
@@ -331,6 +332,9 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
 				this.error(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
 
+				// add 3 sec of silence on if there is an error
+				this._chunkBuffer.push(...this._bufferToChunks(Buffer.alloc(57600));
+				this._finishedReading = false;
 				this._buffering = false;
 				this.bufferStream(attempts);
 			});
