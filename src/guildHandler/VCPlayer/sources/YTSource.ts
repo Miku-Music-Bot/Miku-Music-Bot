@@ -306,7 +306,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			currentBuffer = currentBuffer.slice(19200);
 
 			this._chunkBuffer.push(add);
-			this.events.emit('bufferReady');
+			if (this._chunkBuffer.length > 100) { this.events.emit('bufferReady'); }
 			attempts = 0;
 		};
 
@@ -450,8 +450,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._secPlayed = Math.floor(this._smallChunkNum / 10);
 
 				if (this._chunkBuffer.length > 300 && live) {
-					this.debug('Stream is now 30 sec behind, clearing chunk buffer to catch up');
-					this._chunkBuffer = [];
+					this.info('Stream is now 30 sec behind, catching up');
+					this._chunkBuffer = this._chunkBuffer.slice(250);
 				}
 			}
 			// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
