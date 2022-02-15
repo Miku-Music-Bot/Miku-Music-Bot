@@ -1,7 +1,6 @@
-import type * as Discord from 'discord.js';
-
 import GuildComponent from './GuildComponent.js';
 import type GuildHandler from './GuildHandler.js';
+import { MessageObject } from './ghChildInterface.js';
 
 // default command permissionss
 const defaultEveryone = ['join', 'play', 'pause', 'resume', 'stop'];
@@ -86,43 +85,43 @@ export default class CommandPermissions extends GuildComponent {
 	 * checkMessage()
 	 *
 	 * @param command - command to test
-	 * @param message - discord message object that requested the command
+	 * @param message - message object that requested the command
 	 * @return true if user has permission to use the command, false if not
 	 */
-	async checkMessage(command: string, message: Discord.Message): Promise<boolean> {
+	async checkMessage(command: string, message: MessageObject): Promise<boolean> {
 		try {
 			this.debug(`Checking permissions for {messageId: ${message.id}}`);
 
 			// if command doesn't exist, return false
 			if (!this._permissions[command]) {
 				this.debug(`Command from {messageId: ${message.id}} does not exist.`);
-				this.ui.sendError(`<@${message.author.id}> "${message.content}" is not valid command!`, false, message.channel.id);
+				this.ui.sendError(`<@${message.authorId}> "${message.content}" is not valid command!`, false, message.channelId);
 				return false;
 			}
 
 			// if the user is the guild owner, return true no matter what
-			if (this.guild.ownerId === message.author.id) {
+			if (this.guild.ownerId === message.authorId) {
 				this.debug(`Command from {messageId: ${message.id}} came from guild owner, permission allowed`);
 				return true;
 			}
 
 			// fetch guild member with role information
-			const member = await this.guild.members.fetch({ user: message.author.id });
+			const member = await this.guild.members.fetch({ user: message.authorId });
 			let found = false;
 			for (let i = 0; i < this._permissions[command].length; i++) {
 				if (member.roles.cache.get(this._permissions[command][i]).id === this._permissions[command][i]) { found = true; }
 			}
 			if (found) {
-				this.debug(`User with {userId: ${message.author.id}} has permissions to use command from {messageId: ${message.id}}`);
+				this.debug(`User with {userId: ${message.authorId}} has permissions to use command from {messageId: ${message.id}}`);
 				return true;
 			}
 
 			// if we get here, they don't have permission
 			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
-			this.ui.sendError(`<@${message.author.id}> You don't have permission to use the "${command}" command!`, false, message.channel.id);
+			this.ui.sendError(`<@${message.authorId}> You don't have permission to use the "${command}" command!`, false, message.channelId);
 			return false;
 		} catch (error) {
-			const errorId = this.ui.sendError(`<@${message.author.id}> Sorry! There was an error while checking permissions for your command.`, true);
+			const errorId = this.ui.sendError(`<@${message.authorId}> Sorry! There was an error while checking permissions for your command.`, true);
 			this.error(`{error: ${error}} while checking permissions for {messageId: ${message.id}}. {errorId: ${errorId}}`);
 			return false;
 		}

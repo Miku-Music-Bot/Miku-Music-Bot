@@ -26,13 +26,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	song: Song;
 	events: EventEmitter;
 	playingSilence: boolean;
+	destroyed: boolean;
 
 	private _secPlayed: number;
 
 	private _errorMsg: string;
 
 	private _paused: boolean;
-	destroyed: boolean;
 
 	private _bufferingTimeout: NodeJS.Timeout;
 	private _buffering: boolean;
@@ -54,6 +54,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _nextChunkTime: number;
 	private _audioWriter: NodeJS.Timeout;
 	private _pcmPassthrough: PassThrough;
+	private _opusPassthrough: PassThrough;
+	private _outputStreamStarted: boolean;
 
 	/**
 	 * @param song - Song object for song to create source from
@@ -80,6 +82,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._chunkTiming = 100;					// default to 100 for 0.1 sec of audio at a time
 		this._smallChunkNum = 0;					// how many 0.1 sec "smallChunks" have been played
 		this._pcmPassthrough = new PassThrough();	// create passthrough stream for pcm data
+		this._outputStreamStarted = false;			// so getStream() only starts buffering once and live buffer doesn't write to chunk buffer until it should
 
 		// wait for buffer to be ready, resolve once ready, rejects if error occurs while buffering
 		this._bufferReady = new Promise((resolve, reject) => {
@@ -120,8 +123,6 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @param attempts - attempt number
 	 */
 	private async _bufferVideo(attempts: number) {
-		this.song.fetchdata;
-
 		// make directory for buffer
 		try { await fs.promises.mkdir(this._tempLocation, { recursive: true }); }
 		catch (error) {
@@ -189,7 +190,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				// fatal error if write fails
 				this._errorMsg += 'Failed to write song to buffer\n';
 				this.error(`{error: ${e}} while saving chunk with {chunkCount: ${this._chunkCount}} for song with {url: ${this.song.url}}`);
-				this.events.emit('error', this._errorMsg);
+				this.events.emit('fatalError', this._errorMsg);
 			}
 		};
 
@@ -248,7 +249,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @param attempts - attempt number
 	 */
 	private async _bufferLive(attempts: number) {
-		this.song.fetchdata;
+		this._finishedBuffering = false;
 		try {
 			this._ytdlSource = ytdl(this.song.url, { liveBuffer: 10000, quality: [96, 95, 94, 93, 92, 132, 151] });
 			this._ytdlSource.on('error', (error) => {
@@ -308,9 +309,12 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			const add = currentBuffer.slice(0, 19200);
 			currentBuffer = currentBuffer.slice(19200);
 
+			attempts = 0;
+			if (!this._outputStreamStarted) return;
+
 			this._chunkBuffer.push(add);
 			if (this._chunkBuffer.length > 100) { this.events.emit('bufferReady'); }
-			attempts = 0;
+
 		};
 
 		const finished = async () => {
@@ -319,7 +323,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 			this._chunkBuffer.push(...this._bufferToChunks(currentBuffer, 19200));
 			this.events.emit('bufferReady');
-			
+
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this._finishedReading = true;
 		};
@@ -356,7 +360,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		if (attempts > 5) {						// stop trying after 5 attempts to get buffer
 			this.error(`Tried buffering song with {url: ${this.song.url}} 5 times, failed all 5 times, giving up`);
-			this.events.emit('error', this._errorMsg);
+			this.events.emit('fatalError', this._errorMsg);
 			return;
 		}
 
@@ -423,7 +427,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this.error(`Source stream was too slow to mantain buffer. Playback stopped prematurely on song with {url: ${this.song.url}}`);
 			}
 
-			this.events.emit('error', this._errorMsg);
+			this.events.emit('fatalError', this._errorMsg);
 		}
 	}
 
@@ -456,8 +460,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._secPlayed = Math.floor(this._smallChunkNum / 10);
 
 				if (this._chunkBuffer.length > 300 && live) {
-					this.info('Stream is now 30 sec behind, catching up');
-					this._chunkBuffer = this._chunkBuffer.slice(250);
+					this.info('Livestream is now 30 sec behind, catching up');
+					this._chunkBuffer = this._chunkBuffer.slice(this._chunkBuffer.length - 100);
 				}
 			}
 			// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
@@ -480,6 +484,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @returns Passthrough stream with opus data for discord
 	 */
 	async getStream() {
+		if (this._outputStreamStarted) return this._opusPassthrough;
+		this._outputStreamStarted = true;
 		try {
 			this.bufferStream();
 			await this._bufferReady;
@@ -495,11 +501,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._audioProcessor = new AudioProcessor(this.guildHandler);
 		this._audioProcessor.events.on('error', (msg) => {
 			this._errorMsg += msg;
-			this.events.emit('error', this._errorMsg);
+			this.events.emit('fatalError', this._errorMsg);
 		});
 
-		const opusPassthrough = this._audioProcessor.processStream(this._pcmPassthrough, this);
-		return opusPassthrough;
+		this._opusPassthrough = this._audioProcessor.processStream(this._pcmPassthrough, this);
+		return this._opusPassthrough;
 	}
 
 	/**

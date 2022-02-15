@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as express from 'express';
+import * as winston from 'winston';
 
-import type BotMaster from '../guildHandler/GuildMaster';
+import type BotMaster from '../GuildMaster';
 
 const PORT = process.env.PORT || 8080;
 
@@ -12,9 +13,7 @@ const PORT = process.env.PORT || 8080;
  * @param botMaster - bot master object
  * @return promise that resolves once web server is ready
  */
-export default function startWebServer (botMaster: BotMaster): Promise<void> {
-	botMaster;					// delete this later plz <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
+export default function startWebServer (botMaster: BotMaster, log: winston.Logger): Promise<void> {
 	const app = express();
 	app.use(express.static(path.join(__dirname, 'public')));
 
@@ -25,7 +24,7 @@ export default function startWebServer (botMaster: BotMaster): Promise<void> {
 	return new Promise((resolve, reject) => {
 		try {
 			app.listen(PORT, () => {
-				console.log(`Webserver listening on port ${PORT}`);
+				log.info(`Webserver listening on port ${PORT}`);
 				resolve();
 			});
 		} catch (error) {

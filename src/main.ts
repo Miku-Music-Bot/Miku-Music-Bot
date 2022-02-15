@@ -14,10 +14,13 @@ import * as Discord from 'discord.js';
 import * as dotenv from 'dotenv';	// grab env variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-import BotMaster from './guildHandler/GuildMaster';
+import BotMaster from './GuildMaster';
 import startWebServer from './webPanel/webPanel';
+import newLogger from './logger';
 
-const botMaster = new BotMaster();
+const log = newLogger(path.join(__dirname, 'logs'));
+
+const botMaster = new BotMaster(log);
 
 /**
  * checks guilds bot is in and adds handlers for all of them just in case
@@ -42,13 +45,13 @@ const bot = new Discord.Client({				// set intent flags for bot
 
 // when bot joins a server
 bot.on('guildCreate', (guild) => {
-	console.log(`Joined a new guild: ${guild.name}`);
+	log.info(`Joined a new guild: ${guild.name}`);
 	botMaster.newGuild(guild.id);
 });
 
 // when bot leaves a server
 bot.on('guildDelete', (guild) => {
-	console.log(`Left a guild: ${guild.name}`);
+	log.info(`Left a guild: ${guild.name}`);
 	botMaster.removeGuild(guild.id);
 });
 
@@ -66,12 +69,11 @@ bot.on('messageCreate', (message) => {
 // when bot receives an interaction
 bot.on('interactionCreate', (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
-	console.log(interaction);
 });
 
 // once ready, start handlers for all existing guilds
 bot.once('ready', () => {
-	console.log(`Logged in to discord as ${bot.user.tag}`);
+	log.info(`Logged in to discord as ${bot.user.tag}`);
 
 	// refresh guilds every minute
 	setTimeout(refreshGuilds, 5000);
@@ -79,13 +81,13 @@ bot.once('ready', () => {
 });
 
 // start web panel
-startWebServer(botMaster)
+startWebServer(botMaster, log)
 	.then(() => {
 		// login as bot
 		bot.login(DISCORD_TOKEN);
 	})
 	.catch((error) => {
 		// stop if web server fails to start
-		console.log(`Error starting web server: ${error}`);
+		log.error(`{error: ${error}} starting web server, exiting...`);
 		process.exit();
 	});

@@ -8,12 +8,16 @@ import CommandPermissions from './Permissions';
 import VCPlayer from './VCPlayer/VCPlayer';
 import Queue from './VCPlayer/Queue';
 import AudioSettings from './VCPlayer/AudioSettings';
-import newLogger from './Logger';
+import newLogger from '../logger';
+
+import { MessageObject } from './ghChildInterface';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
+/// <<<<<< testing
 import YTSource from './VCPlayer/sources/YTSource';
 import Song from './VCPlayer/Song';
+
 /**
  * GuildHander
  *
@@ -74,7 +78,7 @@ export default class GuildHandler {
 
 
 
-
+			// <<<<<<<<<<<<<<<< testing
 			this.source = new YTSource(this, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 			this.source.bufferStream();
 			// bot is now ready
@@ -96,9 +100,9 @@ export default class GuildHandler {
 	 * messageHandler()
 	 *
 	 * Handles all messages the bot recieves
-	 * @param message - discord message object
+	 * @param message - object with all message information
 	 */
-	async messageHandler(message: Discord.Message) {
+	async messageHandler(message: MessageObject) {
 		// ignore if bot isn't ready yet
 		if (!this._ready) return;
 		// ignore if not in right channel
@@ -113,7 +117,7 @@ export default class GuildHandler {
 		const msg = message.content + ' ';
 		const command = msg.slice(0, msg.indexOf(' '));
 		const argument = msg.slice(msg.indexOf(' ') + 1, msg.length);
-		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.author.id}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
+		this.debug(`Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.authorId}} in {channelId: ${message.channelId}}. Determined {command: ${command}}, {argument: ${argument}}`);
 
 		// check permissions for command then handle each command
 		if (await this.permissions.checkMessage(command, message)) {
@@ -126,17 +130,17 @@ export default class GuildHandler {
 						this.ui.sendUI();
 
 						if (!this.data.configured) {
-							this.ui.sendNotification(`<@${message.author.id}> This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.`);
+							this.ui.sendNotification(`<@${message.authorId}> This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.`);
 							this.data.configured = true;
 						}
 					} else if (message.channelId === this.data.channelId) {
-						this.ui.sendNotification(`<@${message.author.id}> Miku already lives here!`);
+						this.ui.sendNotification(`<@${message.authorId}> Miku already lives here!`);
 					}
 					break;
 				}
 				case ('join'): {
 					// join the vc
-					this.vcPlayer.join(message.author).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
+					this.vcPlayer.join(message.authorId).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
 					break;
 				}
 				case ('play'): {

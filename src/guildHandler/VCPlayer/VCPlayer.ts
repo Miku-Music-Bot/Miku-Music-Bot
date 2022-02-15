@@ -1,5 +1,4 @@
 import * as Voice from '@discordjs/voice';
-import type * as Discord from 'discord.js';
 
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../GuildHandler';
@@ -76,35 +75,35 @@ export default class VCPlayer extends GuildComponent {
 	 * join()
 	 *
 	 * Joins the voice channel specified
-	 * @param user - discord user to join in voice channel
+	 * @param userId - discord user to join in voice channel
 	 * @return promise that resolves if a voice channel is joined or rejects if failed
 	 */
-	async join(user: Discord.User): Promise<boolean> {
-		this.info(`Joining {userId: ${user.id}} in voice channel`);
+	async join(userId: string): Promise<boolean> {
+		this.info(`Joining {userId: ${userId}} in voice channel`);
 
 		try {
-			const member = await this.guild.members.fetch({ user: user.id });
+			const member = await this.guild.members.fetch({ user: userId });
 
 			// check if they are in a voice channel
 			if (!member.voice.channelId) {
 				// if they aren't send and error message
-				this.info(`{userId: ${user.id}} was not found in a voice channel`);
-				this.ui.sendError(`<@${user.id}> Join a voice channel first!`);
+				this.info(`{userId: ${userId}} was not found in a voice channel`);
+				this.ui.sendError(`<@${userId}> Join a voice channel first!`);
 				return false;
 			}
 			// if they are join it and send notification that join was successful
-			this.debug(`Found that {userId: ${user.id}} is in {channelId: ${member.voice.channelId}}`);
+			this.debug(`Found that {userId: ${userId}} is in {channelId: ${member.voice.channelId}}`);
 
 			await this._joinChannelId(member.voice.channelId);
-			this.info(`Joined {userId: ${user.id}} in {channelId: ${member.voice.channelId}}`);
-			this.ui.sendNotification(`Joined <@${user.id}> in ${member.voice.channel.name}`);
+			this.info(`Joined {userId: ${userId}} in {channelId: ${member.voice.channelId}}`);
+			this.ui.sendNotification(`Joined <@${userId}> in ${member.voice.channel.name}`);
 
 			this._connected = true;
 			return true;
 		}
 		catch (error) {
-			const errorId = this.ui.sendError(`<@${user.id}> Sorry! There was an error joining the voice channel.`, true);
-			this.error(`{error: ${error}} while joining {userId: ${user.id}} in voice channel. {errorId: ${errorId}}`);
+			const errorId = this.ui.sendError(`<@${userId}> Sorry! There was an error joining the voice channel.`, true);
+			this.error(`{error: ${error}} while joining {userId: ${userId}} in voice channel. {errorId: ${errorId}}`);
 			return false;
 		}
 	}
@@ -215,7 +214,7 @@ export default class VCPlayer extends GuildComponent {
 		});
 
 		// catch error events
-		this._currentSource.events.on('error', (error) => {
+		this._currentSource.events.on('fatalError', (error) => {
 			const errorId = this.ui.sendError(
 				`There was an error playing song: ${this._currentSource.song.title}\n
 				The following might tell you why:\n\`\`\`${error}\`\`\``

@@ -35,7 +35,6 @@ export default class AudioProcessor extends GuildComponent {
 		super(guildHandler);
 		this.events = new EventEmitter();
 		this._shouldEnd = true;
-		this.events.on('error', () => { this.destroy(); });
 	}
 
 	/**
@@ -74,7 +73,7 @@ export default class AudioProcessor extends GuildComponent {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
 
 				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this.audioSettings, null, 4)}}`);
-				this.events.emit('error', 'Error while applying audio effects');
+				this.events.emit('fatalError', 'Error while applying audio effects');
 			});
 
 		this._audioFilter.pipe()
@@ -117,7 +116,7 @@ export default class AudioProcessor extends GuildComponent {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
 
 				this.error(`FFmpeg encountered {error: ${error}} while converting song with {url: ${this._source.song.url}} from pcm to opus`);
-				this.events.emit('error', 'Error while converting opus to pcm');
+				this.events.emit('fatalError', 'Error while converting pcm to opus');
 			});
 
 		this._audioConverter.pipe(this._opusPassthrough);

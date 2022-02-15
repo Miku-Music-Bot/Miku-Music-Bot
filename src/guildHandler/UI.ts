@@ -26,7 +26,7 @@ export default class UI extends GuildComponent {
 	 * @param guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */
 	constructor(guildHandler: GuildHandler) {
-	yy	super(guildHandler);
+		super(guildHandler);
 	}
 
 	/**
