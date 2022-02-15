@@ -45,24 +45,6 @@ export default class VCPlayer extends GuildComponent {
 			this.debug(`Error while joining voice channel with {channelId: ${channelId}}`);
 		}
 
-		this._voiceConnection.on(Voice.VoiceConnectionStatus.Disconnected, async () => {
-			this.debug(`Voice connection for {channelId: ${channelId}} disconnected`);
-			try {
-				await Promise.race([
-					Voice.entersState(this._voiceConnection, Voice.VoiceConnectionStatus.Signalling, 5000),
-					Voice.entersState(this._voiceConnection, Voice.VoiceConnectionStatus.Connecting, 5000),
-				]);
-
-				this.debug(`Voice connection for {channelId: ${channelId}} seems to be recoverable, attempting to rejoin...`);
-				await this._joinChannelId(channelId);
-				this.debug(`Successfully rejoined voice {channelId: ${channelId}}`);
-			}
-			catch (error) {
-				this.debug(`{error: ${error}} Unable to recover voice connection to {channelId: ${channelId}}, closing connection`);
-				this.leave();
-			}
-		});
-
 		this._voiceConnection.on('error', (error) => {
 			this.error(`{error: ${error}} on voice connection to {channelId: ${channelId}}`);
 			this.leave();
