@@ -121,14 +121,10 @@ export default class VCPlayer extends GuildComponent {
 			this.playing = false;
 			this.paused = false;
 			if (this._currentSource) { this._currentSource.destroy(); }
-			this._currentSource = null;
 			if (this._audioPlayer) { this._audioPlayer.stop(); }
-			this._audioPlayer = null;
 			if (this._subscription) { this._subscription.unsubscribe(); }
-			this._subscription = null;
 
 			this._voiceConnection.destroy();
-			this._voiceConnection = null;
 		}
 		catch (error) {
 			this.error(`{error: ${error}} while leaving voice channel`);
@@ -177,11 +173,8 @@ export default class VCPlayer extends GuildComponent {
 		this.playing = false;
 		this.paused = false;
 		if (this._currentSource) { this._currentSource.destroy(); }
-		this._currentSource = null;
 		if (this._audioPlayer) { this._audioPlayer.stop(); }
-		this._audioPlayer = null;
 		if (this._subscription) { this._subscription.unsubscribe(); }
-		this._subscription = null;
 
 		this.queue.nextSong();
 	}

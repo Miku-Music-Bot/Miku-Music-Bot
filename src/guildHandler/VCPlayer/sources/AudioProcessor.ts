@@ -139,12 +139,9 @@ export default class AudioProcessor extends GuildComponent {
 	destroy() {
 		try { this._audioFilter.kill('SIGINT'); } catch { /* */ }
 		try { this._audioConverter.kill('SIGINT'); } catch { /* */ }
-		this._audioFilter = null;
-		this._audioConverter = null;
 		this._audioFilterInput.end();
 		this._audioConverterInput.end();
 		this._opusPassthrough.end();
 		this.events.removeAllListeners();
-		this._source = null;
 	}
 }
