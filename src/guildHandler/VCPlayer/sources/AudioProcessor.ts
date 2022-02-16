@@ -10,6 +10,10 @@ import type AudioSource from './AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
+const PCM_FORMAT = 's16le';
+const AUDIO_CHANNELS = 2;
+const AUDIO_FREQUENCY = 48000;
+
 /**
  * AudioProcessor
  * 
@@ -49,10 +53,10 @@ export default class AudioProcessor extends GuildComponent {
 		this._source.resume();
 
 		// change bitrate in case of nightcore setting
-		let bitrate = 48000;
+		let bitrate = AUDIO_FREQUENCY;
 		this._source.setChunkTiming(100);
 		if (this.audioSettings.nightcore && !this._source.song.live) {
-			bitrate = 64000;
+			bitrate = AUDIO_FREQUENCY * 64000 / 48000;
 			this._source.setChunkTiming(75);
 		}
 
@@ -61,18 +65,18 @@ export default class AudioProcessor extends GuildComponent {
 		try { this._audioFilter.kill('SIGINT'); } catch { /* */ }
 		this._audioFilter = ffmpeg(this._audioFilterInput)
 			.inputOptions([
-				'-f s16le',
+				`-f ${PCM_FORMAT}`,
 				`-ar ${bitrate}`,
-				'-ac 2'
+				`-ac ${AUDIO_CHANNELS}`
 			])
 			.audioFilters('loudnorm=I=-32')
 			.audioChannels(2)
 			.audioFrequency(48000)
-			.outputFormat('s16le')
+			.outputFormat(PCM_FORMAT)
 			.on('error', (error) => {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
 
-				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}} using {audioSettings: ${JSON.stringify(this.audioSettings, null, 4)}}`);
+				this.error(`FFmpeg encountered {error: ${error}} while applying audio effects to song with {url: ${this._source.song.url}}`);
 				this.events.emit('fatalError', 'Error while applying audio effects');
 			});
 
@@ -107,9 +111,9 @@ export default class AudioProcessor extends GuildComponent {
 		this.newFFmpeg();
 		this._audioConverter = ffmpeg(this._audioConverterInput)
 			.inputOptions([
-				'-f s16le',
-				'-ar 48000',
-				'-ac 2'
+				`-f ${PCM_FORMAT}`,
+				`-ar ${AUDIO_FREQUENCY}`,
+				`-ac ${AUDIO_CHANNELS}`
 			])
 			.outputFormat('opus')
 			.on('error', (error) => {

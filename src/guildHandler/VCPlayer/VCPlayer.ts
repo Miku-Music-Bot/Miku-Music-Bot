@@ -14,6 +14,7 @@ export default class VCPlayer extends GuildComponent {
 	private _audioPlayer: Voice.AudioPlayer;
 	private _subscription: Voice.PlayerSubscription;
 	private _currentSource: AudioSource;
+	private _currentResource: Voice.AudioResource;
 	private _finishedSongCheck: NodeJS.Timer;
 	private _connected: boolean;
 	playing: boolean;
@@ -208,9 +209,9 @@ export default class VCPlayer extends GuildComponent {
 		try {
 			// create and play the resource
 			const opusStream = await this._currentSource.getStream();
-			const resource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
-			this._audioPlayer.play(resource);
-
+			this._currentResource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
+			this._audioPlayer.play(this._currentResource);
+		
 			// catch finished stream event
 			opusStream.on('end', () => {
 				clearInterval(this._finishedSongCheck);
@@ -220,7 +221,7 @@ export default class VCPlayer extends GuildComponent {
 				} catch {/* */ }
 			});
 			this._finishedSongCheck = setInterval(() => {
-				if (!resource.ended) return;
+				if (!this._currentResource.ended) return;
 
 				clearInterval(this._finishedSongCheck);
 				try {
