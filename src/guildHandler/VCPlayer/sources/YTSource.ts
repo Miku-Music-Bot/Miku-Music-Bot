@@ -2,12 +2,10 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import { Readable, PassThrough } from 'stream';
-import { exec as ytDownloader } from 'youtube-dl-exec';
+import { PassThrough } from 'stream';
 import * as ffmpeg from 'fluent-ffmpeg';
-import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import *  as ytdl from 'ytdl-core';
-import type { ExecaChildProcess } from 'execa';
+import * as ffmpegPath from 'ffmpeg-static';
+import { ChildProcess, spawn } from 'child_process';
 
 import AudioSource from './AudioSource';
 import AudioProcessor from './AudioProcessor';
@@ -16,6 +14,7 @@ import type Song from '../Song';
 import type GuildHandler from '../../GuildHandler';
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
+const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
 
 // audio constants
 const BIT_DEPTH = 16;
@@ -26,7 +25,7 @@ const SEC_PCM_SIZE = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;
 const LARGE_CHUNK_SIZE = SEC_PCM_SIZE * 10;
 const SMALL_CHUNK_SIZE = SEC_PCM_SIZE / 10;
 
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
  * YTSource
@@ -49,8 +48,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _liveTimeout: NodeJS.Timeout;
 
 	// For youtube audio conversion to pcm
-	private _youtubeDLSource: ExecaChildProcess;
-	private _ytdlSource: Readable;
+	private _youtubeDLPSource: ChildProcess;
 	private _ytPCMConverter: ffmpeg.FfmpegCommand;
 	private _ytPCMConverterInput: PassThrough;
 
@@ -144,12 +142,34 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * _bufferVideo()
+	 * bufferStream()
 	 * 
-	 * Handles downloading a normal (non live) video, emits fatalEvent if something terrible happens, calls bufferStream(attempts) if recoverable 
-	 * @param attempts - attempt number
+	 * Starts downloading video from youtube and saving to file
+	 * @param attempts - number of attempts to buffer song
 	 */
-	private async _bufferVideo(attempts: number) {
+	async bufferStream(attempts?: number) {
+		if (this.destroyed) return;
+		if (this._bufferStreamStarted) return;			// avoid starting 2 bufferStream functions at the same time
+		this._bufferStreamStarted = true;
+
+		if (!attempts) { attempts = 0; }
+		attempts++;
+		if (attempts > 5) {								// stop trying after 5 attempts to get buffer
+			this.error(`Tried buffering song with {url: ${this.song.url}} 5 times, failed all 5 times, giving up`);
+			this.events.emit('fatalError', this._errorMsg);
+			return;
+		}
+
+		this.debug(`{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
+		clearTimeout(this._bufferingRetryTimeout);
+
+		// clean up any streams from before just in case
+		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill('SIGINT'); }
+		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
+		clearTimeout(this._liveTimeout);
+
+		this._largeChunkCount = 0;
+
 		// make directory for buffer
 		try { await fs.promises.mkdir(this._tempLocation, { recursive: true }); }
 		catch (error) {
@@ -160,19 +180,27 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		try {
-			// start download from youtube
-			this._ytdlSource = ytdl(this.song.url);
-		}
-		catch (error) {
+		// start download from youtube
+		this._youtubeDLPSource = spawn(YT_DLP_PATH, [
+			'-o', '-',
+			'--no-playlist',
+			'--ffmpeg-location', ffmpegPath,
+			'--quiet',
+			this.song.url
+		]);
+
+		// handle error event
+		this._youtubeDLPSource.on('error', (error) => {
+			if (error.toString().indexOf('SIGINT') !== -1) return;
+
 			this._errorMsg += 'Error on stream from youtube\n';
 			this.warn(`{error: ${error}} on stream from youtube for song with {url: ${this.song.url}}`);
 			this._retryBuffer(attempts);
 			return;
-		}
-		// write data to ytPCMConverter input
-		this._ytdlSource.pipe(this._ytPCMConverterInput);
+		});
 
+		// write data to ytPCMConverter input
+		this._youtubeDLPSource.stdout.pipe(this._ytPCMConverterInput);
 		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
 		// convert song to pcm using ffmpeg
@@ -203,9 +231,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._retryBuffer(attempts);
 			}
 		};
-
-		// handles new chunk data
-		const chunkData = async (data: Buffer) => {
+		// handles new chunk data for a video / livestream
+		const chunkDataVideo = async (data: Buffer) => {
 			// add to currentBuffer
 			currentBuffer = Buffer.concat([currentBuffer, data]);
 
@@ -220,74 +247,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			// emit bufferReady in case it wasn't earlier
 			if (this._largeChunkCount === 2) { this.events.emit('bufferReady'); }
 		};
-		// handles finished download
-		const finished = async () => {
-			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
-			this.events.emit('bufferReady');
-			this._finishedBuffering = true;
-
-			if (Buffer.byteLength(currentBuffer) === 0) return;
-
-			// save the last bit as final file
-			chunkName++;
-			await writeFile(currentBuffer, chunkName);
-			this._largeChunkCount++;
-		};
-
-		// want to turn stream into a stream with equal sized chunks for duration counting
-		this._ytPCMConverter.pipe()
-			.on('data', chunkData)
-			.on('end', finished)
-			.on('error', (e) => {
-				this._errorMsg += 'Error while converting stream to raw pcm\n';
-				this.warn(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
-				this._retryBuffer(attempts);
-			});
-	}
-
-	/**
-	 * _bufferLive()
-	 * 
-	 * Handles downloading a live video, calls bufferStream(attempts) if recoverable 
-	 * @param attempts - attempt number
-	 */
-	private async _bufferLive(attempts: number) {
-		// start download from youtube
-		this._youtubeDLSource = ytDownloader(this.song.url, {
-			output: '-',									// output to stdout
-			ffmpegLocation: ffmpegPath.path					// location for ffmpeg if needed
-		});
-
-		// write data to ytPCMConverter input
-		this._youtubeDLSource.stdout.pipe(this._ytPCMConverterInput);
-
-		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
-
-		// convert song to pcm using ffmpeg
-		this._ytPCMConverter = ffmpeg(this._ytPCMConverterInput)
-			.audioChannels(AUDIO_CHANNELS)
-			.audioFrequency(AUDIO_FREQUENCY)
-			.format(PCM_FORMAT)
-			.on('error', (e) => {
-				// ignore if stopped because of SIGINT
-				if (e.toString().indexOf('SIGINT') !== -1) return;
-
-				// restart if there is an error
-				this._errorMsg += `Buffer Attempt: ${attempts} - Error while converting stream to raw pcm\n`;
-				this.warn(`Ffmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
-				this._retryBuffer(attempts);
-			});
-
-		// restart stream every 5 hours
-		this._liveTimeout = setTimeout(() => {
-			this.debug(`Restarting buffer for song with {url: ${this.song.url}} to ensure youtube link is valid`);
-			this._retryBuffer(attempts - 1);
-		}, 18000000);
-
-		// split into 0.1 sec chunks and add to chunkBuffer
-		let currentBuffer = Buffer.alloc(0);
-		const chunkData = async (data: Buffer) => {
-			console.log(data);
+		const chunkDataLive = async (data: Buffer) => {
 			// add to currentBuffer
 			currentBuffer = Buffer.concat([currentBuffer, data]);
 
@@ -300,63 +260,54 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			if (!this._outputStreamStarted) return;
 
 			this._chunkBuffer.push(add);
-			if (this._chunkBuffer.length > 50) { this.events.emit('bufferReady'); }
-
+			if (this._chunkBuffer.length > 100) { this.events.emit('bufferReady'); }
 		};
-
-		const finished = async () => {
+		// handles finished download for video / livestream
+		const finishedVideo = async () => {
+			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
+			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
+
+			if (Buffer.byteLength(currentBuffer) === 0) return;
+
+			// save the last bit as final file
+			chunkName++;
+			await writeFile(currentBuffer, chunkName);
+			this._largeChunkCount++;
+		};
+		const finishedLive = async () => {
+			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
+			this.events.emit('bufferReady');
+			this._finishedBuffering = true;
+			this._endOfSong = true;
+
 			if (Buffer.byteLength(currentBuffer) === 0) return;
 
 			this._chunkBuffer.push(...this._bufferToChunks(currentBuffer, SMALL_CHUNK_SIZE));
-			this.events.emit('bufferReady');
-
-			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
-			this._endOfSong = true;
 		};
 
 		// want to turn stream into a stream with equal sized chunks for duration counting
 		this._ytPCMConverter.pipe()
-			.on('data', chunkData)
-			.on('end', finished)
+			.on('data', (data) => {
+				if (this.song.live) { chunkDataLive(data); return; }
+				chunkDataVideo(data);
+			})
+			.on('end', () => {
+				if (this.song.live) { finishedLive(); return; }
+				finishedVideo();
+			})
 			.on('error', (e) => {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
 				this.warn(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
 				this._retryBuffer(attempts);
 			});
-	}
 
-	/**
-	 * bufferStream()
-	 * 
-	 * Starts downloading video from youtube and saving to file
-	 * @param attempts - number of attempts to buffer song
-	 */
-	bufferStream(attempts?: number) {
-		if (this.destroyed) return;
-		if (this._bufferStreamStarted) return;			// avoid starting 2 bufferStream functions at the same time
-		this._bufferStreamStarted = true;
-
-		if (!attempts) { attempts = 0; }
-		attempts++;
-		if (attempts > 5) {								// stop trying after 5 attempts to get buffer
-			this.error(`Tried buffering song with {url: ${this.song.url}} 5 times, failed all 5 times, giving up`);
-			this.events.emit('fatalError', this._errorMsg);
-			return;
-		}
-
-		this.debug(`{attempt: ${attempts}} to buffer stream for song with {url: ${this.song.url}}`);
-		clearTimeout(this._bufferingRetryTimeout);
-
-		// clean up any streams from before just in case
-		if (this._youtubeDLSource) { this._youtubeDLSource.cancel(); }
-		if (this._ytdlSource) { this._ytdlSource.destroy(); }
-		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
-		clearTimeout(this._liveTimeout);
-
-		this._largeChunkCount = 0;
-		if (this.song.live) { this._bufferLive(attempts); }
-		else { this._bufferVideo(attempts); }
+		if (!this.song.live) return;
+		// restart stream every 5 hours
+		this._liveTimeout = setTimeout(() => {
+			this.debug(`Restarting buffer for song with {url: ${this.song.url}} to ensure youtube link is valid`);
+			this._retryBuffer(attempts - 1);
+		}, 18000000);
 	}
 
 	/**
@@ -419,7 +370,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			// if paused play nothing
 			if (!this._paused) {
 				// if there are chunks in the buffer, play them
-				if (this._chunkBuffer[0]) {
+				if (this._chunkBuffer[0] && (!this.song.live || this._chunkBuffer.length > 100)) {
 					this.buffering = false;
 
 					this._audioProcesserInput.write(this._chunkBuffer.shift());
@@ -515,8 +466,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
-		if (this._youtubeDLSource) { this._youtubeDLSource.cancel(); }
-		if (this._ytdlSource) { this._ytdlSource.destroy(); }
+		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill('SIGINT'); }
 		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
 		if (this._ytPCMConverterInput) { this._ytPCMConverterInput.end(); }
 		if (this._audioProcesserInput) { this._audioProcesserInput.end(); }
