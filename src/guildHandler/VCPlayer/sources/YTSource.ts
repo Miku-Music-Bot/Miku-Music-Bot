@@ -256,11 +256,9 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			const add = currentBuffer.slice(0, SMALL_CHUNK_SIZE);
 			currentBuffer = currentBuffer.slice(SMALL_CHUNK_SIZE);
 
-			// don't add anything to chunkbuffer if not oputStream hasn't started yet
-			if (!this._outputStreamStarted) return;
-
 			this._chunkBuffer.push(add);
 			if (this._chunkBuffer.length > 100) { this.events.emit('bufferReady'); }
+			if (!this._outputStreamStarted && this._chunkBuffer.length > 100) { this._chunkBuffer = this._chunkBuffer.slice(0, this._chunkBuffer.length - 100); }
 		};
 		// handles finished download for video / livestream
 		const finishedVideo = async () => {
@@ -370,7 +368,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			// if paused play nothing
 			if (!this._paused) {
 				// if there are chunks in the buffer, play them
-				if (this._chunkBuffer[0] && (!this.song.live || this._chunkBuffer.length > 100)) {
+				if (this._chunkBuffer[0]) {
 					this.buffering = false;
 
 					this._audioProcesserInput.write(this._chunkBuffer.shift());
@@ -383,7 +381,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 					}
 				}
 				// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
-				else if (!this._endOfSong || live) {
+				else if (!this._endOfSong) {
 					this.buffering = true;
 					this._audioProcesserInput.write(Buffer.alloc(SMALL_CHUNK_SIZE));
 				}
