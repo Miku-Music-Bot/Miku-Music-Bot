@@ -43,6 +43,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	// For buffering stream
 	private _bufferingRetryTimeout: NodeJS.Timeout;
 	private _bufferStreamStarted: boolean;
+	private _ytPCMConverterOutput: PassThrough;
 	private _finishedBuffering: boolean;
 	private _bufferReady: Promise<void>;
 	private _liveTimeout: NodeJS.Timeout;
@@ -62,6 +63,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _paused: boolean;
 	private _endOfSong: boolean;
 	// timing
+	private _startReadingFrom: number;
 	private _chunkTiming: number;
 	private _smallChunkCount: number;
 	private _nextChunkTime: number;
@@ -105,6 +107,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._paused = false;								// paused or not
 		this._endOfSong = false;							// chunk buffer contains end of song or not
 
+		this._startReadingFrom = 1;							// default to start reading from chunk 0
 		this._chunkTiming = 100;							// default to 100ms for 0.1 sec of audio
 		this._smallChunkCount = 0;							// number of 0.1 sec "smallChunks" that have been played
 
@@ -165,10 +168,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		// clean up any streams from before just in case
 		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill('SIGINT'); }
+		if (this._ytPCMConverterOutput) { this._ytPCMConverterOutput.removeAllListeners('end'); }
 		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
 		clearTimeout(this._liveTimeout);
 
-		this._largeChunkCount = 0;
+		if (!this.song.live) { this._largeChunkCount = 0; }
 
 		// make directory for buffer
 		try { await fs.promises.mkdir(this._tempLocation, { recursive: true }); }
@@ -181,8 +185,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		}
 
 		// start download from youtube
+		let format = '-f bestaudio';
+		if (this.song.live) { format = '93/92/91/94/95/96'; }
 		this._youtubeDLPSource = spawn(YT_DLP_PATH, [
 			'-o', '-',
+			format,
 			'--no-playlist',
 			'--ffmpeg-location', ffmpegPath,
 			'--quiet',
@@ -201,6 +208,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		// write data to ytPCMConverter input
 		this._youtubeDLPSource.stdout.pipe(this._ytPCMConverterInput);
+
 		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
 		// convert song to pcm using ffmpeg
@@ -232,7 +240,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			}
 		};
 		// handles new chunk data for a video / livestream
-		const chunkDataVideo = async (data: Buffer) => {
+		const chunkData = async (data: Buffer) => {
 			// add to currentBuffer
 			currentBuffer = Buffer.concat([currentBuffer, data]);
 
@@ -245,23 +253,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			await writeFile(save, chunkName);
 			this._largeChunkCount++;
 			// emit bufferReady in case it wasn't earlier
-			if (this._largeChunkCount === 2) { this.events.emit('bufferReady'); }
-		};
-		const chunkDataLive = async (data: Buffer) => {
-			// add to currentBuffer
-			currentBuffer = Buffer.concat([currentBuffer, data]);
-
-			if (Buffer.byteLength(currentBuffer) < SMALL_CHUNK_SIZE) return;
-			// Once currentBuffer is the right size add it to chunkBuffer
-			const add = currentBuffer.slice(0, SMALL_CHUNK_SIZE);
-			currentBuffer = currentBuffer.slice(SMALL_CHUNK_SIZE);
-
-			this._chunkBuffer.push(add);
-			if (this._chunkBuffer.length > 100) { this.events.emit('bufferReady'); }
-			if (!this._outputStreamStarted && this._chunkBuffer.length > 100) { this._chunkBuffer = this._chunkBuffer.slice(0, this._chunkBuffer.length - 100); }
+			if (this._largeChunkCount === 3) { this.events.emit('bufferReady'); }
+			if (this.song.live && this._largeChunkCount > 5) {
+				this._startReadingFrom = this._largeChunkCount - 2;
+				try { await fs.promises.unlink(path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm')); } catch { /* */ }
+			}
 		};
 		// handles finished download for video / livestream
-		const finishedVideo = async () => {
+		const finished = async () => {
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
@@ -273,27 +272,17 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			await writeFile(currentBuffer, chunkName);
 			this._largeChunkCount++;
 		};
-		const finishedLive = async () => {
-			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
-			this.events.emit('bufferReady');
-			this._finishedBuffering = true;
-			this._endOfSong = true;
-
-			if (Buffer.byteLength(currentBuffer) === 0) return;
-
-			this._chunkBuffer.push(...this._bufferToChunks(currentBuffer, SMALL_CHUNK_SIZE));
-		};
 
 		// want to turn stream into a stream with equal sized chunks for duration counting
-		this._ytPCMConverter.pipe()
-			.on('data', (data) => {
-				if (this.song.live) { chunkDataLive(data); return; }
-				chunkDataVideo(data);
-			})
-			.on('end', () => {
-				if (this.song.live) { finishedLive(); return; }
-				finishedVideo();
-			})
+		if (this._ytPCMConverterOutput) { 
+			this._ytPCMConverterOutput.end();
+			this._ytPCMConverterInput.removeAllListeners();
+		}
+		this._ytPCMConverterOutput = new PassThrough();
+		this._ytPCMConverter.pipe(this._ytPCMConverterOutput);
+		this._ytPCMConverterOutput
+			.on('data', chunkData)
+			.on('end', finished)
 			.on('error', (e) => {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
 				this.warn(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
@@ -332,19 +321,19 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < 6) {
+		if (attempts < 9) {
 			try {
 				this._chunkBuffer.push(...this._bufferToChunks(await fs.promises.readFile(path.join(this._tempLocation, chunkNum.toString() + '.pcm')), SMALL_CHUNK_SIZE));
 				await fs.promises.unlink(path.join(this._tempLocation, chunkNum.toString() + '.pcm'));
 			}
 			catch (error) {
-				this._errorMsg += `Read Attempt: ${attempts} - Failed to read chunk from buffer\n`;
+				this._errorMsg += 'Failed to read chunk from buffer\n';
 				this.warn(`{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
 				setTimeout(() => { this._queueChunk(chunkNum, attempts); }, 1000);
 			}
 		}
 		else {
-			this.error(`Tried 5 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
+			this.error(`Tried 8 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
 
 			if (!this._finishedBuffering) {
 				this._errorMsg += 'Source stream was to slow to mantain buffer. Playback stopped prematurely.';
@@ -373,11 +362,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 					this._audioProcesserInput.write(this._chunkBuffer.shift());
 
-					if (!live && this._smallChunkCount % 100 === 0) { this._queueChunk((this._smallChunkCount / 100) + 2); }
+					if (this._smallChunkCount % 100 === 0) { this._queueChunk((this._smallChunkCount / 100) + 2); }
 					this._smallChunkCount++;
 					if (live && this._chunkBuffer.length > 300) {
 						this.info('Livestream is now 30 sec behind, catching up');
-						this._chunkBuffer = this._chunkBuffer.slice(this._chunkBuffer.length - 100);
+						this._chunkBuffer.splice(0, this._chunkBuffer.length - 100);
 					}
 				}
 				// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
@@ -413,7 +402,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.bufferStream();
 			await this._bufferReady;
 
-			if (!this.song.live) { await this._queueChunk(1); }
+			await this._queueChunk(this._startReadingFrom);
 			this._smallChunkCount = 0;
 			this._nextChunkTime = Date.now();
 			this._writeChunkIn(0, this.song.live);
