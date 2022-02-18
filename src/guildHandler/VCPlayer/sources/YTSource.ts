@@ -264,6 +264,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
+			if (this.song.live) { this._endOfSong = true; }
 
 			if (Buffer.byteLength(currentBuffer) === 0) return;
 
@@ -321,7 +322,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < 9) {
+		if (attempts < 21) {
 			try {
 				this._chunkBuffer.push(...this._bufferToChunks(await fs.promises.readFile(path.join(this._tempLocation, chunkNum.toString() + '.pcm')), SMALL_CHUNK_SIZE));
 				await fs.promises.unlink(path.join(this._tempLocation, chunkNum.toString() + '.pcm'));
@@ -333,7 +334,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			}
 		}
 		else {
-			this.error(`Tried 8 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
+			this.error(`Tried 20 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
 
 			if (!this._finishedBuffering) {
 				this._errorMsg += 'Source stream was to slow to mantain buffer. Playback stopped prematurely.';
@@ -406,6 +407,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this._smallChunkCount = 0;
 			this._nextChunkTime = Date.now();
 			this._writeChunkIn(0, this.song.live);
+			this.buffering = false;
 		}
 		catch { /* nothing needs to happen */ }
 

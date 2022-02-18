@@ -79,8 +79,8 @@ export default class GuildHandler {
 
 
 			// <<<<<<<<<<<<<<<< testing
-			this.source = new YTSource(this, { url: 'https://www.youtube.com/watch?v=5qap5aO4i9A', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
-			
+			this.source = new YTSource(this, { url: 'https://www.youtube.com/watch?v=Ur-WthRolJ0', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
+
 			// bot is now ready
 			this._ready = true;
 			this.info('Logged into discord, guild handler is ready!');

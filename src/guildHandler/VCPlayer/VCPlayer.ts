@@ -187,6 +187,9 @@ export default class VCPlayer extends GuildComponent {
 		if (this._currentSource) { this._currentSource.destroy(); }
 		this._currentSource = source;
 
+		// notify user that this might take a bit
+		if (this._currentSource.song.live) { this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient'); }
+
 		// create audio player for this song
 		if (this._subscription) { this._subscription.unsubscribe(); }
 		this._audioPlayer = Voice.createAudioPlayer();
