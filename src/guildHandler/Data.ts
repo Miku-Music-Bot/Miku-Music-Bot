@@ -14,6 +14,7 @@ type guildDataConfig = {
 	configured?: boolean,
 	channelId?: string,
 	prefix?: string,
+	autoplay?: boolean,
 	playlists?: Array<string>,
 	permissions?: { [key: string]: Array<string> },
 	audioSettings?: AudioConfig
@@ -24,6 +25,7 @@ const DEFAULTCONFIG: guildDataConfig = {
 	configured: false,
 	channelId: undefined,
 	prefix: '!miku ',
+	autoplay: false,
 	playlists: [],
 	permissions: {},
 	audioSettings: {}
@@ -122,6 +124,9 @@ export default class GuildData extends GuildComponent {
 
 	get prefix() { return this._guildData.prefix; }
 	set prefix(prefix: string) { this._guildData.prefix = prefix; this._saveData(); }
+
+	get autoplay() { return this._guildData.autoplay; }
+	set autoplay(autoplay: boolean) { this._guildData.autoplay = autoplay; this._saveData(); }
 
 	get playlists() { return this._guildData.playlists; }
 	set playlists(playlists: Array<string>) { this._guildData.playlists = playlists; this._saveData(); }

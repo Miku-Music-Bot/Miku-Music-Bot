@@ -16,7 +16,8 @@ export default class VCPlayer extends GuildComponent {
 	private _currentSource: AudioSource;
 	private _currentResource: Voice.AudioResource;
 	private _finishedSongCheck: NodeJS.Timer;
-	private _connected: boolean;
+	
+	connected: boolean;
 	playing: boolean;
 	paused: boolean;
 
@@ -81,7 +82,7 @@ export default class VCPlayer extends GuildComponent {
 			this.info(`Joined {userId: ${userId}} in {channelId: ${member.voice.channelId}}`);
 			this.ui.sendNotification(`Joined <@${userId}> in ${member.voice.channel.name}`);
 
-			this._connected = true;
+			this.connected = true;
 			return true;
 		}
 		catch (error) {
@@ -99,7 +100,7 @@ export default class VCPlayer extends GuildComponent {
 	leave() {
 		try {
 			clearInterval(this._finishedSongCheck);
-			this._connected = false;
+			this.connected = false;
 			this.playing = false;
 			this.paused = false;
 			if (this._currentSource) { this._currentSource.destroy(); }
@@ -158,7 +159,7 @@ export default class VCPlayer extends GuildComponent {
 		if (this._audioPlayer) { this._audioPlayer.stop(); }
 		if (this._subscription) { this._subscription.unsubscribe(); }
 
-		this.queue.nextSong();
+		if (this.connected) { this.queue.nextSong(); }
 	}
 
 	/**
@@ -180,15 +181,17 @@ export default class VCPlayer extends GuildComponent {
 	 * @param source - source to play from
 	 */
 	async play(source: AudioSource) {
-		if (!this._connected) return;
+		if (!this.connected) return;
 		if (source.destroyed) return;
 		this.playing = true;
 		// set currentSource
 		if (this._currentSource) { this._currentSource.destroy(); }
 		this._currentSource = source;
 
+		// update song data
+		await this._currentSource.song.fetchData();
 		// notify user that this might take a bit
-		if (this._currentSource.song.live) { this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient'); }
+		if (this._currentSource.song.live) {  this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient.'); }
 
 		// create audio player for this song
 		if (this._subscription) { this._subscription.unsubscribe(); }

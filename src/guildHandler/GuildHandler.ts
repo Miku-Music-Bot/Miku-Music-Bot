@@ -15,8 +15,8 @@ import { MessageObject } from './ghChildInterface';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /// <<<<<< testing
-import YTSource from './VCPlayer/sources/YTSource';
-import Song from './VCPlayer/Song';
+import YTSource from './VCPlayer/sources/Youtube/YTSource';
+import YTSong from './VCPlayer/sources/youtube/YTSong';
 
 /**
  * GuildHander
@@ -75,11 +75,6 @@ export default class GuildHandler {
 			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
 			this.audioSettings = new AudioSettings(this);
-
-
-
-			// <<<<<<<<<<<<<<<< testing
-			this.source = new YTSource(this, { url: 'https://www.youtube.com/watch?v=Ur-WthRolJ0', live: true, type: 'yt', fetchData: async () => { /* */ } } as unknown as Song);
 
 			// bot is now ready
 			this._ready = true;
@@ -140,10 +135,16 @@ export default class GuildHandler {
 				}
 				case ('join'): {
 					// join the vc
-					this.vcPlayer.join(message.authorId).catch(() => { /* vcPlayer.join() handles notifying user to nothing to do here */ });
+					this.vcPlayer.join(message.authorId);
+
+					// <<<<<<<<<<< for testing
+					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=6uN99OAINAY&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=11' }));
 					break;
 				}
 				case ('play'): {
+					// if not connected to vc, connect
+					if (!this.vcPlayer.connected) { await this.vcPlayer.join(message.authorId); }
+
 					// if there is an argument, means to play/add song to queue
 					if (argument) {
 						// start queue song process
@@ -158,7 +159,7 @@ export default class GuildHandler {
 					}
 
 					// should start playing from autoplay
-					this.vcPlayer.play(this.source);
+					this.queue.nextSong(true);
 					break;
 				}
 				case ('pause'): {

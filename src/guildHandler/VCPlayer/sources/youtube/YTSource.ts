@@ -7,11 +7,11 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from 'ffmpeg-static';
 import { ChildProcess, spawn } from 'child_process';
 
-import AudioSource from './AudioSource';
-import AudioProcessor from './AudioProcessor';
-import GuildComponent from '../../GuildComponent';
+import AudioSource from '../AudioSource';
+import AudioProcessor from '../AudioProcessor';
+import GuildComponent from '../../../GuildComponent';
 import type Song from '../Song';
-import type GuildHandler from '../../GuildHandler';
+import type GuildHandler from '../../../GuildHandler';
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
@@ -113,6 +113,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		this._audioProcesserInput = new PassThrough;		// pcm data input for audioProcessor
 		this._outputStreamStarted = false;					// if the output stream has already been started to avoid starting another one
+	
+		console.log(this.song);
 	}
 
 	/**
@@ -206,6 +208,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		});
 
+		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });
 		// write data to ytPCMConverter input
 		this._youtubeDLPSource.stdout.pipe(this._ytPCMConverterInput);
 
@@ -314,6 +317,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @param attempts - number of attempts to read file
 	 */
 	private async _queueChunk(chunkNum: number, attempts: number | void) {
+		if (this.destroyed) return;
 		if (!attempts) { attempts = 0; }
 		attempts++;
 

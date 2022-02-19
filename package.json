@@ -42,7 +42,8 @@
 		"sodium": "^3.0.2",
 		"winston-daily-rotate-file": "^4.5.5",
 		"youtube-dl-exec": "^2.0.4",
-		"ytdl-core": "^4.10.1"
+		"ytdl-core": "^4.10.1",
+		"ytsr": "^3.6.0"
 	},
 	"optionalDependencies": {
 		"bufferutil": "^4.0.5",

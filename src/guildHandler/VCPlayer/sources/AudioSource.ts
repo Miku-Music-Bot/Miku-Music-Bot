@@ -1,15 +1,14 @@
 import { PassThrough } from 'stream';
 import { EventEmitter } from 'events';
 
-import GuildComponent from '../../GuildComponent';
-import type Song from '../Song';
+import type Song from './Song';
 
 /**
  * AudioSource
  * 
  * Template for how audio source classes should behave
  */
-export default abstract class AudioSource extends GuildComponent {
+export default abstract class AudioSource {
 	song: Song;																		// should be a song object
 	events: EventEmitter;															// should have a 'error' event that is emitted when the song is not played fully that returns string with user friendly error log
 	buffering: boolean;																// should have property that indicates that song is buffering

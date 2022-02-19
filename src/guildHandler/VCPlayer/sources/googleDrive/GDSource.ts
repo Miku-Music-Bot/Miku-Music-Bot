@@ -1,10 +1,10 @@
 import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
 
-import AudioSource from './AudioSource';
-import GuildComponent from '../../GuildComponent';
+import AudioSource from '../AudioSource';
+import GuildComponent from '../../../GuildComponent';
 import type Song from '../Song';
-import type GuildHandler from '../../GuildHandler';
+import type GuildHandler from '../../../GuildHandler';
 
 
 export class GDSource extends GuildComponent implements AudioSource {
