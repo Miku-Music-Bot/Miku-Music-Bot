@@ -2,21 +2,20 @@ import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
 
-import UI from './UI';
-import GuildData from './Data';
-import CommandPermissions from './Permissions';
-import VCPlayer from './VCPlayer/VCPlayer';
-import Queue from './VCPlayer/Queue';
-import AudioSettings from './VCPlayer/AudioSettings';
-import newLogger from '../logger';
+import UI from './Components/UI';
+import GuildConfig from './Components/Data/GuildData';
+import CommandPermissions from './Components/PermissionChecker';
+import VCPlayer from './Components/VCPlayer/VCPlayer';
+import Queue from './Components/Queue';
+import newLogger from '../Logger';
 
-import { MessageObject } from './ghChildInterface';
+import { MessageObject } from './GHChildInterface';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /// <<<<<< testing
-import YTSource from './VCPlayer/sources/Youtube/YTSource';
-import YTSong from './VCPlayer/sources/youtube/YTSong';
+import YTSource from './Components/VCPlayer/sources/YTSource';
+import YTSong from './Components/Data/SourceData/YTSong';
 
 /**
  * GuildHander
@@ -35,13 +34,12 @@ export default class GuildHandler {
 	guild: Discord.Guild;
 
 	ui: UI;
-	data: GuildData;
+	data: GuildConfig;
 	vcPlayer: VCPlayer;
 	queue: Queue;
 	permissions: CommandPermissions;
-	audioSettings: AudioSettings;
 
-
+	//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	source: YTSource;
 	/**
 	 * Creates data object and once data is ready, calls startbot
@@ -74,18 +72,17 @@ export default class GuildHandler {
 			this.vcPlayer = new VCPlayer(this);
 			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
-			this.audioSettings = new AudioSettings(this);
 
 			// bot is now ready
 			this._ready = true;
 			this.info('Logged into discord, guild handler is ready!');
 
 			// if not configured, log for helping debugging
-			if (!this.data.configured) { this.info('This guild has not been configured, waiting set-channel command'); }
+			if (!this.data.guildSettings.configured) { this.info('This guild has not been configured, waiting set-channel command'); }
 		});
 
 		// get guild data, once data is ready, log into discord
-		this.data = new GuildData(this, id, () => {
+		this.data = new GuildConfig(this, id, () => {
 			this.info('Guild data ready, logging in to discord...');
 			this.bot.login(DISCORD_TOKEN);
 		});
@@ -101,13 +98,13 @@ export default class GuildHandler {
 		// ignore if bot isn't ready yet
 		if (!this._ready) return;
 		// ignore if not in right channel
-		if (message.channelId !== this.data.channelId && message.content.indexOf('set-channel') === -1) return;
+		if (message.channelId !== this.data.guildSettings.channelId && message.content.indexOf('set-channel') === -1) return;
 
 		// split message into command and argument
 		let prefix = false;
-		if (message.content.startsWith(this.data.prefix)) {
+		if (message.content.startsWith(this.data.guildSettings.prefix)) {
 			prefix = true;
-			message.content = message.content.slice(this.data.prefix.length, message.content.length);
+			message.content = message.content.slice(this.data.guildSettings.prefix.length, message.content.length);
 		}
 		const msg = message.content + ' ';
 		const command = msg.slice(0, msg.indexOf(' '));
@@ -120,15 +117,15 @@ export default class GuildHandler {
 				case ('set-channel'): {
 					if (prefix) {
 						// set the channel, send ui, then notify user
-						this.data.channelId = message.channelId;
+						this.data.guildSettings.channelId = message.channelId;
 
 						this.ui.sendUI();
 
-						if (!this.data.configured) {
+						if (!this.data.guildSettings.configured) {
 							this.ui.sendNotification(`<@${message.authorId}> This is where miku will live. You no longer need to use the prefix as all messages sent to this channel will be interpreted as commands and will be deleted after the command is executed.`);
-							this.data.configured = true;
+							this.data.guildSettings.configured = true;
 						}
-					} else if (message.channelId === this.data.channelId) {
+					} else if (message.channelId === this.data.guildSettings.channelId) {
 						this.ui.sendNotification(`<@${message.authorId}> Miku already lives here!`);
 					}
 					break;
@@ -138,7 +135,7 @@ export default class GuildHandler {
 					this.vcPlayer.join(message.authorId);
 
 					// <<<<<<<<<<< for testing
-					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=6uN99OAINAY&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=11' }));
+					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=jrK_DSTc-SU' }));
 					break;
 				}
 				case ('play'): {

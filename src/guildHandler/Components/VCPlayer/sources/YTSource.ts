@@ -7,10 +7,10 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegPath from 'ffmpeg-static';
 import { ChildProcess, spawn } from 'child_process';
 
-import AudioSource from '../AudioSource';
+import AudioSource from './AudioSource';
 import AudioProcessor from '../AudioProcessor';
-import GuildComponent from '../../../GuildComponent';
-import type Song from '../Song';
+import GuildComponent from '../../GuildComponent';
+import type Song from '../../Data/SourceData/Song';
 import type GuildHandler from '../../../GuildHandler';
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
@@ -113,8 +113,6 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		this._audioProcesserInput = new PassThrough;		// pcm data input for audioProcessor
 		this._outputStreamStarted = false;					// if the output stream has already been started to avoid starting another one
-	
-		console.log(this.song);
 	}
 
 	/**
@@ -189,6 +187,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		// start download from youtube
 		let format = '-f bestaudio';
 		if (this.song.live) { format = '93/92/91/94/95/96'; }
+
 		this._youtubeDLPSource = spawn(YT_DLP_PATH, [
 			'-o', '-',
 			format,
@@ -208,9 +207,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		});
 
-		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });
 		// write data to ytPCMConverter input
-		this._youtubeDLPSource.stdout.pipe(this._ytPCMConverterInput);
+		this._youtubeDLPSource.stdout.on('data', (data) => { this._ytPCMConverterInput.write(data); });
+		this._youtubeDLPSource.stdout.on('end', () => { this._ytPCMConverterInput.end(); });
+		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });
+		this._youtubeDLPSource.on('exit', () => { this._ytPCMConverterInput.end(); });
 
 		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
@@ -257,7 +258,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this._largeChunkCount++;
 			// emit bufferReady in case it wasn't earlier
 			if (this._largeChunkCount === 3) { this.events.emit('bufferReady'); }
-			if (this.song.live && this._largeChunkCount > 5) {
+			if (this.song.live && this._largeChunkCount > 5 && !this._outputStreamStarted) {
 				this._startReadingFrom = this._largeChunkCount - 2;
 				try { await fs.promises.unlink(path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm')); } catch { /* */ }
 			}
@@ -459,7 +460,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
-		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill('SIGINT'); }
+		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill(); }
 		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
 		if (this._ytPCMConverterInput) { this._ytPCMConverterInput.end(); }
 		if (this._audioProcesserInput) { this._audioProcesserInput.end(); }

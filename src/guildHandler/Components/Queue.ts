@@ -1,9 +1,8 @@
-import GuildComponent from '../GuildComponent';
+import GuildComponent from '../Components/GuildComponent';
 import type GuildHandler from '../GuildHandler';
-import Playlist from './sources/Playlist';
-import Song from './sources//Song';
-import AudioSource from './sources/AudioSource';
-import YTSource from './sources/Youtube/YTSource';
+import Song from './Data/SourceData/Song';
+import AudioSource from './VCPlayer/sources/AudioSource';
+import YTSource from './VCPlayer/sources/YTSource';
 
 /**
  * Queue
@@ -149,7 +148,6 @@ export default class Queue extends GuildComponent {
 		if (!start) {
 			// grab what song was just played
 			const justPlayed = this._resolveIndex(0);
-			console.log(justPlayed);
 			this.lastPlayed = justPlayed.data.song;
 
 			// if repeatSong, play the same song again
@@ -175,7 +173,7 @@ export default class Queue extends GuildComponent {
 			this.vcPlayer.play(source);
 		}
 		// otherwise, if autoplay is on, play from autoplay
-		else if (this.data.autoplay && this.autoplayList.length > 0) {
+		else if (this.data.guildSettings.autoplay && this.autoplayList.length > 0) {
 			const source = this._createSource(this.autoplayList[0].song);
 			this.vcPlayer.play(source);
 		}

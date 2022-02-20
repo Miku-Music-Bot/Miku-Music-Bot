@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
 
-import AudioSource from '../AudioSource';
-import GuildComponent from '../../../GuildComponent';
-import type Song from '../Song';
+import AudioSource from './AudioSource';
+import GuildComponent from '../../GuildComponent';
+import type Song from '../../Data/SourceData/Song';
 import type GuildHandler from '../../../GuildHandler';
 
 

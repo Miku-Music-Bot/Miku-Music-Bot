@@ -1,7 +1,7 @@
 import * as Discord from 'discord.js';
 
 import GuildComponent from './GuildComponent';
-import type GuildHandler from './GuildHandler';
+import type GuildHandler from '../GuildHandler';
 
 /* eslint-disable */
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
@@ -36,7 +36,7 @@ export default class UI extends GuildComponent {
 	 */
 	sendUI() {
 		// this needs to be improved to not use .get();
-		const channel = this.bot.channels.cache.get(this.data.channelId);
+		const channel = this.bot.channels.cache.get(this.data.guildSettings.channelId);
 		if (channel instanceof Discord.TextChannel) {
 			channel.send({ embeds: [ this._createUI() ] });
 		}
@@ -64,7 +64,7 @@ export default class UI extends GuildComponent {
 	 */
 	async sendNotification(message: string, channelId: string | void): Promise<void> {
 		if (!channelId) {
-			channelId = this.data.channelId;
+			channelId = this.data.guildSettings.channelId;
 		}
 
 		try {
@@ -105,7 +105,7 @@ export default class UI extends GuildComponent {
 	 * @return randomized error id
 	 */
 	sendError(message: string, saveErrorId: boolean | void, channelId: string | void): number {
-		if (!channelId) { channelId = this.data.channelId; }
+		if (!channelId) { channelId = this.data.guildSettings.channelId; }
 
 		// Unix Timestamp + random number between 100000000000000-999999999999999
 		const errorId = (Date.now() * 1000) + Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);

@@ -1,31 +1,9 @@
 import * as ytdl from 'ytdl-core';
 
-import Song from '../Song';
-import GuildComponent from '../../../GuildComponent.js';
-import type GuildHandler from '../../../GuildHandler.js';
-
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
-
-type songInfo = {
-	type?: string,
-	url: string,
-	title?: string,
-	duration?: number,
-	thumbnailURL?: string,
-	artist?: string,
-	live?: boolean,
-	reqBy?: string
-}
-
-const songDefaults: songInfo = {
-	url: 'OVERRIDE THIS',
-	title: 'No Title',
-	duration: undefined,
-	thumbnailURL: `${BOT_DOMAIN}/default-thumbnail.jpg`,
-	artist: 'unknown',
-	live: true,
-	reqBy: undefined
-};
+import Song from './Song';
+import GuildComponent from '../../GuildComponent';
+import type GuildHandler from '../../../GuildHandler';
+import { SongConfig, SONG_DEFAULT } from '../Settings/config/songConfig';
 
 /**
  * Song
@@ -33,18 +11,23 @@ const songDefaults: songInfo = {
  * Represents a song
  */
 export default class YTSong extends GuildComponent implements Song {
-	private _songInfo: songInfo;
+	private _songInfo: SongConfig;
 
 	/**
 	 * @param guildHandler
 	 * @param info - songInfo of song you want to create
 	 */
-	constructor(guildHandler: GuildHandler, info: songInfo) {
+	constructor(guildHandler: GuildHandler, info: SongConfig) {
 		super(guildHandler);
-		this._songInfo = songDefaults;
+		// set defaults
+		this._songInfo = {};
+		Object.assign(this._songInfo, SONG_DEFAULT);
+
+		this._songInfo.type = 'yt';
+		this._songInfo.id = this.data.guildSettings.songIdCount;
+		this.data.guildSettings.songIdCount++;
 
 		Object.assign(this._songInfo, info);
-		this._songInfo.type = 'yt';
 	}
 
 	/**
@@ -68,10 +51,18 @@ export default class YTSong extends GuildComponent implements Song {
 			this._songInfo.live = info.videoDetails.isLiveContent;
 		}
 		catch (error) {
-			console.log(error);
 			this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);
 		}
+		console.log(this);
 	}
+
+	/**
+	* export()
+	* 
+	* Exports the settings in the format to be saved in database
+	* @returns object to be saved in database
+	*/
+	export() { return this._songInfo; }
 
 	// getters
 	get type() { return this._songInfo.type; }

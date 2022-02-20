@@ -1,4 +1,4 @@
-import type GuildHandler from './GuildHandler';
+import type GuildHandler from '../GuildHandler';
 
 /**
  * Guild Component
@@ -33,5 +33,4 @@ export default class GuildComponent {
 	get ui() { return this.guildHandler.ui; }
 	get queue() { return this.guildHandler.queue; }
 	get vcPlayer() { return this.guildHandler.vcPlayer; }
-	get audioSettings() { return this.guildHandler.audioSettings; }
 }

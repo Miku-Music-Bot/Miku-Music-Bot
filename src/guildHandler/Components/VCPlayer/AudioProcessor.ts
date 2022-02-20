@@ -5,8 +5,8 @@ import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { EventEmitter } from 'events';
 
 import type GuildHandler from '../../GuildHandler';
-import GuildComponent from '../../GuildComponent';
-import type AudioSource from './AudioSource';
+import GuildComponent from '../GuildComponent';
+import type AudioSource from './sources/AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 
@@ -55,7 +55,7 @@ export default class AudioProcessor extends GuildComponent {
 		// change bitrate in case of nightcore setting
 		let bitrate = AUDIO_FREQUENCY;
 		this._source.setChunkTiming(100);
-		if (this.audioSettings.nightcore && !this._source.song.live) {
+		if (this.data.audioSettings.nightcore && !this._source.song.live) {
 			bitrate = AUDIO_FREQUENCY * 64000 / 48000;
 			this._source.setChunkTiming(75);
 		}
@@ -126,7 +126,7 @@ export default class AudioProcessor extends GuildComponent {
 		this._audioConverter.pipe(this._opusPassthrough);
 
 		// if new audioSettings are applied restart ffmpeg
-		this.audioSettings.events.on('newSettings', () => {
+		this.data.audioSettings.on('newSettings', () => {
 			this.debug('New audio settings, restarting ffmpeg...');
 			this.newFFmpeg();
 		});

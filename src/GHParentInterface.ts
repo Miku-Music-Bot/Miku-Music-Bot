@@ -3,7 +3,7 @@ import * as Discord from 'discord.js';
 import * as winston from 'winston';
 import { ChildProcess, fork } from 'child_process';
 
-import { MessageObject } from './guildHandler/ghChildInterface';
+import { MessageObject } from './guildHandler/GHChildInterface';
 
 export default class GuildHandlerInterface {
 	private log: winston.Logger;		// logger

@@ -16,7 +16,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import BotMaster from './GuildMaster';
 import startWebServer from './webPanel/webPanel';
-import newLogger from './logger';
+import newLogger from './Logger';
 
 const log = newLogger(path.join(__dirname, 'logs'));
 
