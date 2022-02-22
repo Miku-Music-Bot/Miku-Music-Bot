@@ -8,6 +8,8 @@ import PermissionSettings from './Settings/PermissionSettings';
 import { GuildConfig } from './Settings/config/guildConfig';
 import { AudioConfig, EQConfig } from './Settings/config/audioConfig';
 import { PermissionsConfig } from './Settings/config/permissionConfig';
+import GlobalPLaylist from './SourceData/Playlists/GlobalPLaylist';
+import { PlaylistConfig } from './SourceData/Playlists/playlistConfig';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -18,6 +20,7 @@ type DatabaseData = {
 	guildConfig?: GuildConfig,
 	audioConfig: { audio: AudioConfig, eq: EQConfig },
 	permissionConfig: PermissionsConfig
+	globalPlaylistConfig: PlaylistConfig
 }
 
 /**
@@ -30,6 +33,7 @@ export default class GuildData extends GuildComponent {
 	guildSettings: GuildSettings;
 	audioSettings: AudioSettings;
 	permissionSettings: PermissionSettings;
+	globalPlaylist: GlobalPLaylist;
 	private _guildId: string;
 	private _collection: mongoDb.Collection;
 	private _saveTimeout: NodeJS.Timeout;
@@ -80,18 +84,21 @@ export default class GuildData extends GuildComponent {
 				this.guildSettings = new GuildSettings(foundGuild.guildConfig);
 				this.audioSettings = new AudioSettings(foundGuild.audioConfig);
 				this.permissionSettings = new PermissionSettings(foundGuild.permissionConfig);
+				this.globalPlaylist = new GlobalPLaylist(this.guildHandler, foundGuild.globalPlaylistConfig);
 			}
 			else {
 				// if guild is not found in database, save defaults to database
 				this.guildSettings = new GuildSettings();
 				this.audioSettings = new AudioSettings();
 				this.permissionSettings = new PermissionSettings();
+				this.globalPlaylist = new GlobalPLaylist(this.guildHandler);
 
 				const newData: DatabaseData = {
 					guildId: this._guildId,
 					guildConfig: this.guildSettings.export(),
 					audioConfig: this.audioSettings.export(),
-					permissionConfig: this.permissionSettings.export()
+					permissionConfig: this.permissionSettings.export(),
+					globalPlaylistConfig: this.globalPlaylist.export()
 				};
 
 				await this._collection.insertOne(newData);
@@ -130,7 +137,8 @@ export default class GuildData extends GuildComponent {
 				guildId: this._guildId,
 				guildConfig: this.guildSettings.export(),
 				audioConfig: this.audioSettings.export(),
-				permissionConfig: this.permissionSettings.export()
+				permissionConfig: this.permissionSettings.export(),
+				globalPlaylistConfig: this.globalPlaylist.export()
 			};
 			await this._collection.replaceOne({ guildId: this._guildId }, newData);
 		} catch (error) {

@@ -12,6 +12,11 @@ export type SongConfig = {
 	reqBy?: string
 };
 
+export type SongRef = {
+	id: number,
+	playlist: Array<number>
+}
+
 export const SONG_DEFAULT: SongConfig = {
 	id: undefined,
 	title: 'No Title',

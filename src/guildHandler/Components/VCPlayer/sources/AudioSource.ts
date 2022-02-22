@@ -1,7 +1,7 @@
 import { PassThrough } from 'stream';
 import { EventEmitter } from 'events';
 
-import type Song from '../../Data/SourceData/Song';
+import type Song from '../../Data/SourceData/Songs/Song';
 
 /**
  * AudioSource

@@ -1,9 +1,9 @@
 import * as ytdl from 'ytdl-core';
 
 import Song from './Song';
-import GuildComponent from '../../GuildComponent';
-import type GuildHandler from '../../../GuildHandler';
-import { SongConfig, SONG_DEFAULT } from '../Settings/config/songConfig';
+import GuildComponent from '../../../GuildComponent';
+import type GuildHandler from '../../../../GuildHandler';
+import { SongConfig, SONG_DEFAULT } from './songConfig';
 
 /**
  * Song
@@ -31,9 +31,9 @@ export default class YTSong extends GuildComponent implements Song {
 	}
 
 	/**
-	 * fetchdata
+	 * fetchData()
 	 * 
-	 * Grabs updated 
+	 * Grabs updated info for song
 	 */
 	async fetchData(): Promise<void> {
 		try {
@@ -45,6 +45,7 @@ export default class YTSong extends GuildComponent implements Song {
 			this._songInfo.title = info.videoDetails.title;
 			this._songInfo.url = info.videoDetails.video_url;
 			this._songInfo.duration = parseInt(info.videoDetails.lengthSeconds);
+
 			info.videoDetails.thumbnails.sort((a, b) => (a.width > b.width) ? -1 : 1);
 			this._songInfo.thumbnailURL = info.videoDetails.thumbnails[0].url;
 			this._songInfo.artist = info.videoDetails.author.name;
@@ -65,6 +66,7 @@ export default class YTSong extends GuildComponent implements Song {
 	export() { return this._songInfo; }
 
 	// getters
+	get id() { return this._songInfo.id; }
 	get type() { return this._songInfo.type; }
 	get url() { return this._songInfo.url; }
 	get title() { return this._songInfo.title; }

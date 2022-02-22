@@ -1,10 +1,12 @@
+import { SongRef } from '../../SourceData/Songs/songConfig';
+
 // type for guild data
 export type GuildConfig = {
 	configured?: boolean,
 	channelId?: string,
 	prefix?: string,
 	autoplay?: boolean,
-	autoplayList?: Array<{ playlistId: number, songId: number }>,
+	autoplayList?: Array<SongRef>,
 	songIdCount?: number,
 	playlistIdCount?: number
 }

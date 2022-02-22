@@ -15,7 +15,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /// <<<<<< testing
 import YTSource from './Components/VCPlayer/sources/YTSource';
-import YTSong from './Components/Data/SourceData/YTSong';
+import YTSong from './Components/Data/SourceData/Songs/YTSong';
 
 /**
  * GuildHander

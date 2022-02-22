@@ -1,6 +1,6 @@
 import GuildComponent from '../Components/GuildComponent';
 import type GuildHandler from '../GuildHandler';
-import Song from './Data/SourceData/Song';
+import Song from './Data/SourceData/Songs/Song';
 import AudioSource from './VCPlayer/sources/AudioSource';
 import YTSource from './VCPlayer/sources/YTSource';
 

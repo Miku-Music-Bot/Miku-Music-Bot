@@ -1,4 +1,4 @@
-import { SongConfig } from '../Settings/config/songConfig';
+import { SongConfig } from './songConfig';
 
 /**
  * Song
@@ -6,7 +6,8 @@ import { SongConfig } from '../Settings/config/songConfig';
  * Template for how Song classes should behave
  */
 export default abstract class Song {
-	abstract get type(): string;				// have getters for required properties
+	abstract get id(): number;					// have getters for required properties
+	abstract get type(): string;
 	abstract get url(): string;
 	abstract get title(): string;
 	abstract get duration(): number;

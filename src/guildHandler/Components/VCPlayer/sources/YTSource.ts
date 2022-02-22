@@ -10,7 +10,7 @@ import { ChildProcess, spawn } from 'child_process';
 import AudioSource from './AudioSource';
 import AudioProcessor from '../AudioProcessor';
 import GuildComponent from '../../GuildComponent';
-import type Song from '../../Data/SourceData/Song';
+import type Song from '../../Data/SourceData/Songs/Song';
 import type GuildHandler from '../../../GuildHandler';
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
