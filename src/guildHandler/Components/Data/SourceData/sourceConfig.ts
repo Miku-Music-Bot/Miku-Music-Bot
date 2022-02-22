@@ -28,3 +28,17 @@ export const SONG_DEFAULT: SongConfig = {
 	live: true,
 	reqBy: undefined
 };
+
+export type PlaylistConfig = {
+	type?: 'yt' | 'gd' | 'ud' | 'global',
+	id?: number,
+	songs?: Array<SongConfig>
+	playlists?: Array<PlaylistConfig>
+};
+
+export const PLAYLIST_DEFAULT: PlaylistConfig = {
+	type: undefined,
+	id: undefined,
+	songs: [],
+	playlists: []
+};
