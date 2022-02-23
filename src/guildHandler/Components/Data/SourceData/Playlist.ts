@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
-import GuildComponent from '../../../GuildComponent';
-import { SongRef } from '../Songs/songConfig';
-import Song from '../Songs/Song';
-import { PlaylistConfig } from './playlistConfig';
+
+import GuildComponent from '../../GuildComponent';
+import { SongRef, PlaylistConfig } from './sourceConfig';
+import Song from './Song';
 
 export default abstract class Playlist extends GuildComponent {
 	abstract get id(): number;

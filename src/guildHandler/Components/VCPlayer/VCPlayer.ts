@@ -2,7 +2,7 @@ import * as Voice from '@discordjs/voice';
 
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../../GuildHandler';
-import type AudioSource from './sources/AudioSource';
+import type AudioSource from './AudioSources/AudioSource';
 
 /**
  * VCPlayer

@@ -1,8 +1,8 @@
 import GuildComponent from '../Components/GuildComponent';
 import type GuildHandler from '../GuildHandler';
-import Song from './Data/SourceData/Songs/Song';
-import AudioSource from './VCPlayer/sources/AudioSource';
-import YTSource from './VCPlayer/sources/YTAudioSource';
+import Song from './Data/SourceData/Song';
+import AudioSource from './VCPlayer/AudioSources/AudioSource';
+import YTSource from './VCPlayer/AudioSources/YTAudioSource';
 
 /**
  * Queue

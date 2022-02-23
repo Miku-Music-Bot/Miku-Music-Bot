@@ -1,9 +1,9 @@
 import * as ytdl from 'ytdl-core';
 
-import Song from './Song';
+import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
 import type GuildHandler from '../../../../GuildHandler';
-import { SongConfig, SONG_DEFAULT } from './songConfig';
+import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
 
 /**
  * Song

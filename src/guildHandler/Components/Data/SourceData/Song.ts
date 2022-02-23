@@ -1,4 +1,4 @@
-import { SongConfig } from './songConfig';
+import { SongConfig } from './sourceConfig';
 
 /**
  * Song

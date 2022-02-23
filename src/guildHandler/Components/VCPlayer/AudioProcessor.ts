@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 
 import type GuildHandler from '../../GuildHandler';
 import GuildComponent from '../GuildComponent';
-import type AudioSource from './sources/AudioSource';
+import type AudioSource from './AudioSources/AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 

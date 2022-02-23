@@ -14,8 +14,8 @@ import { MessageObject } from './GHChildInterface';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /// <<<<<< testing
-import YTSource from './Components/VCPlayer/sources/YTSource';
-import YTSong from './Components/Data/SourceData/Songs/YTSong';
+import YTSource from './Components/VCPlayer/AudioSources/YTAudioSource';
+import YTSong from './Components/Data/SourceData/YTSources/YTSong';
 
 /**
  * GuildHander

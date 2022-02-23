@@ -1,4 +1,4 @@
-import { SongRef } from '../../SourceData/Songs/songConfig';
+import { SongRef } from '../../SourceData/sourceConfig';
 
 // type for guild data
 export type GuildConfig = {
