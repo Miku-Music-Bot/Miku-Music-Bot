@@ -1,4 +1,3 @@
-import * as ytdl from 'ytdl-core';
 import { EventEmitter } from 'events';
 
 import Song from '../Song';
@@ -7,11 +6,11 @@ import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
 
 /**
- * YTSong
+ * GDSong
  *
  * Represents a song from youtube
  */
-export default class YTSong extends GuildComponent implements Song {
+export default class GDSong extends GuildComponent implements Song {
 	events: EventEmitter;
 	private _songInfo: SongConfig;
 
@@ -22,11 +21,11 @@ export default class YTSong extends GuildComponent implements Song {
 	constructor(guildHandler: GuildHandler, info: SongConfig) {
 		super(guildHandler);
 		this.events = new EventEmitter();
-
+		
 		// set defaults
 		let save = false;
-		this._songInfo = Object.assign({}, SONG_DEFAULT);
-		this._songInfo.type = 'yt';
+		this._songInfo = SONG_DEFAULT;
+		this._songInfo.type = 'gd';
 		if (!info.id) {
 			save = true;
 			this._songInfo.id = this.data.guildSettings.songIdCount;
@@ -44,6 +43,7 @@ export default class YTSong extends GuildComponent implements Song {
 	 */
 	async fetchData(): Promise<void> {
 		try {
+			/*
 			const info = await ytdl.getBasicInfo(this._songInfo.url);
 			if (!info) {
 				this.info(`No song info found for song with {url: ${this._songInfo.url}}`);
@@ -56,7 +56,7 @@ export default class YTSong extends GuildComponent implements Song {
 			info.videoDetails.thumbnails.sort((a, b) => (a.width > b.width) ? -1 : 1);
 			this._songInfo.thumbnailURL = info.videoDetails.thumbnails[0].url;
 			this._songInfo.artist = info.videoDetails.author.name;
-			this._songInfo.live = info.videoDetails.isLiveContent;
+			this._songInfo.live = info.videoDetails.isLiveContent;*/
 		}
 		catch (error) {
 			this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);

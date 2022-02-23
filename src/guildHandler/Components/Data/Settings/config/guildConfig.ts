@@ -1,17 +1,15 @@
-import { SongRef } from '../../SourceData/sourceConfig';
+import { SourceRef } from '../../SourceData/sourceConfig';
 
-// type for guild data
+// Guild Data Configuration data and defaults
 export type GuildConfig = {
-	configured?: boolean,
-	channelId?: string,
-	prefix?: string,
-	autoplay?: boolean,
-	autoplayList?: Array<SongRef>,
-	songIdCount?: number,
-	playlistIdCount?: number
+	configured: boolean,
+	channelId: string,
+	prefix: string,
+	autoplay: boolean,
+	autoplayList: Array<SourceRef>,
+	songIdCount: number,
+	playlistIdCount: number
 }
-
-// defualt settings for guilds
 export const GUILD_DEFAULT: GuildConfig = {
 	configured: false,
 	channelId: undefined,

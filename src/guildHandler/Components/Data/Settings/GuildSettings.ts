@@ -18,8 +18,7 @@ export default class GuildSettings extends EventEmitter {
 		super();
 
 		// set defaults first
-		this._guildSettings = {};
-		Object.assign(this._guildSettings, GUILD_DEFAULT);
+		this._guildSettings = Object.assign({}, GUILD_DEFAULT);
 
 		// apply settings
 		if (!settings) return;

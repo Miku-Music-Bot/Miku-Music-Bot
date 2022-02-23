@@ -1,10 +1,11 @@
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 
+// Song Configuration data and defaults
 export type SongConfig = {
 	id?: number,
 	type?: 'yt' | 'gd',
 	title?: string,
-	url?: string,
+	url: string,
 	duration?: number,
 	thumbnailURL?: string,
 	artist?: string
@@ -12,16 +13,11 @@ export type SongConfig = {
 	reqBy?: string
 };
 
-export type SongRef = {
-	id: number,
-	playlist: Array<number>
-}
-
 export const SONG_DEFAULT: SongConfig = {
 	id: undefined,
 	title: 'No Title',
 	type: undefined,
-	url: 'OVERRIDE THIS',
+	url: undefined,
 	duration: undefined,
 	thumbnailURL: `${BOT_DOMAIN}/default-thumbnail.jpg`,
 	artist: 'unknown',
@@ -29,16 +25,38 @@ export const SONG_DEFAULT: SongConfig = {
 	reqBy: undefined
 };
 
+// Individual Source Configuration data and defaults
 export type PlaylistConfig = {
-	type?: 'yt' | 'gd' | 'ud' | 'global',
 	id?: number,
+	title?: string,
+	url: string,
 	songs?: Array<SongConfig>
-	playlists?: Array<PlaylistConfig>
-};
+}
 
 export const PLAYLIST_DEFAULT: PlaylistConfig = {
-	type: undefined,
 	id: undefined,
-	songs: [],
-	playlists: []
+	title: 'No Name',
+	url: undefined,
+	songs: []
 };
+
+
+// All Source Data Configuration data and defaults
+export type SourceDataConfig = {
+	individualSongs: Array<SongConfig>,
+	gdPlaylists: Array<PlaylistConfig>,
+	ytPlaylists: Array<PlaylistConfig>
+}
+
+export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
+	individualSongs: [],
+	gdPlaylists: [],
+	ytPlaylists: []
+};
+
+// Source reference
+export type SourceRef = {
+	type: 'yt' | 'gd',
+	id: number | undefined,
+	playlist: number | undefined
+}

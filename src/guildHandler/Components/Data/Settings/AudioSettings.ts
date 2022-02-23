@@ -19,10 +19,8 @@ export default class AudioSettings extends EventEmitter {
 		super();
 
 		// set defaults first
-		this._audioSettings = {};
-		this._eqSettings = {};
-		Object.assign(this._audioSettings, AUDIO_PRESETS.default);
-		Object.assign(this._eqSettings, EQ_PRESETS.default);
+		this._audioSettings = Object.assign({}, AUDIO_PRESETS.default);
+		this._eqSettings = Object.assign({}, EQ_PRESETS.default);
 
 		// apply settings
 		if (!settings) return;

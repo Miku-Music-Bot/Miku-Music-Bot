@@ -20,8 +20,7 @@ export default class PermissionSettings extends EventEmitter {
 
 		// apply settings
 		if (!settings) return;
-		this._permissionSettings = {};
-		Object.assign(this._permissionSettings, settings);
+		this._permissionSettings = settings;
 	}
 
 	/**

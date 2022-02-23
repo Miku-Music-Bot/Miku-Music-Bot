@@ -1,3 +1,5 @@
+import { EventEmitter } from 'events';
+
 import { SongConfig } from './sourceConfig';
 
 /**
@@ -6,6 +8,7 @@ import { SongConfig } from './sourceConfig';
  * Template for how Song classes should behave
  */
 export default abstract class Song {
+	abstract events: EventEmitter;
 	abstract get id(): number;					// have getters for required properties
 	abstract get type(): string;
 	abstract get url(): string;
