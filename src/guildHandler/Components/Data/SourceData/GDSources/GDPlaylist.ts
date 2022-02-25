@@ -1,3 +1,5 @@
+import Fuse from 'fuse.js';
+import ytpl = require('ytpl');
 import { EventEmitter } from 'events';
 
 import GuildHandler from '../../../../GuildHandler';
@@ -12,32 +14,134 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	private _title: string;
 	private _url: string;
 	private _songs: Array<GDSong>;
+	private _index: Fuse<GDSong>;
 
 	/**
 	 * @param guildHandler
 	 * @param info - songInfo of song you want to create
 	 */
-	constructor(guildHandler: GuildHandler, info: PlaylistConfig) {
+	constructor(guildHandler: GuildHandler, plInfo?: PlaylistConfig) {
 		super(guildHandler);
 		this.events = new EventEmitter();
 
 		// set defaults
 		let save = false;
-		if (!info) {
+		const info = Object.assign({}, PLAYLIST_DEFAULT);
+		if (!plInfo || !plInfo.id) {
 			save = true;
-			info = PLAYLIST_DEFAULT;
-			info.id = this.data.guildSettings.songIdCount;
-			this.data.guildSettings.songIdCount++;
+			plInfo.id = this.data.guildSettings.playlistIdCount;
+			this.data.guildSettings.playlistIdCount++;
 		}
+		Object.assign(info, plInfo);
+
+		this._id = info.id;
+		this._title = info.title;
+		this._url = info.url;
+		this._songs = [];
+
+		// Create fuse index
+		this._index = new Fuse(this._songs, { 
+			useExtendedSearch: true,
+			keys: [ 'id', 'title', 'artist', 'url' ]
+		});
 
 		// Create songs
-		for (let i = 0; i < info.songs.length; i++) { this._songs.push(new GDSong(this.guildHandler, info.songs[i])); }
+		for (let i = 0; i < info.songs.length; i++) {
+			const song = new GDSong(this.guildHandler, info.songs[i]);
+			this._addSong(song);
+		}
 
-		if (save) { this.events.emit('newSettigns'); }
+		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
 	}
 
+	/**
+	 * _addSong()
+	 * 
+	 * Checks if song already exists in playlist anda dds a song to the playlist
+	 * @param song - song to add to playlist
+	 */
+	private _addSong(song: GDSong) {
+		// remove the song just in case it already exists
+		this._removeSong(song.id);
+		this._index.add(song);
+		song.events.on('newSettings', (s) => {
+			this._addSong(s);
+			this.events.emit('newSettings');
+		});
+		song.events.on('newSettings', () => { this.events.emit('newSettings'); });
+		this.events.emit('newSettings');
+	}
+
+	/**
+	 * removeSong()
+	 * 
+	 * Removes specified song from individual songs
+	 * @param id - song id to remove from individual songs
+	 */
+	private _removeSong(id: number) {
+		// find item that exactly matches id property
+		const results = this._index.search({
+			$and: [{ id: '=' + id }]
+		});
+		if (results.length === 0) return;
+		this._index.removeAt(results[0].refIndex);
+		this.events.emit('newSettings');
+	}
+
+	/**
+	 * fetchData()
+	 * 
+	 * Grabs updated info for playlist
+	 */
 	async fetchData() {
-		//
+		if (!this._url) return;
+		try {
+			const info = await ytpl(this._url);
+			if (!info) {
+				this.info(`No song info found for playlist with {url: ${this._url}}`);
+				return;
+			}
+			this._title = info.title;
+			this._url = info.url;
+
+			// compares urls of objects in the two arrays, creating array of items that don't yet existing in songs
+			const notExisting = info.items.filter(
+				// grab url of element in info
+				({ shortUrl: urlInInfo }) => {
+					// check to see if an element in existing songs contains that same url
+					return !this._songs.some(
+						// grab url of element in info
+						({ url: urlInSongs }) => {
+							// see if urls match
+							return urlInSongs === urlInInfo;
+						});
+				});
+
+			// do the same thing but reversed, creating array of items in songs but not in items
+			const removed = this._songs.filter(({ url: urlInSongs }) => !info.items.some(({ shortUrl: urlInInfo }) => urlInInfo === urlInSongs));
+
+			// add new non existing songs to songs
+			for (let i = 0; i < notExisting.length; i++) {
+				// add new song after creating it
+				const song = new GDSong(this.guildHandler, {
+					title: notExisting[i].title,
+					url: notExisting[i].shortUrl,
+					duration: notExisting[i].durationSec,
+					thumbnailURL: notExisting[i].bestThumbnail.url,
+					artist: notExisting[i].author.name,
+					live: notExisting[i].isLive
+				});
+				this._addSong(song);
+			}
+
+			// remove removed songs from songs
+			for (let i = 0; i < removed.length; i++) {
+				this._removeSong(removed[i].id);
+			}
+		}
+		catch (error) {
+			this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
+		}
 	}
 
 	/**
@@ -48,7 +152,13 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * @returns Song if found, undefined if not
 	 */
 	getSong(id: number) {
-		return this._songs[id];
+		// search for song that exactly matches id property
+		const results = this._index.search({
+			$and: [{ id: '=' + id }]
+		});
+
+		if (results.length === 0) return undefined;
+		return results[0].item;
 	}
 
 	/**
@@ -58,6 +168,17 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * @returns Array containing all songs in the playlist
 	 */
 	getAllSongs() { return this._songs; }
+
+
+	/**
+	 * search()
+	 * 
+	 * @param searchString - string used to search
+	 * @returns array of songs that matched 
+	 */
+	search(searchString: string) {
+		return this._index.search(searchString).map((a) => a.item);
+	}
 
 	/**
 	 * export()

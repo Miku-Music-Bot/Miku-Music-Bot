@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as express from 'express';
+import express = require('express');
 import * as winston from 'winston';
 
 import type BotMaster from '../GuildMaster';

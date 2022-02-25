@@ -23,7 +23,7 @@ export default class AudioSettings extends EventEmitter {
 		this._eqSettings = Object.assign({}, EQ_PRESETS.default);
 
 		// apply settings
-		if (!settings) return;
+		if (!settings) { setImmediate(() => { this.emit('newSettings', this); }); return; }
 		Object.assign(this._audioSettings, settings.audio);
 		Object.assign(this._eqSettings, settings.eq);
 	}

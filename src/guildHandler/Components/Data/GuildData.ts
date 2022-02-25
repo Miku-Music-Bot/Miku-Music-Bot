@@ -5,9 +5,11 @@ import type GuildHandler from '../../GuildHandler';
 import AudioSettings from './Settings/AudioSettings';
 import GuildSettings from './Settings/GuildSettings';
 import PermissionSettings from './Settings/PermissionSettings';
+import SourceManager from './SourceData/SourceManager';
 import { GuildConfig } from './Settings/config/guildConfig';
 import { AudioConfig, EQConfig } from './Settings/config/audioConfig';
 import { PermissionsConfig } from './Settings/config/permissionConfig';
+import { SourceDataConfig } from './SourceData/sourceConfig';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
@@ -18,6 +20,7 @@ type DatabaseData = {
 	guildConfig?: GuildConfig,
 	audioConfig: { audio: AudioConfig, eq: EQConfig },
 	permissionConfig: PermissionsConfig
+	sourceDataConfig: SourceDataConfig
 }
 
 /**
@@ -30,6 +33,7 @@ export default class GuildData extends GuildComponent {
 	guildSettings: GuildSettings;
 	audioSettings: AudioSettings;
 	permissionSettings: PermissionSettings;
+	sourceManager: SourceManager;
 	private _guildId: string;
 	private _collection: mongoDb.Collection;
 	private _saveTimeout: NodeJS.Timeout;
@@ -80,18 +84,21 @@ export default class GuildData extends GuildComponent {
 				this.guildSettings = new GuildSettings(foundGuild.guildConfig);
 				this.audioSettings = new AudioSettings(foundGuild.audioConfig);
 				this.permissionSettings = new PermissionSettings(foundGuild.permissionConfig);
+				this.sourceManager = new SourceManager(this.guildHandler, foundGuild.sourceDataConfig);
 			}
 			else {
 				// if guild is not found in database, save defaults to database
 				this.guildSettings = new GuildSettings();
 				this.audioSettings = new AudioSettings();
 				this.permissionSettings = new PermissionSettings();
+				this.sourceManager = new SourceManager(this.guildHandler);
 
 				const newData: DatabaseData = {
 					guildId: this._guildId,
 					guildConfig: this.guildSettings.export(),
 					audioConfig: this.audioSettings.export(),
 					permissionConfig: this.permissionSettings.export(),
+					sourceDataConfig: this.sourceManager.export()
 				};
 
 				await this._collection.insertOne(newData);
@@ -100,6 +107,7 @@ export default class GuildData extends GuildComponent {
 			this.guildSettings.on('newSettings', () => { this._save(); });
 			this.audioSettings.on('newSettings', () => { this._save(); });
 			this.permissionSettings.on('newSettings', () => { this._save(); });
+			this.sourceManager.events.on('newSettings', () => { this._save(); });
 
 			cb();				// call callback once done
 		} catch (error) {
@@ -131,6 +139,7 @@ export default class GuildData extends GuildComponent {
 				guildConfig: this.guildSettings.export(),
 				audioConfig: this.audioSettings.export(),
 				permissionConfig: this.permissionSettings.export(),
+				sourceDataConfig: this.sourceManager.export()
 			};
 			await this._collection.replaceOne({ guildId: this._guildId }, newData);
 		} catch (error) {

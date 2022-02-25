@@ -5,8 +5,7 @@ import GuildComponent from '../../GuildComponent';
 import Playlist from './Playlist';
 import GDPlaylist from './GDSources/GDPlaylist';
 import Song from './Song';
-import { SongConfig, SourceDataConfig, SourceRef, SOURCE_DATA_DEFAULT } from './sourceConfig';
-import YTSong from './YTSources/YTSong';
+import { SourceDataConfig, SourceRef, SOURCE_DATA_DEFAULT } from './sourceConfig';
 import YTPlaylist from './YTSources/YTPlaylist';
 
 /**
@@ -16,7 +15,6 @@ import YTPlaylist from './YTSources/YTPlaylist';
  */
 export default class SourceManager extends GuildComponent {
 	events: EventEmitter;
-	private _individualSongs: Array<Song>;
 	private _gdPlaylists: Array<Playlist>;
 	private _ytPlaylists: Array<Playlist>;
 
@@ -24,7 +22,7 @@ export default class SourceManager extends GuildComponent {
 	 * @param guildHandler
 	 * @param info - sourceData of source manager you want to create
 	 */
-	constructor(guildHandler: GuildHandler, sourceData: SourceDataConfig) {
+	constructor(guildHandler: GuildHandler, sourceData?: SourceDataConfig) {
 		super(guildHandler);
 		this.events = new EventEmitter();
 
@@ -32,30 +30,43 @@ export default class SourceManager extends GuildComponent {
 		let save = false;
 		if (!sourceData) {
 			save = true;
-			sourceData = SOURCE_DATA_DEFAULT;
+			sourceData = Object.assign({}, SOURCE_DATA_DEFAULT);
 		}
+		this._gdPlaylists = [];
+		this._ytPlaylists = [];
 
 		// Create songs and playlists
-		for (let i = 0; i < sourceData.individualSongs.length; i++) { this.addSong(this._createSong(sourceData.individualSongs[i])); }
 		for (let i = 0; i < sourceData.gdPlaylists.length; i++) { this._gdPlaylists.push(new GDPlaylist(this.guildHandler, sourceData.gdPlaylists[i])); }
 		for (let i = 0; i < sourceData.ytPlaylists.length; i++) { this._ytPlaylists.push(new YTPlaylist(this.guildHandler, sourceData.ytPlaylists[i])); }
+
+		// refresh playlists
+		setTimeout(() => this._refreshAll(), 1_000);
 
 		if (save) { this.events.emit('newSettings'); }
 	}
 
 	/**
-	 * _createSong()
+	 * _refreshAll()
 	 * 
-	 * Creates the correct song object using info about the song
-	 * @param info - Song info used to create song
-	 * @returns Song object
+	 * Refreshes all playlists every 30 min
 	 */
-	private _createSong(info: SongConfig): Song {
-		switch (info.type) {
-			case ('yt'): { return new YTSong(this.guildHandler, info); }
-			case ('gd'): {
-				return new YTSong(this.guildHandler, info);
-				//return new GDSong(this.guildHandler, info);
+	private async _refreshAll() {
+		if (this.vcPlayer.playing) {
+			setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+			return;
+		}
+		for (let i = 0; i < this._gdPlaylists.length; i++) {
+			await this._gdPlaylists[i].fetchData();
+			if (this.vcPlayer.playing) {
+				setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+				return;
+			}
+		}
+		for (let i = 0; i < this._ytPlaylists.length; i++) {
+			await this._ytPlaylists[i].fetchData();
+			if (this.vcPlayer.playing) {
+				setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+				return;
 			}
 		}
 	}
@@ -105,33 +116,6 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * addSong()
-	 * 
-	 * Adds a song to individual songs and keeps it sorted
-	 * @param song - song to add to individual songs
-	 */
-	addSong(song: Song) {
-		const i = this._binaryInsert(song.id, this._individualSongs);
-		if (i === -1) return;
-		this._individualSongs.splice(i, 0, song);
-		song.events.on('newSettings', () => { this.events.emit('newSettings'); });
-		this.events.emit('newSettings');
-	}
-
-	/**
-	 * removeSong()
-	 * 
-	 * Removes specified song from individual songs
-	 * @param id - song id to remove from individual songs
-	 */
-	removeSong(id: number) {
-		const i = this._binarySearch(id, this._individualSongs);
-		if (i === -1) return;
-		this._individualSongs.splice(i, 1);
-		this.events.emit('newSettings');
-	}
-
-	/**
 	 * addPlaylist()
 	 * 
 	 * Adds a playlist to correct location and keeps it sorts
@@ -140,11 +124,11 @@ export default class SourceManager extends GuildComponent {
 	 */
 	addPlaylist(playlist: Playlist, type: 'yt' | 'gd') {
 		let ref;
-		switch(type) {
-			case('yt'): { ref = this._ytPlaylists; break; }
-			case('gd'): { ref = this._gdPlaylists; break; }
+		switch (type) {
+			case ('yt'): { ref = this._ytPlaylists; break; }
+			case ('gd'): { ref = this._gdPlaylists; break; }
 		}
-		
+
 		const i = this._binaryInsert(playlist.id, ref);
 		if (i === -1) return;
 		ref.splice(i, 0, playlist);
@@ -184,14 +168,7 @@ export default class SourceManager extends GuildComponent {
 	 * @param song - song to add to playlist
 	 */
 	resolveRef(ref: SourceRef): Array<Song> {
-		// if no playlist argument given, return that song if it exists
-		if (!ref.playlist) {
-			const i = this._binarySearch(ref.id, this._individualSongs);
-			if (i === -1) return [];
-			return [this._individualSongs[i]];
-		}
-
-		// get the playlist if a reference is given
+		// get the playlist
 		let playlist;
 		switch (ref.type) {
 			case ('yt'): {
@@ -218,20 +195,36 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
+	 * searchSaved()
+	 * 
+	 * Searchs all saved sources using given string
+	 * @param searchString - String to use to search
+	 * @returns results split by source they come from
+	 */
+	searchSaved(searchString: string) {
+		const results: { gd: Array<Song>, yt: Array<Song> } = {
+			gd: [],
+			yt: []
+		};
+
+		for (let i = 0; i < this._gdPlaylists.length; i++) { results.gd.push(...this._gdPlaylists[i].search(searchString)); }
+		for (let i = 0; i < this._ytPlaylists.length; i++) { results.yt.push(...this._ytPlaylists[i].search(searchString)); }
+
+		return results;
+	}
+
+	/**
 	 * export()
 	 * 
 	 * Exports the settings in the format to be saved in database		
 	 * @returns object to be saved in database
 	 */
 	export(): SourceDataConfig {
-		const individualSongs = [];
-		for (let i = 0; i < this._individualSongs.length; i++) { individualSongs.push(this._individualSongs[i].export()); }
 		const gdPlaylists = [];
 		for (let i = 0; i < this._gdPlaylists.length; i++) { gdPlaylists.push(this._gdPlaylists[i].export()); }
 		const ytPlaylists = [];
 		for (let i = 0; i < this._ytPlaylists.length; i++) { ytPlaylists.push(this._ytPlaylists[i].export()); }
 		return {
-			individualSongs,
 			gdPlaylists,
 			ytPlaylists
 		};

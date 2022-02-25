@@ -1,4 +1,5 @@
-import * as ytpl from 'ytpl';
+import Fuse from 'fuse.js';
+import ytpl = require('ytpl');
 import { EventEmitter } from 'events';
 
 import GuildHandler from '../../../../GuildHandler';
@@ -13,22 +14,23 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	private _title: string;
 	private _url: string;
 	private _songs: Array<YTSong>;
+	private _index: Fuse<YTSong>;
 
 	/**
 	 * @param guildHandler
 	 * @param info - songInfo of song you want to create
 	 */
-	constructor(guildHandler: GuildHandler, plInfo: PlaylistConfig) {
+	constructor(guildHandler: GuildHandler, plInfo?: PlaylistConfig) {
 		super(guildHandler);
 		this.events = new EventEmitter();
 
 		// set defaults
 		let save = false;
 		const info = Object.assign({}, PLAYLIST_DEFAULT);
-		if (!plInfo.id) {
+		if (!plInfo || !plInfo.id) {
 			save = true;
-			info.id = this.data.guildSettings.songIdCount;
-			this.data.guildSettings.songIdCount++;
+			plInfo.id = this.data.guildSettings.playlistIdCount;
+			this.data.guildSettings.playlistIdCount++;
 		}
 		Object.assign(info, plInfo);
 
@@ -37,71 +39,35 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 		this._url = info.url;
 		this._songs = [];
 
+		// Create fuse index
+		this._index = new Fuse(this._songs, { 
+			useExtendedSearch: true,
+			keys: [ 'id', 'title', 'artist', 'url' ]
+		});
+
 		// Create songs
 		for (let i = 0; i < info.songs.length; i++) {
 			const song = new YTSong(this.guildHandler, info.songs[i]);
 			this._addSong(song);
-			song.events.on('newSettings', () => { this.events.emit('newSettings'); });
 		}
 
-		if (save) { this.events.emit('newSettings'); }
-	}
-
-	/**
-	 * _binaryInsert()
-	 * 
-	 * Uses a binary search to find index location to insert an element at
-	 * @param id - id to search for
-	 * @param array - array to search in
-	 * @returns location to insert at or -1 if already exists
-	 */
-	private _binaryInsert(id: number, array: Array<{ id: number }>) {
-		let left = 0;
-		let right = array.length - 1;
-		while (left <= right) {
-			const middle = Math.round((left + right) / 2);
-			if (array[middle].id === id) { return -1; }
-
-			if (array[middle].id < id) { left = middle + 1; }
-			else { right = middle - 1; }
-		}
-		const middle = Math.round((left + right) / 2);
-		if (!array[middle]) return array.length;
-		if (array[middle].id < id) { return middle + 1; }
-		return middle;
-	}
-
-	/**
-	 * _binarySearch()
-	 * 
-	 * Uses a binary search to find index location of an element
-	 * @param id - id to search for
-	 * @param array - array to search in
-	 * @returns location found for -1 is doesnt exist
-	 */
-	private _binarySearch(id: number, array: Array<{ id: number }>) {
-		let left = 0;
-		let right = array.length - 1;
-		while (left <= right) {
-			const middle = Math.round((left + right) / 2);
-			if (array[middle].id === id) { return middle; }
-
-			if (array[middle].id < id) { left = middle + 1; }
-			else { right = middle - 1; }
-		}
-		return -1;
+		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
 	}
 
 	/**
 	 * _addSong()
 	 * 
-	 * Adds a song to the playlist and keeps it sorted
+	 * Checks if song already exists in playlist anda dds a song to the playlist
 	 * @param song - song to add to playlist
 	 */
 	private _addSong(song: YTSong) {
-		const i = this._binaryInsert(song.id, this._songs);
-		if (i === -1) return;
-		this._songs.splice(i, 0, song);
+		// remove the song just in case it already exists
+		this._removeSong(song.id);
+		this._index.add(song);
+		song.events.on('newSettings', (s) => {
+			this._addSong(s);
+			this.events.emit('newSettings');
+		});
 		song.events.on('newSettings', () => { this.events.emit('newSettings'); });
 		this.events.emit('newSettings');
 	}
@@ -113,9 +79,12 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	 * @param id - song id to remove from individual songs
 	 */
 	private _removeSong(id: number) {
-		const i = this._binarySearch(id, this._songs);
-		if (i === -1) return;
-		this._songs.splice(i, 1);
+		// find item that exactly matches id property
+		const results = this._index.search({
+			$and: [{ id: '=' + id }]
+		});
+		if (results.length === 0) return;
+		this._index.removeAt(results[0].refIndex);
 		this.events.emit('newSettings');
 	}
 
@@ -125,6 +94,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	 * Grabs updated info for playlist
 	 */
 	async fetchData() {
+		if (!this._url) return;
 		try {
 			const info = await ytpl(this._url);
 			if (!info) {
@@ -170,7 +140,6 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			}
 		}
 		catch (error) {
-			console.log(error);
 			this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
 		}
 	}
@@ -183,9 +152,13 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	 * @returns Song if found, undefined if not
 	 */
 	getSong(id: number) {
-		const i = this._binarySearch(id, this._songs);
-		if (i === -1) return undefined;
-		return this._songs[i];
+		// search for song that exactly matches id property
+		const results = this._index.search({
+			$and: [{ id: '=' + id }]
+		});
+
+		if (results.length === 0) return undefined;
+		return results[0].item;
 	}
 
 	/**
@@ -195,6 +168,17 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	 * @returns Array containing all songs in the playlist
 	 */
 	getAllSongs() { return this._songs; }
+
+
+	/**
+	 * search()
+	 * 
+	 * @param searchString - string used to search
+	 * @returns array of songs that matched 
+	 */
+	search(searchString: string) {
+		return this._index.search(searchString).map((a) => a.item);
+	}
 
 	/**
 	 * export()

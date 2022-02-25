@@ -34,7 +34,7 @@ export default class YTSong extends GuildComponent implements Song {
 		}
 		Object.assign(this._songInfo, info);
 
-		if (save) { this.events.emit('newSettings'); }
+		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
 	}
 
 	/**

@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg = require('fluent-ffmpeg');
 import * as ffmpegPath from 'ffmpeg-static';
 import { ChildProcess, spawn } from 'child_process';
 

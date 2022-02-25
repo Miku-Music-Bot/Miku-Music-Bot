@@ -30,7 +30,7 @@ export default class UI extends GuildComponent {
 	}
 
 	/**
-	 * sendui
+	 * sendUI()
 	 *
 	 * Sends ui to channel
 	 */
@@ -38,12 +38,12 @@ export default class UI extends GuildComponent {
 		// this needs to be improved to not use .get();
 		const channel = this.bot.channels.cache.get(this.data.guildSettings.channelId);
 		if (channel instanceof Discord.TextChannel) {
-			channel.send({ embeds: [ this._createUI() ] });
+			channel.send({ embeds: [this._createUI()] });
 		}
 	}
 
 	/**
-	 * createui
+	 * createUI()
 	 *
 	 * Creates discord messageEmbed for UI
 	 * @return Discord message embed
@@ -91,14 +91,14 @@ export default class UI extends GuildComponent {
 				this.debug(`Channel with {channelId: ${channelId}} was not a text channel, notification with {message: ${message}} was not sent`);
 			}
 		} catch (error) {
-			this.error(`{error: ${error}} while creating/sending notification message.`);
+			this.error(`{error: ${error}} while creating/sending notification message with {message: ${message}}`);
 		}
 	}
 
 	/**
 	 * sendError()
 	 *
-	 * Sends a notification
+	 * Sends an error notification
 	 * @param message - message you want to send
 	 * @param saveErrorId - create an error id or not
 	 * @param channelId - discord channel id for text channel for message to be sent
@@ -129,10 +129,33 @@ export default class UI extends GuildComponent {
 				else {
 					this.debug(`Channel with {channelId: ${channelId}} was not a text channel, error with {message: ${message}} was not sent`);
 				}
-			} catch (error) {
-				this.error(`{error: ${error}} while creating/sending error message.`);
+			}
+			catch (error) {
+				this.error(`{error: ${error}} while creating/sending error message with {message: ${message}}.`);
 			}
 		})();
 		return errorId;
+	}
+
+	/**
+	 * sendEmbed()
+	 *
+	 * Sends an already made embed
+	 * @param embed - embed you want to send
+	 */
+	async sendEmbed(embed: Discord.MessageEmbed) {
+		try {
+			const channel = await this.bot.channels.fetch(this.data.guildSettings.channelId);
+			if (channel instanceof Discord.TextChannel) {
+				const msg = await channel.send({ embeds: [embed] });
+				this.debug(`Embed with {title: ${embed.title}} sent, {messageId: ${msg.id}}`);
+			}
+			else {
+				this.debug(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${embed.title}} was not sent`);
+			}
+		}
+		catch (error) {
+			this.error(`{error: ${error}} while creating/sending embed with {title: ${embed.title}}.`);
+		}
 	}
 }

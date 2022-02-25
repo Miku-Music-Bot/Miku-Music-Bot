@@ -12,7 +12,6 @@ export type SongConfig = {
 	live?: boolean,
 	reqBy?: string
 };
-
 export const SONG_DEFAULT: SongConfig = {
 	id: undefined,
 	title: 'No Title',
@@ -27,12 +26,11 @@ export const SONG_DEFAULT: SongConfig = {
 
 // Individual Source Configuration data and defaults
 export type PlaylistConfig = {
-	id?: number,
-	title?: string,
+	id: number,
+	title: string,
 	url: string,
-	songs?: Array<SongConfig>
+	songs: Array<SongConfig>
 }
-
 export const PLAYLIST_DEFAULT: PlaylistConfig = {
 	id: undefined,
 	title: 'No Name',
@@ -40,18 +38,28 @@ export const PLAYLIST_DEFAULT: PlaylistConfig = {
 	songs: []
 };
 
-
 // All Source Data Configuration data and defaults
 export type SourceDataConfig = {
-	individualSongs: Array<SongConfig>,
 	gdPlaylists: Array<PlaylistConfig>,
 	ytPlaylists: Array<PlaylistConfig>
 }
-
 export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
-	individualSongs: [],
-	gdPlaylists: [],
-	ytPlaylists: []
+	gdPlaylists: [
+		{
+			id: undefined,
+			title: 'Individual Songs - Google Drive',
+			url: undefined,
+			songs: []
+		}
+	],
+	ytPlaylists: [
+		{
+			id: undefined,
+			title: 'Individual Songs - Youtube',
+			url: undefined,
+			songs: []
+		}
+	]
 };
 
 // Source reference

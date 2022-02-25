@@ -38,6 +38,7 @@
 		"express": "^4.17.2",
 		"ffmpeg-static": "^4.4.1",
 		"fluent-ffmpeg": "^2.1.2",
+		"fuse.js": "^6.5.3",
 		"mongodb": "^4.2.2",
 		"sodium": "^3.0.2",
 		"winston-daily-rotate-file": "^4.5.5",

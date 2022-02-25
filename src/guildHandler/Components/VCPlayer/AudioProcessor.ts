@@ -1,6 +1,6 @@
 
 import { PassThrough } from 'stream';
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg = require('fluent-ffmpeg');
 import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import { EventEmitter } from 'events';
 

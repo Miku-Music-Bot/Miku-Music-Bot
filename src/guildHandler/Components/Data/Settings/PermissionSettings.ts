@@ -46,7 +46,7 @@ export default class PermissionSettings extends EventEmitter {
 			for (let i = 0; i < PERMISSIONS_DEFAULT.admin.length; i++) {
 				this._permissionSettings[PERMISSIONS_DEFAULT.admin[i]] = [];
 			}
-			this.emit('newSettings');
+			setImmediate(() => { this.emit('newSettings', this); });
 		}
 	}
 
