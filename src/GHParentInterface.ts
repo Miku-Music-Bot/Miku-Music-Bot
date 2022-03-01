@@ -3,7 +3,7 @@ import * as Discord from 'discord.js';
 import * as winston from 'winston';
 import { ChildProcess, fork } from 'child_process';
 
-import { MessageObject } from './guildHandler/GHChildInterface';
+import { InteractionObject, MessageObject } from './guildHandler/GHChildInterface';
 
 export default class GuildHandlerInterface {
 	private log: winston.Logger;		// logger
@@ -35,7 +35,7 @@ export default class GuildHandlerInterface {
 			content: this._guildId
 		});
 	}
-	
+
 	removeGuild() {
 		//
 	}
@@ -49,5 +49,16 @@ export default class GuildHandlerInterface {
 		};
 
 		this._process.send({ type: 'message', content });
+	}
+
+	interactionHandler(interaction: Discord.ButtonInteraction) {
+		const content: InteractionObject = {
+			customId: interaction.customId,
+			authorId: interaction.user.id,
+			parentMessageId: interaction.message.id,
+			parentChannelId: interaction.channelId
+		};
+
+		this._process.send({ type: 'interaction', content });
 	}
 }

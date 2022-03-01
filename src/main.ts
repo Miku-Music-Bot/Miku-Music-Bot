@@ -61,14 +61,20 @@ bot.on('messageCreate', (message) => {
 	if (!message.guildId) return;						// ignore if is a dm
 
 	const guild = botMaster.getGuild(message.guildId);
-	if (guild) {
-		guild.messageHandler(message);
-	}
+	if (guild) { guild.messageHandler(message); }
 });
 
 // when bot receives an interaction
 bot.on('interactionCreate', (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
+	if (!interaction.guildId) return;
+	
+	const guild = botMaster.getGuild(interaction.guildId);
+	if (guild) {
+		guild.interactionHandler(interaction);
+		interaction.reply(interaction.customId);
+		interaction.deleteReply();
+	}
 });
 
 // once ready, start handlers for all existing guilds

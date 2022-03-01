@@ -17,7 +17,10 @@ export type message = {
 }
 
 export type InteractionObject = {
-	//
+	customId: string,
+	authorId: string,
+	parentMessageId: string,
+	parentChannelId: string
 }
 export type interaction = { 
 	type: 'interaction',
@@ -38,6 +41,7 @@ process.on('message', (message: parentCommand) => {
 			break;
 		}
 		case('interaction'): {
+			guildHandler.interactionHandler(message.content);
 			break;
 		}
 	}

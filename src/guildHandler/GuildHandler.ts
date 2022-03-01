@@ -9,13 +9,14 @@ import VCPlayer from './Components/VCPlayer/VCPlayer';
 import Queue from './Components/Queue';
 import newLogger from '../Logger';
 
-import { MessageObject } from './GHChildInterface';
+import { InteractionObject, MessageObject } from './GHChildInterface';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /// <<<<<< testing
 import YTSource from './Components/VCPlayer/AudioSources/YTAudioSource';
 import YTSong from './Components/Data/SourceData/YTSources/YTSong';
+import Search from './Components/Search';
 
 /**
  * GuildHander
@@ -38,6 +39,7 @@ export default class GuildHandler {
 	vcPlayer: VCPlayer;
 	queue: Queue;
 	permissions: CommandPermissions;
+	search: Search;
 
 	//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	source: YTSource;
@@ -72,6 +74,7 @@ export default class GuildHandler {
 			this.vcPlayer = new VCPlayer(this);
 			this.queue = new Queue(this);
 			this.permissions = new CommandPermissions(this);
+			this.search = new Search(this);
 
 			// bot is now ready
 			this._ready = true;
@@ -79,6 +82,7 @@ export default class GuildHandler {
 
 			// if not configured, log for helping debugging
 			if (!this.data.guildSettings.configured) { this.info('This guild has not been configured, waiting set-channel command'); }
+			else { this.ui.sendUI(); }
 		});
 
 		// get guild data, once data is ready, log into discord
@@ -140,11 +144,15 @@ export default class GuildHandler {
 				}
 				case ('play'): {
 					// if not connected to vc, connect
-					if (!this.vcPlayer.connected) { await this.vcPlayer.join(message.authorId); }
+					if (!this.vcPlayer.connected) { 
+						const joined = await this.vcPlayer.join(message.authorId);
+						if (!joined) break;
+					}
 
 					// if there is an argument, means to play/add song to queue
 					if (argument) {
-						// start queue song process
+						// search for song
+						this.search.search(argument);
 						break;
 					}
 
@@ -175,6 +183,16 @@ export default class GuildHandler {
 				}
 			}
 		}
+	}
+
+	/**
+	 * interactionHandler()
+	 * 
+	 * Handles all interactions the bot recieves
+	 * @param interaction - object with all interaction information
+	 */
+	async interactionHandler(interaction: InteractionObject) {
+		this.ui.buttonPressed(interaction);
 	}
 
 	/**
