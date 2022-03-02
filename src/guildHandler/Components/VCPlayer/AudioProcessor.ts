@@ -1,14 +1,14 @@
 
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
-import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import ffmpegPath = require('ffmpeg-static');
 import { EventEmitter } from 'events';
 
 import type GuildHandler from '../../GuildHandler';
 import GuildComponent from '../GuildComponent';
 import type AudioSource from './AudioSources/AudioSource';
 
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const PCM_FORMAT = 's16le';
 const AUDIO_CHANNELS = 2;

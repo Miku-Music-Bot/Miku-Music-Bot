@@ -57,8 +57,14 @@ export default class UI extends GuildComponent {
 						break;
 					}
 
+					// if not playing anything, start playing fron queue
+					if (!this.vcPlayer.playing) {
+						this.queue.nextSong(true);
+						break;
+					}
+
 					// toggle pause/play
-					if (this.vcPlayer.playing) { this.vcPlayer.resume(); }
+					if (this.vcPlayer.paused) { this.vcPlayer.resume(); }
 					else { this.vcPlayer.pause(); }
 					break;
 				}
@@ -67,7 +73,7 @@ export default class UI extends GuildComponent {
 					break;
 				}
 				case ('skip'): {
-					this.queue.nextSong();
+					this.vcPlayer.finishedSong();
 					break;
 				}
 			}

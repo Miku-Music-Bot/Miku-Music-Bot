@@ -65,16 +65,22 @@ bot.on('messageCreate', (message) => {
 });
 
 // when bot receives an interaction
-bot.on('interactionCreate', (interaction) => {
+bot.on('interactionCreate', async (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
 	if (!interaction.guildId) return;
 	
+	// Send to correct guild handler and update to respond to discord to indicate that reaction has been recieved
 	const guild = botMaster.getGuild(interaction.guildId);
 	if (guild) {
 		guild.interactionHandler(interaction);
-		interaction.reply(interaction.customId);
-		interaction.deleteReply();
+		try { await interaction.update({}); } catch { /* */ }
 	}
+});
+
+// when bot recieves a reaction
+bot.on('messageReactionAdd', async (reaction) => {
+	// delete it
+	try { await reaction.remove(); } catch { /* */ }
 });
 
 // once ready, start handlers for all existing guilds

@@ -24,7 +24,7 @@ const AUDIO_FREQUENCY = 48000;
 const SEC_PCM_SIZE = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;
 const LARGE_CHUNK_SIZE = SEC_PCM_SIZE * 10;
 const SMALL_CHUNK_SIZE = SEC_PCM_SIZE / 10;
-console.log(ffmpegPath);
+
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
