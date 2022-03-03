@@ -158,7 +158,7 @@ export default class Queue extends GuildComponent {
 			this.vcPlayer.play(source);
 			return;
 		}
-		
+
 		// Move to next song, unless we are at the end of the queue
 		this._currentLoc++;
 		if (this._currentLoc >= this._queue.length) {
@@ -187,9 +187,44 @@ export default class Queue extends GuildComponent {
 			this.vcPlayer.play(source);
 		}
 		// send error if there is nothing to play
-		else { this.ui.sendError('Nothing to play!'); }
+		else {
+			this.currentLoc = -1;
+			this.nowPlaying = false;
+			this.ui.sendError('Nothing to play!');
+		}
 
 		// refresh autoplay queue if we are near the end
 		if (this._autoplayQueue.length <= 10) { this._refreshAutoplay(); }
+	}
+
+	/**
+	 * getUIInfo()
+	 * 
+	 * Returns the required info for ui to display the queue
+	 */
+	getUIInfo() {
+		const info = {
+			nowPlaying: this.nowPlaying,
+			repeatQueue: this._repeatQueue,
+			repeatSong: this._repeatSong,
+			autoplay: this.data.guildSettings.autoplay
+		}
+
+		if (!this.nowPlaying) return info;
+
+
+		info.lastPlayed = this._lastPlayed;
+		info.nowPlayingSong = this._nowPlayingSong;
+
+		if (this._currentLoc === -1) {
+			info.playingFrom = 'autoplay';
+			info.nextInAutoplay = this._autoplayQueue.slice(0, 3);
+
+			return info;
+		}
+
+		info.playingFrom = 'queue',
+		info.nextInQueue = this._queue.slice(this._currentLoc + 1, this._currentLoc + 4);
+		return info;
 	}
 }

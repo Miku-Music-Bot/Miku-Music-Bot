@@ -98,8 +98,27 @@ export default class UI extends GuildComponent {
 	 * @return Discord message embed
 	 */
 	private _createUI(): Discord.MessageOptions {
-		const userInterface = new Discord.MessageEmbed()
-			.setDescription('hi');
+		const queueInfo = this.queue.getUIInfo();
+
+		const userInterface = new Discord.MessageEmbed();
+		
+		if (!queueInfo.nowPlaying) {
+			userInterface
+				.setTitle('Idle - Listening for Commands')
+				.setDescription('Type "help" for a list of avaliable commands')
+				.addFields({ 
+					name: 'autoplay', 
+					value: queueInfo.autoplay ? 'on' : 'off' 
+				});
+		}
+		else {
+			userInterface.setTitle('Not Playing');
+			if (queueInfo.nowPlaying) { 
+				const status = this.vcPlayer.paused ? '[Paused]' : 'Now Playing';
+				userInterface.setTitle(`${status}: ${queueInfo.nowPlayingSong.title}`); 
+			}
+
+		}
 
 		const audioControls = new Discord.MessageActionRow()
 			.addComponents(
