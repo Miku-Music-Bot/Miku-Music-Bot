@@ -139,7 +139,7 @@ export default class GuildHandler {
 					this.vcPlayer.join(message.authorId);
 
 					// <<<<<<<<<<< for testing
-					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=jrK_DSTc-SU' }));
+					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=5yDNEmcKQFY&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=24' }));
 					break;
 				}
 				case ('play'): {
@@ -164,7 +164,7 @@ export default class GuildHandler {
 					}
 
 					// should start playing from autoplay
-					this.queue.nextSong(true);
+					this.queue.nextSong();
 					break;
 				}
 				case ('pause'): {

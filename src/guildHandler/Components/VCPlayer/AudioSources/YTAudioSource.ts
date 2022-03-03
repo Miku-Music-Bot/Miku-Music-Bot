@@ -13,7 +13,7 @@ import GuildComponent from '../../GuildComponent';
 import type Song from '../../Data/SourceData/Song';
 import type GuildHandler from '../../../GuildHandler';
 
-const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
+const TEMP_DIR = __dirname; //process.env.TEMP_DIR;				// directory for temp files
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
 
 // audio constants

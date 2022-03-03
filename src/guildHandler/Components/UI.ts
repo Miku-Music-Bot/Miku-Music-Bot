@@ -53,13 +53,13 @@ export default class UI extends GuildComponent {
 					if (!this.vcPlayer.connected) {
 						const joined = await this.vcPlayer.join(interaction.authorId);
 						// should start playing from autoplay
-						if (joined) { this.queue.nextSong(true); }
+						if (joined) { this.queue.nextSong(); }
 						break;
 					}
 
 					// if not playing anything, start playing fron queue
 					if (!this.vcPlayer.playing) {
-						this.queue.nextSong(true);
+						this.queue.nextSong();
 						break;
 					}
 

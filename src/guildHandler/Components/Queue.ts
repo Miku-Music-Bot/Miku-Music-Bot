@@ -10,115 +10,118 @@ import YTSource from './VCPlayer/AudioSources/YTAudioSource';
  * Handles queue of songs to be played and playing said songs
  */
 export default class Queue extends GuildComponent {
-	private _sources: Array<{ song: Song, id: number }>;				// should be sorted by ids
-	private _apSources: Array<{ song: Song, id: number }>;			// should be sorted by ids
-	private _sourceCount: number;
-
-	queueList: Array<{ song: Song, id: number }>;						// does not need to be sorted
-	autoplayList: Array<{ song: Song, id: number }>;					// does not need to be sorted
+	private _queue: Array<Song>;
+	private _autoplayQueue: Array<Song>;
 	nowPlaying: boolean;
-	lastPlayed: Song;
+	private _nowPlayingSong: Song;
+	private _lastPlayed: Song;
+	private _currentLoc: number;
 
-	repeatSong: number;
-	repeatQueue: boolean;
+	private _repeatSong: number;
+	private _repeatQueue: boolean;
 
 	/**
 	 * @param guildHandler - guild handler for guild this queue object is responsible for
 	 */
 	constructor(guildHandler: GuildHandler) {
 		super(guildHandler);
-		this._sources = [];
-		this._apSources = [];
-		this._sourceCount = 0;
 
-		this.queueList = [];
-		this.autoplayList = [];
-
+		this._queue = [];
+		this._autoplayQueue = [];
 		this.nowPlaying = false;
-		this.repeatSong = 0;
-		this.repeatQueue = false;
+		this._currentLoc = -1;
+
+		this._repeatSong = 0;
+		this._repeatQueue = false;
+
+		this._refreshAutoplay();
 	}
 
 	/**
 	 * _resolveIndex()
 	 * 
 	 * @param i - index to resolve
-	 * @returns Object with property "from" (queue or autoplay), "index" (of queueList or autoplayList), and "data"
+	 * @returns Object with property "from" (queue or notFound or autoplay), "index" (of queueList or autoplayList), and "song"
 	 */
 	private _resolveIndex(i: number) {
-		if (this.queueList.length > i) {
+		if (this._queue.length > i) {
 			return {
 				from: 'queue',
 				index: i,
-				data: this.queueList[i]
+				song: this._queue[i]
+			};
+		}
+		else if (this._queue.length + this._autoplayQueue.length <= i) {
+			return {
+				from: 'notFound',
+				index: i,
+				song: undefined
 			};
 		}
 		else {
 			return {
 				from: 'autoplay',
-				index: i - this.queueList.length,
-				data: this.autoplayList[i - this.queueList.length]
+				index: i - this._queue.length,
+				song: this._autoplayQueue[i - this._queue.length]
 			};
 		}
 	}
 
 	/**
-	 * _binarySearch()
+	 * removeSong()
 	 * 
-	 * Finds object with propretym, id matching given id, null if not found
-	 * @param id - id to find 
-	 * @param list - array of objects with id property
-	 * @returns index of found item or null if not found
+	 * Removes a song with the given id from the queue
+	 * @param id - id of song to remove
 	 */
-	private _binarySearch(id: number, arr: Array<{ id: number }>) {
-		let lBound = 0;
-		let rBound = arr.length - 1;
-		let middle = 0;
-		while (lBound <= rBound) {
-			middle = Math.floor((lBound + rBound) / 2);
+	removeSong(id: number) {
+		const loc = this._resolveIndex(id - 1);
+		if (loc.from === 'queue') { this._queue.splice(loc.index, 1); }
+		else if (loc.from === 'autoplay') { this._autoplayQueue.splice(loc.index, 1); }
+		else { this.ui.sendError('That song doens\'t exist in the queue or in autoplay'); }
 
-			if (arr[middle].id === id) { return middle; }
-
-			if (arr[middle].id > id) { rBound = middle - 1; }
-			else { lBound = middle + 1; }
-		}
-		return null;
-	}
-
-	removeQueue(id: number) {
-		//
 	}
 
 	/**
 	 * addQueue()
 	 * 
-	 * Inserts a song to queue and saves it to the sources list
+	 * Inserts a song to queue
 	 * @param song - song to add to queue
 	 */
-	addQueue(song: Song) {
-		this._sources.push({ id: this._sourceCount, song });
-		this.queueList.push({ id: this._sourceCount, song });
-		this._sourceCount++;
+	addQueue(song: Song) { this._queue.push(song); }
+
+	/**
+	 * 
+	 */
+	private _refreshQueue() { this._queue = this._shuffle(this._queue); }
+
+	/**
+	 * _refreshAutoplay()
+	 * 
+	 * Adds new songs to the autoplay queue
+	 */
+	private _refreshAutoplay() {
+		const newSongs = [];
+		for (let i = 0; i < this.data.guildSettings.autoplayList.length; i++) {
+			newSongs.push(...this.data.sourceManager.resolveRef(this.data.guildSettings.autoplayList[i]));
+		}
+		this._autoplayQueue.push(...this._shuffle(newSongs));
 	}
 
 	/**
-	 * addAutoplay()
+	 * _shuffle()
 	 * 
-	 * Inserts a song to autoplay and saves it to the sources list
-	 * @param song - song to add to autoplay
+	 * Implements a Fisher-Yates algorithm to shuffle an array
+	 * @param list - array to shuffle
+	 * @returns suffled array
 	 */
-	addAutoplay(song: Song) {
-		this._apSources.push({ id: this._sourceCount, song });
-		this.autoplayList.push({ id: this._sourceCount, song });
-		this._sourceCount++;
-	}
-
-	private _refreshQueue() {
-		//
-	}
-
-	private _refreshAutoplay() {
-		//
+	private _shuffle(list: Array<Song>): Array<Song> {
+		for (let i = list.length - 1; i > 0; i--) {
+			const rand = Math.round(Math.random() * i);
+			const temp = list[i];
+			list[i] = list[rand];
+			list[rand] = temp;
+		}
+		return list;
 	}
 
 	/**
@@ -144,40 +147,49 @@ export default class Queue extends GuildComponent {
 	 * 
 	 * Queues up the next song if queue is not finished, otherwise does nothing
 	 */
-	nextSong(start?: boolean) {
-		if (!start) {
-			// grab what song was just played
-			const justPlayed = this._resolveIndex(0);
-			this.lastPlayed = justPlayed.data.song;
-
-			// if repeatSong, play the same song again
-			if (this.repeatSong > 0) {
-				const source = this._createSource(this.lastPlayed);
-				this.vcPlayer.play(source);
-				return;
-			}
-
-			// if not repeating song, shift the queue/autoplay over 1 song
-			if (justPlayed.from === 'queue') { this.queueList.shift(); }
-			else { this.autoplayList.shift(); }
-		}
+	nextSong() {
 		this.nowPlaying = true;
+		this._lastPlayed = this._nowPlayingSong;
 
-		// refresh the queue if it has ended and we want to repeat it
-		if (this.queueList.length === 0 && this.repeatQueue) { this._refreshQueue(); }
-		if (this.autoplayList.length === 0) { this._refreshAutoplay(); }
+		// if repeatSong, play the same song again
+		if ((this._repeatSong > 0 || this._repeatSong === -1) && this._lastPlayed) {
+			if (this._repeatSong !== -1) { this._repeatSong--; }
+			const source = this._createSource(this._lastPlayed);
+			this.vcPlayer.play(source);
+			return;
+		}
+		
+		// Move to next song, unless we are at the end of the queue
+		this._currentLoc++;
+		if (this._currentLoc >= this._queue.length) {
+			// refresh the queue if it has ended and we want to repeat it, otherwise clear the queue
+			if (this._repeatQueue) {
+				this._refreshQueue();
+				this._currentLoc = 0;
+			}
+			else { this._queue = []; }
+		}
 
-		// if there is stuff in the queue, the next song
-		if (this.queueList.length > 0) {
-			const source = this._createSource(this.queueList[0].song);
+		// if queue is empty and autoplay is on, set currentLoc to the right place
+		if (this._queue.length === 0 && this.data.guildSettings.autoplay) { this._currentLoc = -1; }
+
+		// if currentLoc is -1, play from autoplay
+		if (this._currentLoc === -1 && this.data.guildSettings.autoplay) {
+			const source = this._createSource(this._autoplayQueue[0]);
+			this._nowPlayingSong = this._autoplayQueue[0];
+			this._autoplayQueue.shift();
 			this.vcPlayer.play(source);
 		}
-		// otherwise, if autoplay is on, play from autoplay
-		else if (this.data.guildSettings.autoplay && this.autoplayList.length > 0) {
-			const source = this._createSource(this.autoplayList[0].song);
+		// otherwise play the right song from the queue
+		else if (this._currentLoc < this._queue.length) {
+			const source = this._createSource(this._queue[this._currentLoc]);
+			this._nowPlayingSong = this._queue[this._currentLoc];
 			this.vcPlayer.play(source);
 		}
-		// send error if this is just the start
-		else if (start) { this.ui.sendError('Nothing to play!'); }
+		// send error if there is nothing to play
+		else { this.ui.sendError('Nothing to play!'); }
+
+		// refresh autoplay queue if we are near the end
+		if (this._autoplayQueue.length <= 10) { this._refreshAutoplay(); }
 	}
 }
