@@ -137,7 +137,7 @@ export default class UI extends GuildComponent {
 		return { embeds: [userInterface], components: [audioControls] };
 	}
 
-	private async _deleteMsg(channelId: string, messageId: string) {
+	async deleteMsg(channelId: string, messageId: string) {
 		try {
 			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
 			const message = await channel.messages.fetch(messageId);
@@ -178,7 +178,7 @@ export default class UI extends GuildComponent {
 
 			const interactionHandler = (interaction: InteractionObject) => {
 				if (interaction.customId === 'close') {
-					this._deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+					this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 				}
 			};
 
@@ -223,7 +223,7 @@ export default class UI extends GuildComponent {
 
 				const interactionHandler = (interaction: InteractionObject) => {
 					if (interaction.customId === 'close') {
-						this._deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+						this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 					}
 				};
 
@@ -256,7 +256,7 @@ export default class UI extends GuildComponent {
 				this._interactionListeners[msg.id] = { interactionHandler };
 
 				// set timeout if given
-				if (life !== -1) { this._interactionListeners[msg.id].timeout = setTimeout(() => { this._deleteMsg(channel.id, msg.id); }, life); }
+				if (life !== -1) { this._interactionListeners[msg.id].timeout = setTimeout(() => { this.deleteMsg(channel.id, msg.id); }, life); }
 				return msg.id;
 			}
 			else { this.debug(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`); }

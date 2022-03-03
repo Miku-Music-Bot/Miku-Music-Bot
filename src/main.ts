@@ -65,7 +65,7 @@ bot.on('messageCreate', (message) => {
 });
 
 // when bot receives an interaction
-bot.on('interactionCreate', async (interaction) => {
+bot.on('interactionCreate', (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
 	if (!interaction.guildId) return;
 	
@@ -73,7 +73,7 @@ bot.on('interactionCreate', async (interaction) => {
 	const guild = botMaster.getGuild(interaction.guildId);
 	if (guild) {
 		guild.interactionHandler(interaction);
-		try { await interaction.update({}); } catch { /* */ }
+		setTimeout(async () => { try { await interaction.update({}); } catch { /* */ } }, 1_000);
 	}
 });
 

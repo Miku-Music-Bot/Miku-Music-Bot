@@ -1,5 +1,6 @@
 import * as Discord from 'discord.js';
 import ytsr = require('ytsr');
+import { InteractionObject } from '../GHChildInterface';
 import GuildHandler from '../GuildHandler';
 import Song from './Data/SourceData/Song';
 import YTSong from './Data/SourceData/YTSources/YTSong';
@@ -46,7 +47,11 @@ export default class Search extends GuildComponent {
 			const searchResults: SearchResults = {
 				searchString,
 				items: [],
-				indexes: null
+				indexes: {
+					savedGD: null,
+					savedYT: null,
+					ytSearch: null
+				}
 			};
 
 			const savedResults = this.data.sourceManager.searchSaved(searchString);
@@ -72,12 +77,15 @@ export default class Search extends GuildComponent {
 			};
 			searchResults.items.push(...filteredYTResults.map((result) => {
 				let durationSec = 0;
-				const durationParts = result.duration.split(':');
-				const durationMultipliers = [1, 60, 3600, 86400];
-				let multiplierIndex = 0;
-				for (let i = durationParts.length - 1; i >= 0; i--) {
-					durationSec += parseInt(durationParts[i]) * durationMultipliers[multiplierIndex];
-					multiplierIndex++;
+
+				if (result.duration) {
+					const durationParts = result.duration.split(':');
+					const durationMultipliers = [1, 60, 3600, 86400];
+					let multiplierIndex = 0;
+					for (let i = durationParts.length - 1; i >= 0; i--) {
+						durationSec += parseInt(durationParts[i]) * durationMultipliers[multiplierIndex];
+						multiplierIndex++;
+					}
 				}
 
 				return new YTSong(this.guildHandler, {
@@ -90,7 +98,31 @@ export default class Search extends GuildComponent {
 				});
 			}));
 
-			this._sendSearchUI(searchResults);
+			let page = 1;
+			const interactionHandler = (interaction: InteractionObject) => {
+				switch (interaction.customId) {
+					case ('backPage'): {
+						page--;
+						this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, page));
+						break;
+					}
+					case ('nextPage'): {
+						page++;
+						this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, page));
+						break;
+					}
+					case ('close'): {
+						this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+						break;
+					}
+					default: {
+						const index = parseInt(interaction.customId);
+						if (index) { this.queue.addQueue(searchResults.items[index]); }
+						break;
+					}
+				}
+			};
+			this.ui.sendEmbed(this._createSearchUI(searchResults, page), -1, interactionHandler);
 		}
 		catch (error) {
 			const errorId = this.ui.sendError(`Error while searching using search string: "${searchString}"`, true);
@@ -99,12 +131,14 @@ export default class Search extends GuildComponent {
 	}
 
 	/**
+	 * _createSearchUI()
 	 * 
+	 * Generates the message embed for search
 	 * @param results - Search results to display
 	 * @param page - Page to show
-	 * @returns 
+	 * @returns discord message options for embed to send
 	 */
-	private _sendSearchUI(searchResults: SearchResults, page?: number) {
+	private _createSearchUI(searchResults: SearchResults, page?: number): Discord.MessageOptions {
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
@@ -115,6 +149,7 @@ export default class Search extends GuildComponent {
 		//const ytPageStart = Math.ceil((results.savedResults.gd.length + results.savedResults.yt.length) / 5);
 		const indexStart = (page - 1) * 5;
 
+		const numbers = new Discord.MessageActionRow();
 		let displayText = '';
 		for (let i = 0; i < 5; i++) {
 			const loc = indexStart + i;
@@ -122,26 +157,26 @@ export default class Search extends GuildComponent {
 			// Add headers when appropriate, add 'nothing found' if that group has nothing in it
 			if (loc === searchResults.indexes.savedGD.loc) {
 				displayText += '__**Saved Songs - Google Drive**__\n\n';
-				if (searchResults.indexes.savedGD.items === 0) { displayText += 'Nothing Found!'; }
+				if (searchResults.indexes.savedGD.items === 0) { displayText += 'Nothing Found!\n\n'; }
 			}
 			if (loc === searchResults.indexes.savedYT.loc) {
 				displayText += '__**Saved Songs - Youtube**__\n\n';
-				if (searchResults.indexes.savedYT.items === 0) { displayText += 'Nothing Found!'; }
+				if (searchResults.indexes.savedYT.items === 0) { displayText += 'Nothing Found!\n\n'; }
 			}
 			if (loc === searchResults.indexes.ytSearch.loc) {
 				displayText += '__**Youtube Search Results**__\n\n';
-				if (searchResults.indexes.ytSearch.items === 0) { displayText += 'Nothing Found!'; }
+				if (searchResults.indexes.ytSearch.items === 0) { displayText += 'Nothing Found!\n\n'; }
 			}
 
-			// Add approprit song to display
-			if (loc >= searchResults.items.length) {
+			// Add approprite song to display
+			if (loc < searchResults.items.length) {
 				// Number label
 				displayText += (i + 1).toString() + '\n';
 
 				const song = searchResults.items[loc];
 
 				// set title of song in bold
-				displayText += `**${song.title}**`;
+				displayText += `**${song.title}**\n`;
 
 				switch (song.type) {
 					case ('yt'): {
@@ -161,6 +196,14 @@ export default class Search extends GuildComponent {
 					}
 				}
 				displayText += '\n';
+
+				numbers.addComponents(
+					// Song selector button
+					new Discord.MessageButton()
+						.setLabel((i + 1).toString())
+						.setCustomId((i + 1).toString())
+						.setStyle('SECONDARY')
+				);
 			}
 			else { break; }
 		}
@@ -170,6 +213,27 @@ export default class Search extends GuildComponent {
 			.setDescription(displayText)
 			.setFooter({ text: `Page ${page} of ${maxPage}` });
 
-		this.ui.sendEmbed({ embeds: [searchUI] });
+		const navigation = new Discord.MessageActionRow()
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('<')
+					.setCustomId('backPage')
+					.setStyle('PRIMARY')
+					.setDisabled(page === 1)
+			)
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('>')
+					.setCustomId('nextPage')
+					.setStyle('PRIMARY')
+					.setDisabled(page === maxPage)
+			)
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('Done')
+					.setCustomId('close')
+					.setStyle('PRIMARY')
+			);
+		return { embeds: [searchUI], components: [numbers, navigation] };
 	}
 }
