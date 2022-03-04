@@ -44,6 +44,30 @@ export default class Search extends GuildComponent {
 	 */
 	async search(searchString: string) {
 		try {
+			const interactionHandler = async (interaction: InteractionObject) => {
+				try {
+					const customId = JSON.parse(interaction.customId);
+					switch (customId.type) {
+						case ('page'): {
+							await this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, customId.pageNum));
+							break;
+						}
+						case ('close'): {
+							await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+							break;
+						}
+						default: {
+							this.queue.addQueue(searchResults.items[customId.index]);
+							break;
+						}
+					}
+				} catch { return; }
+			};
+
+			const loadingMsg = new Discord.MessageEmbed()
+				.setTitle('Searching...');
+			const id = this.ui.sendEmbed({ embeds: [loadingMsg] }, -1, interactionHandler);
+
 			const searchResults: SearchResults = {
 				searchString,
 				items: [],
@@ -98,31 +122,7 @@ export default class Search extends GuildComponent {
 				});
 			}));
 
-			let page = 1;
-			const interactionHandler = (interaction: InteractionObject) => {
-				switch (interaction.customId) {
-					case ('backPage'): {
-						page--;
-						this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, page));
-						break;
-					}
-					case ('nextPage'): {
-						page++;
-						this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, page));
-						break;
-					}
-					case ('close'): {
-						this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
-						break;
-					}
-					default: {
-						const index = parseInt(interaction.customId);
-						if (index) { this.queue.addQueue(searchResults.items[index]); }
-						break;
-					}
-				}
-			};
-			this.ui.sendEmbed(this._createSearchUI(searchResults, page), -1, interactionHandler);
+			this.ui.updateMsg(this.data.guildSettings.channelId, await id, this._createSearchUI(searchResults));
 		}
 		catch (error) {
 			const errorId = this.ui.sendError(`Error while searching using search string: "${searchString}"`, true);
@@ -201,7 +201,7 @@ export default class Search extends GuildComponent {
 					// Song selector button
 					new Discord.MessageButton()
 						.setLabel((i + 1).toString())
-						.setCustomId((i + 1).toString())
+						.setCustomId(JSON.stringify( { type: 'select', index: loc.toString() }))
 						.setStyle('SECONDARY')
 				);
 			}
@@ -217,21 +217,21 @@ export default class Search extends GuildComponent {
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('<')
-					.setCustomId('backPage')
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page-1 }))
 					.setStyle('PRIMARY')
 					.setDisabled(page === 1)
 			)
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('>')
-					.setCustomId('nextPage')
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page+1 }))
 					.setStyle('PRIMARY')
 					.setDisabled(page === maxPage)
 			)
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('Done')
-					.setCustomId('close')
+					.setCustomId(JSON.stringify({ type: 'close' }))
 					.setStyle('PRIMARY')
 			);
 		return { embeds: [searchUI], components: [numbers, navigation] };

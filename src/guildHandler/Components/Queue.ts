@@ -90,7 +90,9 @@ export default class Queue extends GuildComponent {
 	addQueue(song: Song) { this._queue.push(song); }
 
 	/**
+	 * _refreshQueue()
 	 * 
+	 * Shuffles the queue
 	 */
 	private _refreshQueue() { this._queue = this._shuffle(this._queue); }
 
