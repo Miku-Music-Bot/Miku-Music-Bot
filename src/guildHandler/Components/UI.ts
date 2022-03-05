@@ -136,18 +136,48 @@ export default class UI extends GuildComponent {
 
 		const userInterface = new Discord.MessageEmbed();
 
-		// Title
 		if (!queueInfo.nowPlaying) {
+			// If not playing right now, show idle UI
 			userInterface
 				.setTitle('Idle - Listening for Commands')
 				.setDescription('Click the "help" buttom below if you need help')
 				.setThumbnail(DEFAULT_THUMBNAIL_URL);
 		}
 		else {
-			let status = '[Playing]';
+			// Check song status, (paused over buffering over playing)
+			let status = '';
 			if (this.vcPlayer.paused) { status = '[Paused]'; }
-			else if (this.vcPlayer.isBuffering()) { status = '[Buffering]'; }
+			else if (this.vcPlayer.currentSource.buffering) { status = '[Buffering]'; }
+			else { status = '[Playing]'; }
 			userInterface.setTitle(`${status}: ${queueInfo.nowPlayingSong.title}`);
+
+			// Create progress bar
+			const progressBarLength = 50;
+			let progressBar = '';
+			// Convert duration in sec to string and add to progress bar
+			let progress = this.vcPlayer.currentSource.getPlayedDuration();
+			let hours: number | string = Math.floor(progress / 3600);
+			if (hours < 10) { hours = '0' + hours.toString(); }
+			progress %= 3600;
+			let min: number | string = Math.floor(progress / 60);
+			if (min < 10) { min = '0' + min.toString(); }
+			progress %= 60;
+			let sec: number | string = progress;
+			if (sec < 10) { sec = '0' + sec.toString(); }
+			progressBar += `-${hours.toString()}:${min.toString()}:${sec.toString()} [`;
+			
+			// Figure out where to put the indicator
+			progress = this.vcPlayer.currentSource.getPlayedDuration();
+			const lineLength = progressBarLength - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
+			const indicatorLoc = Math.round(progress / this.vcPlayer.currentSource.song.duration * lineLength);
+			// Create bar
+			for (let i = 0; i < lineLength; i++) {
+				if (i === indicatorLoc) { progressBar += '|'; }
+				else { progressBar += '-'; }
+			}
+			// Add overall duration to the end
+			progressBar += (this.vcPlayer.currentSource.song.live) ? '] Live' : `] ${queueInfo.nowPlayingSong.durationString}`;
+			userInterface.setDescription(progressBar);
 		}
 
 		let autostopDisplay = 'off';

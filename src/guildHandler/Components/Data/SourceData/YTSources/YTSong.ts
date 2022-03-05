@@ -71,8 +71,8 @@ export default class YTSong extends GuildComponent implements Song {
 	*/
 	export(): SongConfig {
 		const info = Object.assign({}, this._songInfo);
-		info.reqBy = ''; 
-		return info; 
+		info.reqBy = '';
+		return info;
 	}
 
 	// getters
@@ -86,9 +86,14 @@ export default class YTSong extends GuildComponent implements Song {
 	get live() { return this._songInfo.live; }
 	get durationString() {
 		let secs = this._songInfo.duration;
-		const hours = Math.floor(secs / 3600);
+		let hours: number | string = Math.floor(secs / 3600);
+		if (hours < 10) { hours = '0' + hours.toString(); }
 		secs %= 3600;
-		const min = Math.floor(secs / 60);
+		let min: number | string = Math.floor(secs / 60);
+		if (min < 10) { min = '0' + min.toString(); }
+		secs %= 60;
+		let sec: number | string = secs;
+		if (sec < 10) { sec = '0' + sec.toString(); }
 		return `${hours.toString()}:${min.toString()}:${secs.toString()}`;
 	}
 	get reqBy() { return this._songInfo.reqBy; }

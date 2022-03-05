@@ -40,8 +40,8 @@ export default class SourceManager extends GuildComponent {
 		for (let i = 0; i < sourceData.gdPlaylists.length; i++) { this._gdPlaylists.push(new GDPlaylist(this.guildHandler, sourceData.gdPlaylists[i])); }
 		for (let i = 0; i < sourceData.ytPlaylists.length; i++) { this._ytPlaylists.push(new YTPlaylist(this.guildHandler, sourceData.ytPlaylists[i])); }
 
-		// refresh playlists
-		setTimeout(() => this._refreshAll(), 1_000);
+		// Refresh playlists
+		setTimeout(() => this._refreshAll(), 10_000);
 
 		if (save) { this.events.emit('newSettings'); }
 	}
