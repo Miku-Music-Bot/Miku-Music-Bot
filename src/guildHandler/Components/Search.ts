@@ -58,6 +58,7 @@ export default class Search extends GuildComponent {
 							break;
 						}
 						case('select'): {
+							searchResults.items[customId.index].reqBy = interaction.authorId;
 							this.queue.addQueue(searchResults.items[customId.index]);
 							// if not connected to vc, connect
 							if (!this.vcPlayer.connected) {

@@ -12,6 +12,7 @@ import Search from './Components/Search';
 
 import { InteractionInfo, MessageInfo } from './GHChildInterface';
 
+const LOG_DIR = process.env.LOG_DIR;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /**
@@ -43,7 +44,7 @@ export default class GuildHandler {
 	 */
 	constructor(id: string) {
 		// set up logger
-		const logger = newLogger(path.join(__dirname, 'logs', id));
+		const logger = newLogger(path.join(LOG_DIR, id));
 		this.logger = logger;
 		this.debug = (msg) => { logger.debug(msg); };
 		this.info = (msg) => { logger.info(msg); };

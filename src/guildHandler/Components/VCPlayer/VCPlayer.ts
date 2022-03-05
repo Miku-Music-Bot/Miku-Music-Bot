@@ -1,8 +1,10 @@
 import * as Voice from '@discordjs/voice';
+import { PassThrough } from 'stream';
 
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../../GuildHandler';
 import type AudioSource from './AudioSources/AudioSource';
+
 
 /**
  * VCPlayer
@@ -13,6 +15,7 @@ export default class VCPlayer extends GuildComponent {
 	private _voiceConnection: Voice.VoiceConnection;
 	private _audioPlayer: Voice.AudioPlayer;
 	private _subscription: Voice.PlayerSubscription;
+	private _currentOpusStream: PassThrough;
 	private _currentSource: AudioSource;
 	private _currentResource: Voice.AudioResource;
 	private _finishedSongCheck: NodeJS.Timer;
@@ -103,10 +106,7 @@ export default class VCPlayer extends GuildComponent {
 			this.connected = false;
 			this.playing = false;
 			this.paused = false;
-			if (this._currentSource) { this._currentSource.destroy(); }
-			if (this._audioPlayer) { this._audioPlayer.stop(); }
-			if (this._subscription) { this._subscription.unsubscribe(); }
-
+			this.finishedSong();
 			this._voiceConnection.destroy();
 		}
 		catch (error) {
@@ -155,6 +155,10 @@ export default class VCPlayer extends GuildComponent {
 		clearInterval(this._finishedSongCheck);
 		this.playing = false;
 		this.paused = false;
+		if (this._currentOpusStream) { 
+			this._currentOpusStream.removeAllListeners();
+			this._currentOpusStream.end();
+		}
 		if (this._currentSource) { this._currentSource.destroy(); }
 		if (this._audioPlayer) { this._audioPlayer.stop(); }
 		if (this._subscription) { this._subscription.unsubscribe(); }
@@ -184,6 +188,12 @@ export default class VCPlayer extends GuildComponent {
 		if (!this.connected) return;
 		if (source.destroyed) return;
 		this.playing = true;
+
+		// stop previous stream
+		if (this._currentOpusStream) { 
+			this._currentOpusStream.removeAllListeners();
+			this._currentOpusStream.end();
+		}
 		// set currentSource
 		if (this._currentSource) { this._currentSource.destroy(); }
 		this._currentSource = source;
@@ -214,12 +224,12 @@ export default class VCPlayer extends GuildComponent {
 
 		try {
 			// create and play the resource
-			const opusStream = await this._currentSource.getStream();
-			this._currentResource = Voice.createAudioResource(opusStream, { inputType: Voice.StreamType.OggOpus });
+			this._currentOpusStream = await this._currentSource.getStream();
+			this._currentResource = Voice.createAudioResource(this._currentOpusStream, { inputType: Voice.StreamType.OggOpus });
 			this._audioPlayer.play(this._currentResource);
 		
 			// catch finished stream event
-			opusStream.on('end', () => {
+			this._currentOpusStream.on('end', () => {
 				clearInterval(this._finishedSongCheck);
 				try {
 					this.debug(`Finished playing song with {url: ${this._currentSource.song.url}}`);

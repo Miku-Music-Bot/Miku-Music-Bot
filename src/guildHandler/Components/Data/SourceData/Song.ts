@@ -19,6 +19,7 @@ export default abstract class Song {
 	abstract get artist(): string;
 	abstract get live(): boolean;
 	abstract get reqBy(): string;
+	abstract set reqBy(reqBy: string);
 	abstract fetchData(): Promise<void>			// should update the info of the song
 	abstract export(): SongConfig				// should be able to export data for database
 }

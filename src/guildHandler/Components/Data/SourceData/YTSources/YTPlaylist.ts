@@ -8,6 +8,9 @@ import Playlist from '../Playlist';
 import { PlaylistConfig, PLAYLIST_DEFAULT } from '../sourceConfig';
 import YTSong from './YTSong';
 
+const SEARCH_THRESHOLD = parseInt(process.env.SEARCH_THRESHOLD);
+const SEARCH_DISTANCE = parseInt(process.env.SEARCH_DISTANCE);
+
 export default class YTPlaylist extends GuildComponent implements Playlist {
 	events: EventEmitter;
 	private _id: number;
@@ -41,6 +44,8 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 
 		// Create fuse index
 		this._index = new Fuse(this._songs, { 
+			distance: SEARCH_DISTANCE,
+			threshold: SEARCH_THRESHOLD,
 			useExtendedSearch: true,
 			keys: [ 'id', 'title', 'artist', 'url' ]
 		});

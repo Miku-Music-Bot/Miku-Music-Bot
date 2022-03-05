@@ -21,7 +21,7 @@ export const SONG_DEFAULT: SongConfig = {
 	thumbnailURL: `${BOT_DOMAIN}/default-thumbnail.jpg`,
 	artist: 'unknown',
 	live: true,
-	reqBy: undefined
+	reqBy: ''
 };
 
 // Individual Source Configuration data and defaults

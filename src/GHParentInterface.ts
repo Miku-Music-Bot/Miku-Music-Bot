@@ -70,7 +70,7 @@ export default class GuildHandlerInterface {
 
 			this._process.send({ type: 'interaction', content, responseId: resId.toString() });
 
-			setTimeout(() => { this._events.emit(resId.toString()); }, MAX_RESPONSE_WAIT);
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
 		});
 	}
 }

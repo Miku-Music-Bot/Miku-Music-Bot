@@ -32,7 +32,7 @@ type UIInfo = {
 export default class Queue extends GuildComponent {
 	private _queue: Array<Song>;
 	private _autoplayQueue: Array<Song>;
-	nowPlaying: boolean;
+	private _nowPlaying: boolean;
 	private _nowPlayingSong: Song;
 	private _lastPlayed: Song;
 	private _currentLoc: number;
@@ -49,7 +49,7 @@ export default class Queue extends GuildComponent {
 
 		this._queue = [];
 		this._autoplayQueue = [];
-		this.nowPlaying = false;
+		this._nowPlaying = false;
 		this._currentLoc = -1;
 
 		this._repeatSong = 0;
@@ -97,9 +97,11 @@ export default class Queue extends GuildComponent {
 	 */
 	removeSong(id: number) {
 		const loc = this._resolveIndex(id - 1);
-		if (loc.from === 'queue') { this._queue.splice(loc.index, 1); }
-		else if (loc.from === 'autoplay') { this._autoplayQueue.splice(loc.index, 1); }
+		let removed;
+		if (loc.from === 'queue') { removed = this._queue.splice(loc.index, 1); }
+		else if (loc.from === 'autoplay') { removed = this._autoplayQueue.splice(loc.index, 1); }
 		else { this.ui.sendError('That song doens\'t exist in the queue or in autoplay'); }
+		if (removed) { removed[0].reqBy = ''; }
 		this.ui.updateUI();
 	}
 
@@ -179,7 +181,7 @@ export default class Queue extends GuildComponent {
 	 * Queues up the next song if queue is not finished, otherwise does nothing
 	 */
 	nextSong() {
-		this.nowPlaying = true;
+		this._nowPlaying = true;
 		this._lastPlayed = this._nowPlayingSong;
 
 		// if repeatSong, play the same song again
@@ -198,7 +200,10 @@ export default class Queue extends GuildComponent {
 				this._refreshQueue();
 				this._currentLoc = 0;
 			}
-			else { this._queue = []; }
+			else {
+				for (let i = 0; i < this._queue.length; i++) { this._queue[i].reqBy = ''; }
+				this._queue = [];
+			}
 		}
 
 		// if queue is empty and autoplay is on, set currentLoc to the right place
@@ -220,7 +225,7 @@ export default class Queue extends GuildComponent {
 		// send error if there is nothing to play
 		else {
 			this._currentLoc = -1;
-			this.nowPlaying = false;
+			this._nowPlaying = false;
 			this.ui.sendError('Nothing to play!');
 		}
 
@@ -236,6 +241,8 @@ export default class Queue extends GuildComponent {
 	 */
 	setRepeatSong(repeats: number) { if (repeats >= -1) { this._repeatSong = repeats; } }
 
+	stop() { this._nowPlaying = false; }
+
 	/**
 	 * getUIInfo()
 	 * 
@@ -243,7 +250,7 @@ export default class Queue extends GuildComponent {
 	 */
 	getUIInfo(): UIInfo {
 		const info: UIInfo = {
-			nowPlaying: this.nowPlaying,
+			nowPlaying: this._nowPlaying,
 			repeatQueue: this._repeatQueue,
 			repeatSong: this._repeatSong,
 			autoplay: this.data.guildSettings.autoplay,
@@ -253,31 +260,27 @@ export default class Queue extends GuildComponent {
 			nextInAutoplay: []
 		};
 
-		if (!this.nowPlaying) return info;
+		if (!this._nowPlaying) return info;
 
 
 		info.lastPlayed = this._lastPlayed;
 		info.nowPlayingSong = this._nowPlayingSong;
 
-		if (this._currentLoc === -1) {
-			info.playingFrom = 'autoplay';
-			for (let i = 0; i < 3; i++) {
-				if (this._autoplayQueue[i + 1]) {
-					info.nextInAutoplay.push({
-						index: this._queue.length + i,
-						song: this._autoplayQueue[i]
-					});
-				}
-			}
-			return info;
-		}
-
-		info.playingFrom = 'queue';
+		if (this._currentLoc === -1) { info.playingFrom = 'autoplay'; }
+		else { info.playingFrom = 'queue'; }
 		for (let i = 0; i < 3; i++) {
 			if (this._queue[this._currentLoc + i + 1]) {
 				info.nextInQueue.push({
 					index: this._currentLoc + i + 1,
 					song: this._queue[this._currentLoc + i + 1]
+				});
+			}
+		}
+		for (let i = 0; i < 3; i++) {
+			if (this._autoplayQueue[i + 1]) {
+				info.nextInAutoplay.push({
+					index: this._queue.length + i + 1,
+					song: this._autoplayQueue[i]
 				});
 			}
 		}

@@ -79,6 +79,7 @@ export default class UI extends GuildComponent {
 					}
 					case ('stop'): {
 						this.vcPlayer.leave();
+						this.queue.stop();
 						break;
 					}
 					case ('skip'): {
@@ -86,7 +87,7 @@ export default class UI extends GuildComponent {
 						break;
 					}
 					case ('repeat'): {
-						this.queue.setRepeatSong(customId.repeat);
+						this.queue.setRepeatSong(customId.repeat + 1);
 						break;
 					}
 					default: { return false; }
@@ -140,19 +141,23 @@ export default class UI extends GuildComponent {
 			// If not playing right now, show idle UI
 			userInterface
 				.setTitle('Idle - Listening for Commands')
-				.setDescription('Click the "help" buttom below if you need help')
+				.setDescription('Click the "help" button below if you need help')
 				.setThumbnail(DEFAULT_THUMBNAIL_URL);
 		}
 		else {
 			// Check song status, (paused over buffering over playing)
 			let status = '';
-			if (this.vcPlayer.paused) { status = '[Paused]'; }
-			else if (this.vcPlayer.currentSource.buffering) { status = '[Buffering]'; }
-			else { status = '[Playing]'; }
-			userInterface.setTitle(`${status}: ${queueInfo.nowPlayingSong.title}`);
+			if (this.vcPlayer.paused) { status = 'Paused'; }
+			else if (this.vcPlayer.currentSource.buffering) { status = 'Buffering'; }
+			else { status = 'Playing'; }
+			userInterface.setAuthor({ name: status });
+			userInterface.setTitle(queueInfo.nowPlayingSong.title);
+
+			// Set thumbnail
+			userInterface.setThumbnail(queueInfo.nowPlayingSong.thumbnailURL);
 
 			// Create progress bar
-			const progressBarLength = 50;
+			const progressBarLength = 70;
 			let progressBar = '';
 			// Convert duration in sec to string and add to progress bar
 			let progress = this.vcPlayer.currentSource.getPlayedDuration();
@@ -165,7 +170,7 @@ export default class UI extends GuildComponent {
 			let sec: number | string = progress;
 			if (sec < 10) { sec = '0' + sec.toString(); }
 			progressBar += `-${hours.toString()}:${min.toString()}:${sec.toString()} [`;
-			
+
 			// Figure out where to put the indicator
 			progress = this.vcPlayer.currentSource.getPlayedDuration();
 			const lineLength = progressBarLength - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
@@ -178,6 +183,90 @@ export default class UI extends GuildComponent {
 			// Add overall duration to the end
 			progressBar += (this.vcPlayer.currentSource.song.live) ? '] Live' : `] ${queueInfo.nowPlayingSong.durationString}`;
 			userInterface.setDescription(progressBar);
+
+			// Song information
+			let sourceName = '';
+			switch (queueInfo.nowPlayingSong.type) {
+				case ('yt'): { sourceName = 'Youtube'; break; }
+				case ('gd'): { sourceName = 'Google Drive'; break; }
+			}
+			userInterface.addFields([
+				{
+					name: 'Requested By',
+					value: (queueInfo.nowPlayingSong.reqBy === '') ? 'Autoplay' : `<@${queueInfo.nowPlayingSong.reqBy}>`,
+					inline: true
+				},
+				{
+					name: (queueInfo.nowPlayingSong.type === 'yt') ? 'Channel' : 'Artist',
+					value: (queueInfo.nowPlayingSong.artist) ? queueInfo.nowPlayingSong.artist : 'unknown',
+					inline: true
+				},
+				{
+					name: 'Link',
+					value: `[${sourceName}](${queueInfo.nowPlayingSong.url})`,
+					inline: true
+				}
+			]);
+
+			const songInfoMaxLength = 50;
+			// Last played information
+			if (queueInfo.lastPlayed) {
+				let lastPlayedText = '';
+				if (queueInfo.lastPlayed.title.length > songInfoMaxLength) {
+					lastPlayedText += queueInfo.lastPlayed.title.substring(0, songInfoMaxLength - 3) + '...';
+				}
+				else { lastPlayedText += queueInfo.lastPlayed.title; }
+				userInterface.addFields({
+					name: 'Last Played',
+					value: `${lastPlayedText} - [${(queueInfo.lastPlayed.reqBy) ? `<@${queueInfo.lastPlayed.reqBy}>` : 'Autoplay'}]`,
+					inline: false
+				});
+			}
+
+			// Queue information
+			let queueTxt = '';
+			for (let i = 0; i < 3; i++) {
+				if (i === queueInfo.nextInQueue.length) {
+					if (queueInfo.repeatQueue === 0) { queueTxt += '**>> End Of Queue <<**'; break; }
+					else { queueTxt += '**>> Repeat Queue <<**'; break; }
+				}
+
+				// Index number for item
+				let itemText = `${queueInfo.nextInQueue[i].index.toString()}. `;
+				// Add title of song cut off to be the right length
+				if (queueInfo.nextInQueue[i].song.title.length > songInfoMaxLength) {
+					itemText += queueInfo.nextInQueue[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';
+				}
+				else { itemText += queueInfo.nextInQueue[i].song.title; }
+				queueTxt += `${itemText} - [${(queueInfo.nextInQueue[i].song.reqBy) ? `<@${queueInfo.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
+			}
+			userInterface.addFields({
+				name: 'Queue',
+				value: queueTxt,
+				inline: false
+			});
+
+			// Autoplay information
+			let autoplayTxt = '';
+			if (queueInfo.autoplay) {
+				for (let i = 0; i < 3; i++) {
+					if (i === queueInfo.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
+					// Index number for item
+					let itemText = `${queueInfo.nextInAutoplay[i].index.toString()}. `;
+					// Add title of song cut off to be the right length
+					if (queueInfo.nextInAutoplay[i].song.title.length > songInfoMaxLength) {
+						itemText += queueInfo.nextInAutoplay[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';
+					}
+					else { itemText += queueInfo.nextInAutoplay[i].song.title; }
+					autoplayTxt += `${itemText}\n`;
+				}
+			}
+			else { autoplayTxt += 'Autoplay is off'; }
+			userInterface.addFields({
+				name: 'Autoplay',
+				value: autoplayTxt,
+				inline: false
+			});
 		}
 
 		let autostopDisplay = 'off';
@@ -239,7 +328,7 @@ export default class UI extends GuildComponent {
 				// Repeat button
 				new Discord.MessageButton()
 					.setLabel(`Repeat Song: ${queueInfo.repeatSong} time${(queueInfo.repeatSong > 1) ? 's' : ''}`)
-					.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong + 1, special: 5 }))
+					.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong, special: 5 }))
 					.setStyle('SECONDARY')
 					.setDisabled(!this.vcPlayer.playing)
 			);

@@ -1,5 +1,6 @@
 /node_modules
 /built
-/.data
+/logs
+/temp
 
 .env

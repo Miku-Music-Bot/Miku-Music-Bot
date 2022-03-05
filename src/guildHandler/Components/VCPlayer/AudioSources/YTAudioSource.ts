@@ -13,7 +13,7 @@ import GuildComponent from '../../GuildComponent';
 import type Song from '../../Data/SourceData/Song';
 import type GuildHandler from '../../../GuildHandler';
 
-const TEMP_DIR = __dirname; //process.env.TEMP_DIR;				// directory for temp files
+const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
 
 // audio constants
@@ -98,8 +98,6 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			});
 			this.events.once('error', reject);
 		});
-
-		this._ytPCMConverterInput = new PassThrough();		// input for yt to pcm converter
 
 		this._largeChunkCount = 0;							// how many 10 sec "largeChunks" there are on disk
 		this._tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this.song.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex'));
@@ -209,6 +207,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		});
 
 		// write data to ytPCMConverter input
+		this._ytPCMConverterInput = new PassThrough();
 		this._youtubeDLPSource.stdout.on('data', (data) => { this._ytPCMConverterInput.write(data); });
 		this._youtubeDLPSource.stdout.on('end', () => { this._ytPCMConverterInput.end(); });
 		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });

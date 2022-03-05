@@ -10,7 +10,7 @@ import startWebServer from './webPanel/webPanel';
 import newLogger from './Logger';
 
 const GUILD_REFRESH_INTERVAL = parseInt(process.env.GUILD_REFRESH_INTERVAL);
-
+const LOG_DIR = process.env.LOG_DIR;
 /**
  * main.js
  *
@@ -20,7 +20,7 @@ const GUILD_REFRESH_INTERVAL = parseInt(process.env.GUILD_REFRESH_INTERVAL);
  * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
 
-const log = newLogger(path.join(__dirname, 'logs'));
+const log = newLogger(path.join(LOG_DIR, 'main'));
 const botMaster = new BotMaster(log);
 
 /**
