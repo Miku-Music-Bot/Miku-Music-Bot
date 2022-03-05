@@ -4,6 +4,26 @@ import Song from './Data/SourceData/Song';
 import AudioSource from './VCPlayer/AudioSources/AudioSource';
 import YTSource from './VCPlayer/AudioSources/YTAudioSource';
 
+type UIInfo = {
+	lastPlayed?: Song,
+	nowPlayingSong?: Song,
+	playingFrom?: 'autoplay' | 'queue',
+	nextInAutoplay: Array<{
+		index: number,
+		song: Song
+	}>,
+	nextInQueue: Array<{
+		index: number,
+		song: Song
+	}>,
+	nowPlaying: boolean,
+	autostop: string,
+	repeatQueue: number,
+	repeatSong: number,
+	shuffle: boolean,
+	autoplay: boolean
+};
+
 /**
  * Queue
  * 
@@ -18,7 +38,8 @@ export default class Queue extends GuildComponent {
 	private _currentLoc: number;
 
 	private _repeatSong: number;
-	private _repeatQueue: boolean;
+	private _repeatQueue: number;
+	private _autostop: 'song' | 'queue' | 'off';
 
 	/**
 	 * @param guildHandler - guild handler for guild this queue object is responsible for
@@ -32,7 +53,8 @@ export default class Queue extends GuildComponent {
 		this._currentLoc = -1;
 
 		this._repeatSong = 0;
-		this._repeatQueue = false;
+		this._repeatQueue = 0;
+		this._autostop = 'off';
 
 		this._refreshAutoplay();
 	}
@@ -78,7 +100,7 @@ export default class Queue extends GuildComponent {
 		if (loc.from === 'queue') { this._queue.splice(loc.index, 1); }
 		else if (loc.from === 'autoplay') { this._autoplayQueue.splice(loc.index, 1); }
 		else { this.ui.sendError('That song doens\'t exist in the queue or in autoplay'); }
-
+		this.ui.updateUI();
 	}
 
 	/**
@@ -87,7 +109,13 @@ export default class Queue extends GuildComponent {
 	 * Inserts a song to queue
 	 * @param song - song to add to queue
 	 */
-	addQueue(song: Song) { this._queue.push(song); }
+	addQueue(song: Song) {
+		if (song) {
+			this._queue.push(song);
+			this.ui.sendNotification(`Added "${song.title}" to queue`);
+			this.ui.updateUI();
+		}
+	}
 
 	/**
 	 * _refreshQueue()
@@ -117,6 +145,7 @@ export default class Queue extends GuildComponent {
 	 * @returns suffled array
 	 */
 	private _shuffle(list: Array<Song>): Array<Song> {
+		if (!this.data.guildSettings.shuffle) return list;
 		for (let i = list.length - 1; i > 0; i--) {
 			const rand = Math.round(Math.random() * i);
 			const temp = list[i];
@@ -190,7 +219,7 @@ export default class Queue extends GuildComponent {
 		}
 		// send error if there is nothing to play
 		else {
-			this.currentLoc = -1;
+			this._currentLoc = -1;
 			this.nowPlaying = false;
 			this.ui.sendError('Nothing to play!');
 		}
@@ -200,17 +229,29 @@ export default class Queue extends GuildComponent {
 	}
 
 	/**
+	 * setRepeatSong()
+	 * 
+	 * Sets the number of times to repeat song
+	 * @param repeats - number of times to repeat
+	 */
+	setRepeatSong(repeats: number) { if (repeats >= -1) { this._repeatSong = repeats; } }
+
+	/**
 	 * getUIInfo()
 	 * 
 	 * Returns the required info for ui to display the queue
 	 */
-	getUIInfo() {
-		const info = {
+	getUIInfo(): UIInfo {
+		const info: UIInfo = {
 			nowPlaying: this.nowPlaying,
 			repeatQueue: this._repeatQueue,
 			repeatSong: this._repeatSong,
-			autoplay: this.data.guildSettings.autoplay
-		}
+			autoplay: this.data.guildSettings.autoplay,
+			autostop: this._autostop,
+			shuffle: this.data.guildSettings.shuffle,
+			nextInQueue: [],
+			nextInAutoplay: []
+		};
 
 		if (!this.nowPlaying) return info;
 
@@ -220,13 +261,26 @@ export default class Queue extends GuildComponent {
 
 		if (this._currentLoc === -1) {
 			info.playingFrom = 'autoplay';
-			info.nextInAutoplay = this._autoplayQueue.slice(0, 3);
-
+			for (let i = 0; i < 3; i++) {
+				if (this._autoplayQueue[i + 1]) {
+					info.nextInAutoplay.push({
+						index: this._queue.length + i,
+						song: this._autoplayQueue[i]
+					});
+				}
+			}
 			return info;
 		}
 
-		info.playingFrom = 'queue',
-		info.nextInQueue = this._queue.slice(this._currentLoc + 1, this._currentLoc + 4);
+		info.playingFrom = 'queue';
+		for (let i = 0; i < 3; i++) {
+			if (this._queue[this._currentLoc + i + 1]) {
+				info.nextInQueue.push({
+					index: this._currentLoc + i + 1,
+					song: this._queue[this._currentLoc + i + 1]
+				});
+			}
+		}
 		return info;
 	}
 }

@@ -1,36 +1,47 @@
 import GuildHandler from './GuildHandler';
 
-export type startMsg = {
+export type StartMsg = {
 	type: 'start',
 	content: string			// discord guild id
 }
 
-export type MessageObject = {
+export type MessageInfo = {
 	id: string,			// message id
 	content: string,	// message content
 	channelId: string	// discord channel id for where message is from
 	authorId: string	// discord user id for author of message
 }
-export type message = {
+export type Message = {
 	type: 'message',
-	content: MessageObject
+	content: MessageInfo
 }
 
-export type InteractionObject = {
+export type InteractionInfo = {
 	customId: string,
 	authorId: string,
 	parentMessageId: string,
-	parentChannelId: string
+	parentChannelId: string,
 }
-export type interaction = { 
+export type Interaction = { 
 	type: 'interaction',
-	content: InteractionObject
+	content: InteractionInfo,
+	responseId: string
 }
 
-type parentCommand = startMsg | message | interaction
+export type ParentCommand = StartMsg | Message | Interaction
+
+export type InteractionSuccess = {
+	success: boolean
+}
+export type InteractionResponse = {
+	responseId: string,
+	content: InteractionSuccess
+}
+
+export type ChildResponse = InteractionResponse;
 
 let guildHandler: GuildHandler;
-process.on('message', (message: parentCommand) => {
+process.on('message', async (message: ParentCommand) => {
 	switch(message.type) {
 		case('start'): {
 			guildHandler = new GuildHandler(message.content);
@@ -41,7 +52,12 @@ process.on('message', (message: parentCommand) => {
 			break;
 		}
 		case('interaction'): {
-			guildHandler.interactionHandler(message.content);
+			const success = await guildHandler.interactionHandler(message.content);
+			const response: InteractionResponse = {
+				responseId: message.responseId,
+				content: { success }
+			};
+			process.send(response);
 			break;
 		}
 	}

@@ -17,10 +17,11 @@ const TEMP_DIR = __dirname; //process.env.TEMP_DIR;				// directory for temp fil
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
 
 // audio constants
-const BIT_DEPTH = 16;
-const PCM_FORMAT = 's16le';
-const AUDIO_CHANNELS = 2;
-const AUDIO_FREQUENCY = 48000;
+const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
+const PCM_FORMAT = process.env.PCM_FORMAT;
+const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
+const AUDIO_FREQUENCY = parseInt(process.env.AUDIO_FREQUENCY);
+const CHUNK_TIMING = parseInt(process.env.CHUNK_TIMING);
 const SEC_PCM_SIZE = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;
 const LARGE_CHUNK_SIZE = SEC_PCM_SIZE * 10;
 const SMALL_CHUNK_SIZE = SEC_PCM_SIZE / 10;
@@ -108,7 +109,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._endOfSong = false;							// chunk buffer contains end of song or not
 
 		this._startReadingFrom = 1;							// default to start reading from chunk 0
-		this._chunkTiming = 100;							// default to 100ms for 0.1 sec of audio
+		this._chunkTiming = CHUNK_TIMING;						// default to 100ms for 0.1 sec of audio
 		this._smallChunkCount = 0;							// number of 0.1 sec "smallChunks" that have been played
 
 		this._audioProcesserInput = new PassThrough;		// pcm data input for audioProcessor

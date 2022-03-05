@@ -4,7 +4,7 @@ import * as winston from 'winston';
 
 import type BotMaster from '../GuildMaster';
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT;
 
 /**
  * webPanel.js

@@ -81,4 +81,11 @@ export default class GDSong extends GuildComponent implements Song {
 	get artist() { return this._songInfo.artist; }
 	get live() { return this._songInfo.live; }
 	get reqBy() { return this._songInfo.reqBy; }
+	get durationString() {
+		let secs = this._songInfo.duration;
+		const hours = Math.floor(secs / 3600);
+		secs %= 3600;
+		const min = Math.floor(secs / 60);
+		return `${hours.toString()}:${min.toString()}:${secs.toString()}`;
+	}
 }

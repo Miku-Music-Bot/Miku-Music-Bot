@@ -46,6 +46,9 @@ export default class GuildSettings extends EventEmitter {
 	get autoplay() { return this._guildSettings.autoplay; }
 	set autoplay(autoplay: GuildConfig['autoplay']) { this._guildSettings.autoplay = autoplay; this.emit('newSettings'); }
 
+	get shuffle() { return this._guildSettings.shuffle; }
+	set shuffle(shuffle: GuildConfig['shuffle']) { this._guildSettings.shuffle = shuffle; this.emit('newSettings'); } 
+
 	get autoplayList() { return this._guildSettings.autoplayList; }
 	set autoplayList(autoplayList: GuildConfig['autoplayList']) { this._guildSettings.autoplayList = autoplayList; this.emit('newSettings'); }
 

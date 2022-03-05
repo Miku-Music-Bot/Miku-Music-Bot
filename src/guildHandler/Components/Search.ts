@@ -1,6 +1,6 @@
 import * as Discord from 'discord.js';
 import ytsr = require('ytsr');
-import { InteractionObject } from '../GHChildInterface';
+import { InteractionInfo } from '../GHChildInterface';
 import GuildHandler from '../GuildHandler';
 import Song from './Data/SourceData/Song';
 import YTSong from './Data/SourceData/YTSources/YTSong';
@@ -44,9 +44,10 @@ export default class Search extends GuildComponent {
 	 */
 	async search(searchString: string) {
 		try {
-			const interactionHandler = async (interaction: InteractionObject) => {
+			const interactionHandler = async (interaction: InteractionInfo) => {
 				try {
 					const customId = JSON.parse(interaction.customId);
+					
 					switch (customId.type) {
 						case ('page'): {
 							await this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, customId.pageNum));
@@ -56,16 +57,31 @@ export default class Search extends GuildComponent {
 							await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 							break;
 						}
-						default: {
+						case('select'): {
 							this.queue.addQueue(searchResults.items[customId.index]);
+							// if not connected to vc, connect
+							if (!this.vcPlayer.connected) {
+								const joined = await this.vcPlayer.join(interaction.authorId);
+								// should start playing from autoplay
+								if (joined) { this.queue.nextSong(); }
+								break;
+							}
+
+							// if not playing anything, start playing fron queue
+							if (!this.vcPlayer.playing) { this.queue.nextSong(); }
 							break;
 						}
+						default: { return false; }
 					}
-				} catch { return; }
+					return true;
+				}
+				catch (error) {
+					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+					return false;
+				}
 			};
 
-			const loadingMsg = new Discord.MessageEmbed()
-				.setTitle('Searching...');
+			const loadingMsg = new Discord.MessageEmbed().setTitle('Searching...');
 			const id = this.ui.sendEmbed({ embeds: [loadingMsg] }, -1, interactionHandler);
 
 			const searchResults: SearchResults = {
@@ -183,7 +199,7 @@ export default class Search extends GuildComponent {
 						// Url, artist, and duration should all exist on youtube sources
 						displayText += `Url: **${song.url}**\n`;
 						displayText += `Uploaded By: **${song.artist}**\n`;
-						displayText += `Duration: **${song.duration}**\n`;
+						displayText += `Duration: **${song.durationString}**\n`;
 						break;
 					}
 					case ('gd'): {
@@ -191,7 +207,7 @@ export default class Search extends GuildComponent {
 						if (song.artist) { displayText += `Artist: **${song.artist}**\n`; }
 						else { displayText += 'Artist: *unknown*\n'; }
 
-						if (song.duration) { displayText += `Duration: **${song.duration}**\n`; }
+						if (song.duration) { displayText += `Duration: **${song.durationString}**\n`; }
 						else { displayText += 'Duration: *unknown*\n'; }
 					}
 				}
@@ -201,7 +217,7 @@ export default class Search extends GuildComponent {
 					// Song selector button
 					new Discord.MessageButton()
 						.setLabel((i + 1).toString())
-						.setCustomId(JSON.stringify( { type: 'select', index: loc.toString() }))
+						.setCustomId(JSON.stringify({ type: 'select', index: loc.toString() }))
 						.setStyle('SECONDARY')
 				);
 			}
@@ -217,21 +233,28 @@ export default class Search extends GuildComponent {
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('<')
-					.setCustomId(JSON.stringify({ type: 'page', pageNum: page-1 }))
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page - 1, special: 1 }))
 					.setStyle('PRIMARY')
 					.setDisabled(page === 1)
 			)
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('>')
-					.setCustomId(JSON.stringify({ type: 'page', pageNum: page+1 }))
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page + 1, special: 2 }))
 					.setStyle('PRIMARY')
 					.setDisabled(page === maxPage)
 			)
 			.addComponents(
 				new Discord.MessageButton()
+					.setLabel('>> Youtube Results')
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / 5) + 1, special: 3 }))
+					.setStyle('PRIMARY')
+					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / 5) + 1)
+			)
+			.addComponents(
+				new Discord.MessageButton()
 					.setLabel('Done')
-					.setCustomId(JSON.stringify({ type: 'close' }))
+					.setCustomId(JSON.stringify({ type: 'close', special: 4 }))
 					.setStyle('PRIMARY')
 			);
 		return { embeds: [searchUI], components: [numbers, navigation] };

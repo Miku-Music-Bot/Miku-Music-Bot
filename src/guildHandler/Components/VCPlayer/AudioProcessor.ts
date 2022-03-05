@@ -10,9 +10,12 @@ import type AudioSource from './AudioSources/AudioSource';
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-const PCM_FORMAT = 's16le';
-const AUDIO_CHANNELS = 2;
-const AUDIO_FREQUENCY = 48000;
+const PCM_FORMAT = process.env.PCM_FORMAT;
+const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
+const CHUNK_TIMING = parseInt(process.env.CHUNK_TIMING);
+const AUDIO_FREQUENCY = parseInt(process.env.AUDIO_FREQUENCY);
+const NIGHTCORE_CHUNK_TIMING = parseInt(process.env.NIGHTCORE_CHUNK_TIMING);
+const NIGHTCORE_AUDIO_FREQUENCY = parseInt(process.env.NIGHTCORE_AUDIO_FREQUENCY);
 
 /**
  * AudioProcessor
@@ -54,10 +57,10 @@ export default class AudioProcessor extends GuildComponent {
 
 		// change bitrate in case of nightcore setting
 		let bitrate = AUDIO_FREQUENCY;
-		this._source.setChunkTiming(100);
+		this._source.setChunkTiming(CHUNK_TIMING);
 		if (this.data.audioSettings.nightcore && !this._source.song.live) {
-			bitrate = AUDIO_FREQUENCY * 64000 / 48000;
-			this._source.setChunkTiming(75);
+			bitrate = NIGHTCORE_AUDIO_FREQUENCY;
+			this._source.setChunkTiming(NIGHTCORE_CHUNK_TIMING);
 		}
 
 		// create new ffmpeg process with new settings
@@ -70,8 +73,8 @@ export default class AudioProcessor extends GuildComponent {
 				`-ac ${AUDIO_CHANNELS}`
 			])
 			.audioFilters('loudnorm=I=-32')
-			.audioChannels(2)
-			.audioFrequency(48000)
+			.audioChannels(AUDIO_CHANNELS)
+			.audioFrequency(AUDIO_FREQUENCY)
 			.outputFormat(PCM_FORMAT)
 			.on('error', (error) => {
 				if (error.toString().indexOf('SIGINT') !== -1) return;

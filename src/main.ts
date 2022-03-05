@@ -2,6 +2,15 @@
 import * as path from 'path';
 import * as Discord from 'discord.js';
 
+import * as dotenv from 'dotenv';	// grab env variables
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+import BotMaster from './GuildMaster';
+import startWebServer from './webPanel/webPanel';
+import newLogger from './Logger';
+
+const GUILD_REFRESH_INTERVAL = parseInt(process.env.GUILD_REFRESH_INTERVAL);
+
 /**
  * main.js
  *
@@ -11,15 +20,7 @@ import * as Discord from 'discord.js';
  * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
 
-import * as dotenv from 'dotenv';	// grab env variables
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-
-import BotMaster from './GuildMaster';
-import startWebServer from './webPanel/webPanel';
-import newLogger from './Logger';
-
 const log = newLogger(path.join(__dirname, 'logs'));
-
 const botMaster = new BotMaster(log);
 
 /**
@@ -65,15 +66,15 @@ bot.on('messageCreate', (message) => {
 });
 
 // when bot receives an interaction
-bot.on('interactionCreate', (interaction) => {
+bot.on('interactionCreate', async (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
 	if (!interaction.guildId) return;
 	
 	// Send to correct guild handler and update to respond to discord to indicate that reaction has been recieved
 	const guild = botMaster.getGuild(interaction.guildId);
 	if (guild) {
-		guild.interactionHandler(interaction);
-		setTimeout(async () => { try { await interaction.update({}); } catch { /* */ } }, 1_000);
+		await guild.interactionHandler(interaction);
+		setTimeout(async () => { try { await interaction.update({}); } catch { /* */ } }, 500);
 	}
 });
 
@@ -89,7 +90,7 @@ bot.once('ready', () => {
 
 	// refresh guilds every minute
 	setTimeout(refreshGuilds, 5000);
-	setInterval(refreshGuilds, 60000);
+	setInterval(refreshGuilds, GUILD_REFRESH_INTERVAL);
 });
 
 // start web panel

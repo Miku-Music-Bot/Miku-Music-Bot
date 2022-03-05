@@ -8,6 +8,7 @@ import Song from './Song';
 import { SourceDataConfig, SourceRef, SOURCE_DATA_DEFAULT } from './sourceConfig';
 import YTPlaylist from './YTSources/YTPlaylist';
 
+const REFRESH_PLAYLIST_INTERVAL = parseInt(process.env.REFRESH_PLAYLIST_INTERVAL);
 /**
  * SourceManager
  * 
@@ -52,20 +53,20 @@ export default class SourceManager extends GuildComponent {
 	 */
 	private async _refreshAll() {
 		if (this.vcPlayer.playing) {
-			setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+			setTimeout(() => { this._refreshAll(); }, REFRESH_PLAYLIST_INTERVAL);
 			return;
 		}
 		for (let i = 0; i < this._gdPlaylists.length; i++) {
 			await this._gdPlaylists[i].fetchData();
 			if (this.vcPlayer.playing) {
-				setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+				setTimeout(() => { this._refreshAll(); }, REFRESH_PLAYLIST_INTERVAL);
 				return;
 			}
 		}
 		for (let i = 0; i < this._ytPlaylists.length; i++) {
 			await this._ytPlaylists[i].fetchData();
 			if (this.vcPlayer.playing) {
-				setTimeout(() => { this._refreshAll(); }, 30 * 1_000);
+				setTimeout(() => { this._refreshAll(); }, REFRESH_PLAYLIST_INTERVAL);
 				return;
 			}
 		}

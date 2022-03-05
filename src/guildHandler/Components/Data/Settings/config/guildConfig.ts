@@ -6,6 +6,7 @@ export type GuildConfig = {
 	channelId: string,
 	prefix: string,
 	autoplay: boolean,
+	shuffle: boolean,
 	autoplayList: Array<SourceRef>,
 	songIdCount: number,
 	playlistIdCount: number
@@ -15,6 +16,7 @@ export const GUILD_DEFAULT: GuildConfig = {
 	channelId: undefined,
 	prefix: '!miku ',
 	autoplay: false,
+	shuffle: true,
 	autoplayList: [],
 	songIdCount: 0,
 	playlistIdCount: 0

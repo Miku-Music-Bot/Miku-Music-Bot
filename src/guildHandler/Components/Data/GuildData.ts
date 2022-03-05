@@ -13,7 +13,9 @@ import { SourceDataConfig } from './SourceData/sourceConfig';
 
 const MONGODB_URI = process.env.MONGODB_URI;											// mongodb connection uri
 const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
-const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME || 'Guilds';	// name of collection for guild data
+const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME;				// name of collection for guild data
+const MAX_DATABASE_RETRY_WAIT = parseInt(process.env.MAX_DATABASE_RETRY_WAIT);
+const DATABASE_ACCESS_WAIT = parseInt(process.env.DATABASE_ACCESS_WAIT);
 
 type DatabaseData = {
 	guildId: string,
@@ -63,7 +65,7 @@ export default class GuildData extends GuildComponent {
 	 * @param cb - callback for when done getting data
 	 */
 	private async _initData(wait: number, cb: () => void) {
-		if (wait > 60000) { wait = 60000; }
+		if (wait > MAX_DATABASE_RETRY_WAIT) { wait = MAX_DATABASE_RETRY_WAIT; }
 
 		try {
 			this.debug('Connecting to mongodb database');
@@ -123,7 +125,7 @@ export default class GuildData extends GuildComponent {
 	 */
 	private _save() {
 		clearTimeout(this._saveTimeout);
-		this._saveTimeout = setTimeout(() => { this._saveData(); }, 1000);
+		this._saveTimeout = setTimeout(() => { this._saveData(); }, DATABASE_ACCESS_WAIT);
 	}
 
 	/**
@@ -143,8 +145,8 @@ export default class GuildData extends GuildComponent {
 			};
 			await this._collection.replaceOne({ guildId: this._guildId }, newData);
 		} catch (error) {
-			this.error(`{error: ${error}} saving data from database. Trying again in 1 min`);
-			this._retrySave = setInterval(() => this._saveData(), 60000);
+			this.error(`{error: ${error}} saving data from database. Trying again in ${MAX_DATABASE_RETRY_WAIT} ms`);
+			this._retrySave = setInterval(() => this._saveData(), MAX_DATABASE_RETRY_WAIT);
 		}
 	}
 

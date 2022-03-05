@@ -14,6 +14,7 @@ export default abstract class Song {
 	abstract get url(): string;
 	abstract get title(): string;
 	abstract get duration(): number;
+	abstract get durationString(): string;
 	abstract get thumbnailURL(): string;
 	abstract get artist(): string;
 	abstract get live(): boolean;

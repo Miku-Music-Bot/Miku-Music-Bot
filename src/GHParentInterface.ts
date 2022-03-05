@@ -2,17 +2,24 @@ import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
 import { ChildProcess, fork } from 'child_process';
+import { EventEmitter } from 'events';
 
-import { InteractionObject, MessageObject } from './guildHandler/GHChildInterface';
+import { InteractionInfo, MessageInfo, ChildResponse } from './guildHandler/GHChildInterface';
+
+const MAX_RESPONSE_WAIT = parseInt(process.env.MAX_RESPONSE_WAIT);
 
 export default class GuildHandlerInterface {
 	private log: winston.Logger;		// logger
+	private _events: EventEmitter;		// for message events
 	private _guildId: string;			// discord guild id
+	private _nextId: number;			// next response id to use
 	private _process: ChildProcess;		// child process doing the work
 
 	constructor(guildId: string, log: winston.Logger) {
 		this.log = log;
+		this._events = new EventEmitter();
 		this._guildId = guildId;
+		this._nextId = 0;
 		this._startChild();
 	}
 
@@ -29,6 +36,7 @@ export default class GuildHandlerInterface {
 			if (error.toString().indexOf('SIGINT') !== -1) return;
 			this.log.error(`{error: ${error}} on GuildHandler process for {guildId: ${this._guildId}}`);
 		});
+		this._process.on('message', (message: ChildResponse) => { this._events.emit(message.responseId, message); });
 
 		this._process.send({
 			type: 'start',
@@ -36,12 +44,10 @@ export default class GuildHandlerInterface {
 		});
 	}
 
-	removeGuild() {
-		//
-	}
+	removeGuild() { if (this._process) { this._process.kill('SIGINT'); } }
 
 	messageHandler(message: Discord.Message) {
-		const content: MessageObject = {
+		const content: MessageInfo = {
 			id: message.id,
 			content: message.content,
 			channelId: message.channelId,
@@ -52,13 +58,19 @@ export default class GuildHandlerInterface {
 	}
 
 	interactionHandler(interaction: Discord.ButtonInteraction) {
-		const content: InteractionObject = {
-			customId: interaction.customId,
-			authorId: interaction.user.id,
-			parentMessageId: interaction.message.id,
-			parentChannelId: interaction.channelId
-		};
+		return new Promise((resolve) => {
+			const content: InteractionInfo = {
+				customId: interaction.customId,
+				authorId: interaction.user.id,
+				parentMessageId: interaction.message.id,
+				parentChannelId: interaction.channelId,
+			};
+			const resId = (this._nextId++).toString();
+			this._events.once(resId, (message) => { resolve(message.content); });
 
-		this._process.send({ type: 'interaction', content });
+			this._process.send({ type: 'interaction', content, responseId: resId.toString() });
+
+			setTimeout(() => { this._events.emit(resId.toString()); }, MAX_RESPONSE_WAIT);
+		});
 	}
 }

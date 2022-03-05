@@ -1,6 +1,12 @@
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
+const LOG_FILE_NAME = process.env.LOG_FILE_NAME;
+const LOG_DATE_PATTERN = process.env.LOG_DATE_PATTERN;
+const ZIP_LOGS = process.env.ZIP_LOGS == 'true';
+const LOG_MAX_SIZE = process.env.LOG_MAX_SIZE;
+const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
+
 /**
  * logger.js
  *
@@ -22,11 +28,11 @@ export default function newLogger(logDir: string): winston.Logger {
 			new winston.transports.DailyRotateFile({
 				level: 'debug',
 				dirname: logDir,
-				filename: '%DATE%.log',
-				datePattern: 'YYYY-MM-DD',
-				zippedArchive: true,
-				maxSize: '20m',
-				maxFiles: '14d',
+				filename: LOG_FILE_NAME,
+				datePattern: LOG_DATE_PATTERN,
+				zippedArchive: ZIP_LOGS,
+				maxSize: LOG_MAX_SIZE,
+				maxFiles: LOG_MAX_FILES,
 				format: winston.format.combine(
 					winston.format.timestamp(),
 					winston.format.json(),

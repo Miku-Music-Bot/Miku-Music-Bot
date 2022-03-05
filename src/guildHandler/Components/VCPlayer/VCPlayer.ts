@@ -238,4 +238,15 @@ export default class VCPlayer extends GuildComponent {
 		}
 		catch { /* */ }
 	}
+
+	/**
+	 * isBuffering()
+	 * 
+	 * Check if buffering or not
+	 * @returns buffering or not
+	 */
+	isBuffering(): boolean {
+		if (this._currentSource) { return this._currentSource.buffering; }
+		else { return false; }
+	}
 }

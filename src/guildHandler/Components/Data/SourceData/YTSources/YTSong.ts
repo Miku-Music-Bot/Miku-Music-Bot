@@ -69,7 +69,11 @@ export default class YTSong extends GuildComponent implements Song {
 	* Exports the settings in the format to be saved in database
 	* @returns object to be saved in database
 	*/
-	export() { return this._songInfo; }
+	export(): SongConfig {
+		const info = Object.assign({}, this._songInfo);
+		info.reqBy = ''; 
+		return info; 
+	}
 
 	// getters
 	get id() { return this._songInfo.id; }
@@ -80,5 +84,13 @@ export default class YTSong extends GuildComponent implements Song {
 	get thumbnailURL() { return this._songInfo.thumbnailURL; }
 	get artist() { return this._songInfo.artist; }
 	get live() { return this._songInfo.live; }
+	get durationString() {
+		let secs = this._songInfo.duration;
+		const hours = Math.floor(secs / 3600);
+		secs %= 3600;
+		const min = Math.floor(secs / 60);
+		return `${hours.toString()}:${min.toString()}:${secs.toString()}`;
+	}
 	get reqBy() { return this._songInfo.reqBy; }
+	set reqBy(reqBy: string) { this._songInfo.reqBy = reqBy; }
 }

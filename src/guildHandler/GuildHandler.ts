@@ -8,15 +8,11 @@ import CommandPermissions from './Components/PermissionChecker';
 import VCPlayer from './Components/VCPlayer/VCPlayer';
 import Queue from './Components/Queue';
 import newLogger from '../Logger';
+import Search from './Components/Search';
 
-import { InteractionObject, MessageObject } from './GHChildInterface';
+import { InteractionInfo, MessageInfo } from './GHChildInterface';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-
-/// <<<<<< testing
-import YTSource from './Components/VCPlayer/AudioSources/YTAudioSource';
-import YTSong from './Components/Data/SourceData/YTSources/YTSong';
-import Search from './Components/Search';
 
 /**
  * GuildHander
@@ -41,8 +37,6 @@ export default class GuildHandler {
 	permissions: CommandPermissions;
 	search: Search;
 
-	//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-	source: YTSource;
 	/**
 	 * Creates data object and once data is ready, calls startbot
 	 * @param id - discord guild id for GuildHander to be responsible for
@@ -98,7 +92,7 @@ export default class GuildHandler {
 	 * Handles all messages the bot recieves
 	 * @param message - object with all message information
 	 */
-	async messageHandler(message: MessageObject) {
+	async messageHandler(message: MessageInfo) {
 		// ignore if bot isn't ready yet
 		if (!this._ready) return;
 		// ignore if not in right channel
@@ -137,9 +131,6 @@ export default class GuildHandler {
 				case ('join'): {
 					// join the vc
 					this.vcPlayer.join(message.authorId);
-
-					// <<<<<<<<<<< for testing
-					this.queue.addQueue(new YTSong(this, { url: 'https://www.youtube.com/watch?v=5yDNEmcKQFY&list=PLzI2HALtu4JLaGXbUiAH_RQtkaALHgRoh&index=24' }));
 					break;
 				}
 				case ('play'): {
@@ -190,9 +181,11 @@ export default class GuildHandler {
 	 * 
 	 * Handles all interactions the bot recieves
 	 * @param interaction - object with all interaction information
+	 * @return true/false if the interaction was successful
 	 */
-	async interactionHandler(interaction: InteractionObject) {
-		this.ui.buttonPressed(interaction);
+	async interactionHandler(interaction: InteractionInfo) {
+		if (!this._ready) { return false; }
+		return await this.ui.buttonPressed(interaction); 
 	}
 
 	/**

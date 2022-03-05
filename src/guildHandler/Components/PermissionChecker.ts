@@ -1,6 +1,6 @@
 import GuildComponent from './GuildComponent.js';
 import type GuildHandler from '../GuildHandler.js';
-import { MessageObject } from '../GHChildInterface.js';
+import { MessageInfo } from '../GHChildInterface.js';
 
 /**
  * PermissionChecker
@@ -23,7 +23,7 @@ export default class PermissionChecker extends GuildComponent {
 	 * @param message - message object that requested the command
 	 * @return true if user has permission to use the command, false if not
 	 */
-	async checkMessage(command: string, message: MessageObject): Promise<boolean> {
+	async checkMessage(command: string, message: MessageInfo): Promise<boolean> {
 		try {
 			this.debug(`Checking permissions for {messageId: ${message.id}}`);
 			const allowedRoles = this.data.permissionSettings.getFor(command);

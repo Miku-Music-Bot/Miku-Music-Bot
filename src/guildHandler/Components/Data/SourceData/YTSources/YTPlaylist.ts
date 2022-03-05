@@ -154,7 +154,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	getSong(id: number) {
 		// search for song that exactly matches id property
 		const results = this._index.search({
-			$and: [{ id: '=' + id }]
+			$and: [{ id: `=${id}` }]
 		});
 
 		if (results.length === 0) return undefined;
