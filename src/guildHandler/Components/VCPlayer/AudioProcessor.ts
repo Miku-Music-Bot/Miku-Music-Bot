@@ -90,6 +90,7 @@ export default class AudioProcessor extends GuildComponent {
 				this._shouldEnd = true;
 			})
 			.on('data', (data) => { this._audioConverterInput.write(data); })
+			.on('error', (error) => { this.warn(`{error:${error}} on _audioFilter for song with {url:${this._source.song.url}}`); })
 			.on('end', () => {
 				if (this._shouldEnd) { this._audioConverterInput.end(); }
 				this._shouldEnd = true;
@@ -106,8 +107,13 @@ export default class AudioProcessor extends GuildComponent {
 	processStream(pcmPassthrough: PassThrough, source: AudioSource) {
 		this._source = source;
 		this._audioFilterInput = new PassThrough();
+		this._audioFilterInput.on('error', (error) => { this.warn(`{error:${error}} on _audioFilterInput for song with {url:${this._source.song.url}}`); });
+
 		this._audioConverterInput = new PassThrough();
+		this._audioConverterInput.on('error', (error) => { this.warn(`{error:${error}} on _audioConverterInput for song with {url:${this._source.song.url}}`); });
+
 		this._opusPassthrough = new PassThrough();
+		this._opusPassthrough.on('error', (error) => { this.warn(`{error:${error}} on _opusPassthrough for song with {url:${this._source.song.url}}`); });
 
 		pcmPassthrough.pipe(this._audioFilterInput);
 
@@ -126,10 +132,13 @@ export default class AudioProcessor extends GuildComponent {
 				this.events.emit('fatalError', 'Error while converting pcm to opus');
 			});
 
-		this._audioConverter.pipe(this._opusPassthrough);
+		this._audioConverter.pipe()
+			.on('data', (data) => { this._opusPassthrough.write(data); })
+			.on('end', () => { this._opusPassthrough.end(); })
+			.on('error', (error) => { this.warn(`{error:${error}} on _audioConverter for song with {url:${this._source.song.url}}`); });
 
 		// if new audioSettings are applied restart ffmpeg
-		this.data.audioSettings.on('newSettings', () => {
+		this.data.audioSettings.on('restartProcessor', () => {
 			this.debug('New audio settings, restarting ffmpeg...');
 			this.newFFmpeg();
 		});
@@ -149,5 +158,6 @@ export default class AudioProcessor extends GuildComponent {
 		this._audioConverterInput.end();
 		this._opusPassthrough.end();
 		this.events.removeAllListeners();
+		this.data.audioSettings.removeAllListeners('restartProcessor');
 	}
 }

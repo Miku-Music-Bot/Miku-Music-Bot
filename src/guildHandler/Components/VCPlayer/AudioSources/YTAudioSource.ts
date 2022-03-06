@@ -71,7 +71,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	private _audioWriter: NodeJS.Timeout;
 
 	// For output stream
-	private _audioProcesserInput: PassThrough;
+	private _audioProcessorInput: PassThrough;
 	private _audioProcessor: AudioProcessor;
 	private _audioProcessorOutput: PassThrough;
 	private _outputStreamStarted: boolean;
@@ -106,11 +106,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._paused = false;								// paused or not
 		this._endOfSong = false;							// chunk buffer contains end of song or not
 
-		this._startReadingFrom = 1;							// default to start reading from chunk 0
-		this._chunkTiming = CHUNK_TIMING;						// default to 100ms for 0.1 sec of audio
+		this._startReadingFrom = 1;							// default to start reading from chunk 1
+		this._chunkTiming = CHUNK_TIMING;					// default to 100ms for 0.1 sec of audio
 		this._smallChunkCount = 0;							// number of 0.1 sec "smallChunks" that have been played
 
-		this._audioProcesserInput = new PassThrough;		// pcm data input for audioProcessor
+		this._audioProcessorInput = new PassThrough;		// pcm data input for audioProcessor
+		this._audioProcessorInput.on('error', (error) => { this.warn(`{error:${error}} on _audioProcessorInput for song with {url:${this.song.url}}`); });
+
 		this._outputStreamStarted = false;					// if the output stream has already been started to avoid starting another one
 	}
 
@@ -208,8 +210,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		// write data to ytPCMConverter input
 		this._ytPCMConverterInput = new PassThrough();
+		this._ytPCMConverterInput.on('error', (error) => { this.warn(`{error:${error}} on _ytPCMConverterInput for song with {url:${this.song.url}}`); });
+
 		this._youtubeDLPSource.stdout.on('data', (data) => { this._ytPCMConverterInput.write(data); });
 		this._youtubeDLPSource.stdout.on('end', () => { this._ytPCMConverterInput.end(); });
+
 		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });
 		this._youtubeDLPSource.on('exit', () => { this._ytPCMConverterInput.end(); });
 
@@ -279,11 +284,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		};
 
 		// want to turn stream into a stream with equal sized chunks for duration counting
-		if (this._ytPCMConverterOutput) { 
+		if (this._ytPCMConverterOutput) {
 			this._ytPCMConverterOutput.end();
 			this._ytPCMConverterInput.removeAllListeners();
 		}
 		this._ytPCMConverterOutput = new PassThrough();
+		this._ytPCMConverterOutput.on('error', (error) => { this.warn(`{error:${error}} on _ytPCMConverterOutput for song with {url:${this.song.url}}`); });
+
 		this._ytPCMConverter.pipe(this._ytPCMConverterOutput);
 		this._ytPCMConverterOutput
 			.on('data', chunkData)
@@ -366,7 +373,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				if (this._chunkBuffer[0]) {
 					this.buffering = false;
 
-					this._audioProcesserInput.write(this._chunkBuffer.shift());
+					this._audioProcessorInput.write(this._chunkBuffer.shift());
 
 					if (this._smallChunkCount % 100 === 0) { this._queueChunk((this._smallChunkCount / 100) + 2); }
 					this._smallChunkCount++;
@@ -378,11 +385,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
 				else if (!this._endOfSong) {
 					this.buffering = true;
-					this._audioProcesserInput.write(Buffer.alloc(SMALL_CHUNK_SIZE));
+					this._audioProcessorInput.write(Buffer.alloc(SMALL_CHUNK_SIZE));
 				}
 				// if finished playing, end stream
 				else {
-					this._audioProcesserInput.end();
+					this._audioProcessorInput.end();
 					return;
 				}
 			}
@@ -423,7 +430,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.events.emit('fatalError', this._errorMsg);
 		});
 
-		this._audioProcessorOutput = this._audioProcessor.processStream(this._audioProcesserInput, this);
+		this._audioProcessorOutput = this._audioProcessor.processStream(this._audioProcessorInput, this);
 		return this._audioProcessorOutput;
 	}
 
@@ -460,16 +467,16 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
-		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill(); }
-		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
-		if (this._ytPCMConverterInput) { this._ytPCMConverterInput.end(); }
-		if (this._audioProcesserInput) { this._audioProcesserInput.end(); }
-		if (this._audioProcessor) { this._audioProcessor.destroy(); }
-		if (this._audioProcessorOutput) { this._audioProcessorOutput.end(); }
-
 		clearInterval(this._bufferingRetryTimeout);
 		clearTimeout(this._liveTimeout);
 		clearInterval(this._audioWriter);
+
+		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill(); }
+		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
+		if (this._ytPCMConverterInput) { this._ytPCMConverterInput.end(); }
+		if (this._audioProcessorInput) { this._audioProcessorInput.end(); }
+		if (this._audioProcessor) { this._audioProcessor.destroy(); }
+		if (this._audioProcessorOutput) { this._audioProcessorOutput.end(); }
 
 		try { await fs.promises.rm(this._tempLocation, { recursive: true }); } catch { /* */ }
 	}

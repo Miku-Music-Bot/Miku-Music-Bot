@@ -504,7 +504,7 @@ export default class UI extends GuildComponent {
 		try {
 			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
 			const message = await channel.messages.fetch(messageId);
-			message.edit(messageOptions);
+			await message.edit(messageOptions);
 		}
 		catch (error) { this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`); }
 	}

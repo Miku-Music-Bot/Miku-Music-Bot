@@ -23,7 +23,13 @@ export default class AudioSettings extends EventEmitter {
 		this._eqSettings = Object.assign({}, EQ_PRESETS.default);
 
 		// apply settings
-		if (!settings) { setImmediate(() => { this.emit('newSettings', this); }); return; }
+		if (!settings) {
+			setImmediate(() => {
+				this.emit('newSettings', this);
+				this.emit('restartProcessor');
+			});
+			return;
+		}
 		Object.assign(this._audioSettings, settings.audio);
 		Object.assign(this._eqSettings, settings.eq);
 	}
@@ -38,6 +44,7 @@ export default class AudioSettings extends EventEmitter {
 		// should validate audio settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._audioSettings, settings);
 		this.emit('newSettings');
+		this.emit('restartProcessor');
 	}
 
 	/**
@@ -50,6 +57,7 @@ export default class AudioSettings extends EventEmitter {
 		// should validate eq settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._eqSettings, eq);
 		this.emit('newSettings');
+		this.emit('restartProcessor');
 	}
 
 	/**

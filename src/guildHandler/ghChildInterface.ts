@@ -22,7 +22,7 @@ export type InteractionInfo = {
 	parentMessageId: string,
 	parentChannelId: string,
 }
-export type Interaction = { 
+export type Interaction = {
 	type: 'interaction',
 	content: InteractionInfo,
 	responseId: string
@@ -42,16 +42,16 @@ export type ChildResponse = InteractionResponse;
 
 let guildHandler: GuildHandler;
 process.on('message', async (message: ParentCommand) => {
-	switch(message.type) {
-		case('start'): {
+	switch (message.type) {
+		case ('start'): {
 			guildHandler = new GuildHandler(message.content);
 			break;
 		}
-		case('message'): {
+		case ('message'): {
 			guildHandler.messageHandler(message.content);
 			break;
 		}
-		case('interaction'): {
+		case ('interaction'): {
 			const success = await guildHandler.interactionHandler(message.content);
 			const response: InteractionResponse = {
 				responseId: message.responseId,
@@ -62,3 +62,12 @@ process.on('message', async (message: ParentCommand) => {
 		}
 	}
 });
+
+process
+	.on('unhandledRejection', (reason, p) => {
+		console.error(reason, 'Unhandled Rejection at Promise', p);
+	})
+	.on('uncaughtException', err => {
+		console.error(err, 'Uncaught Exception thrown');
+		process.exit(1);
+	});
