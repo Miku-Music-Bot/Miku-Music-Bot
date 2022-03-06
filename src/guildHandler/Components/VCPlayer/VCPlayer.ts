@@ -155,10 +155,7 @@ export default class VCPlayer extends GuildComponent {
 		clearInterval(this._finishedSongCheck);
 		this.playing = false;
 		this.paused = false;
-		if (this._currentOpusStream) { 
-			this._currentOpusStream.removeAllListeners();
-			this._currentOpusStream.end();
-		}
+		if (this._currentOpusStream) { this._currentOpusStream.removeAllListeners(); }
 		if (this._currentSource) { this._currentSource.destroy(); }
 		if (this._audioPlayer) { this._audioPlayer.stop(); }
 		if (this._subscription) { this._subscription.unsubscribe(); }
