@@ -47,14 +47,19 @@ export default class GuildHandlerInterface {
 	removeGuild() { if (this._process) { this._process.kill('SIGINT'); } }
 
 	messageHandler(message: Discord.Message) {
-		const content: MessageInfo = {
-			id: message.id,
-			content: message.content,
-			channelId: message.channelId,
-			authorId: message.author.id
-		};
+		return new Promise((resolve) => {
+			const content: MessageInfo = {
+				id: message.id,
+				content: message.content,
+				channelId: message.channelId,
+				authorId: message.author.id
+			};
+			const resId = (this._nextId++).toString();
+			this._events.once(resId, (message) => { resolve(message.content); });
 
-		this._process.send({ type: 'message', content });
+			this._process.send({ type: 'message', content, responseId: resId.toString() });
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
+		});
 	}
 
 	interactionHandler(interaction: Discord.ButtonInteraction) {

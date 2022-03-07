@@ -57,12 +57,15 @@ bot.on('guildDelete', (guild) => {
 });
 
 // when bot receives a message
-bot.on('messageCreate', (message) => {
+bot.on('messageCreate', async (message) => {
 	if (message.author.id === bot.user.id) return; 		// ignore if message author is the bot
 	if (!message.guildId) return;						// ignore if is a dm
 
 	const guild = botMaster.getGuild(message.guildId);
-	if (guild) { guild.messageHandler(message); }
+	if (guild) { 
+		const sucess = await guild.messageHandler(message); 
+		if (sucess) { try { message.delete(); } catch { /* */ } }
+	}
 });
 
 // when bot receives an interaction
@@ -73,8 +76,8 @@ bot.on('interactionCreate', async (interaction) => {
 	// Send to correct guild handler and update to respond to discord to indicate that reaction has been recieved
 	const guild = botMaster.getGuild(interaction.guildId);
 	if (guild) {
-		await guild.interactionHandler(interaction);
-		setTimeout(async () => { try { await interaction.update({}); } catch { /* */ } }, 500);
+		const success = await guild.interactionHandler(interaction);
+		if (success) { setTimeout(async () => { try { await interaction.update({}); } catch { /* */ } }, 500); }
 	}
 });
 

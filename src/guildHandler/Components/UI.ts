@@ -232,7 +232,7 @@ export default class UI extends GuildComponent {
 				}
 
 				// Index number for item
-				let itemText = `${queueInfo.nextInQueue[i].index.toString()}. `;
+				let itemText = `${(queueInfo.nextInQueue[i].index + 1).toString()}. `;
 				// Add title of song cut off to be the right length
 				if (queueInfo.nextInQueue[i].song.title.length > songInfoMaxLength) {
 					itemText += queueInfo.nextInQueue[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';
@@ -252,7 +252,7 @@ export default class UI extends GuildComponent {
 				for (let i = 0; i < 3; i++) {
 					if (i === queueInfo.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
 					// Index number for item
-					let itemText = `${queueInfo.nextInAutoplay[i].index.toString()}. `;
+					let itemText = `${(queueInfo.nextInAutoplay[i].index + 1).toString()}. `;
 					// Add title of song cut off to be the right length
 					if (queueInfo.nextInAutoplay[i].song.title.length > songInfoMaxLength) {
 						itemText += queueInfo.nextInAutoplay[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';

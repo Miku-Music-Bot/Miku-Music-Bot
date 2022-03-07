@@ -72,7 +72,7 @@ export default class AudioProcessor extends GuildComponent {
 				`-ar ${bitrate}`,
 				`-ac ${AUDIO_CHANNELS}`
 			])
-			.audioFilters('loudnorm=I=-32')
+			.audioFilters('loudnorm=I=-16:TP=-1.5:LRA=11')
 			.audioChannels(AUDIO_CHANNELS)
 			.audioFrequency(AUDIO_FREQUENCY)
 			.outputFormat(PCM_FORMAT)

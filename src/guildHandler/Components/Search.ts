@@ -1,8 +1,11 @@
 import * as Discord from 'discord.js';
+import ytdl = require('ytdl-core');
+import ytpl = require('ytpl');
 import ytsr = require('ytsr');
 import { InteractionInfo } from '../GHChildInterface';
 import GuildHandler from '../GuildHandler';
 import Song from './Data/SourceData/Song';
+import YTPlaylist from './Data/SourceData/YTSources/YTPlaylist';
 import YTSong from './Data/SourceData/YTSources/YTSong';
 import GuildComponent from './GuildComponent';
 
@@ -25,6 +28,8 @@ type SearchResults = {
 	}
 }
 
+const ITEMS_PER_PAGE = parseInt(process.env.ITEMS_PER_PAGE);
+const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
 /**
  * Search
  * 
@@ -37,54 +42,13 @@ export default class Search extends GuildComponent {
 	constructor(guildHandler: GuildHandler) { super(guildHandler); }
 
 	/**
-	 * search()
+	 * _searchSongs()
 	 * 
-	 * Runs search and sends search UI
-	 * @param searchString - String to use to search
+	 * @param searchString - string to use to search
+	 * @returns SearchResults object
 	 */
-	async search(searchString: string) {
+	private async _searchSongs(searchString: string) {
 		try {
-			const interactionHandler = async (interaction: InteractionInfo) => {
-				try {
-					const customId = JSON.parse(interaction.customId);
-					
-					switch (customId.type) {
-						case ('page'): {
-							await this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, customId.pageNum));
-							break;
-						}
-						case ('close'): {
-							await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
-							break;
-						}
-						case('select'): {
-							searchResults.items[customId.index].reqBy = interaction.authorId;
-							this.queue.addQueue(searchResults.items[customId.index]);
-							// if not connected to vc, connect
-							if (!this.vcPlayer.connected) {
-								const joined = await this.vcPlayer.join(interaction.authorId);
-								// should start playing from autoplay
-								if (joined) { this.queue.nextSong(); }
-								break;
-							}
-
-							// if not playing anything, start playing fron queue
-							if (!this.vcPlayer.playing) { this.queue.nextSong(); }
-							break;
-						}
-						default: { return false; }
-					}
-					return true;
-				}
-				catch (error) {
-					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
-					return false;
-				}
-			};
-
-			const loadingMsg = new Discord.MessageEmbed().setTitle('Searching...');
-			const id = this.ui.sendEmbed({ embeds: [loadingMsg] }, -1, interactionHandler);
-
 			const searchResults: SearchResults = {
 				searchString,
 				items: [],
@@ -108,7 +72,7 @@ export default class Search extends GuildComponent {
 			};
 			searchResults.items.push(...savedResults.yt);
 
-			const ytsrResults = await ytsr(searchString, { limit: 50 });
+			const ytsrResults = await ytsr(searchString, { limit: MAX_YT_RESULTS });
 			// filter out non video and premiers
 			const filteredYTResults: ytsr.Video[] = ytsrResults.items.filter((result) => result.type === 'video' && !result.isUpcoming) as ytsr.Video[];
 			// add to results
@@ -138,12 +102,47 @@ export default class Search extends GuildComponent {
 					live: result.isLive
 				});
 			}));
-
-			this.ui.updateMsg(this.data.guildSettings.channelId, await id, this._createSearchUI(searchResults));
+			return searchResults;
 		}
 		catch (error) {
-			const errorId = this.ui.sendError(`Error while searching using search string: "${searchString}"`, true);
-			this.error(`{error: ${error}} while searching for songs using {searchString: ${searchString}}, {errorId: ${errorId}}`);
+			this.error(`{error:${error}} while searching for songs using {searchString:${searchString}}`);
+			return undefined;
+		}
+	}
+
+	/**
+	 * _searchSongURL()
+	 * 
+	 * @param url - url to use to search
+	 * @returns Song object or undefined
+	 */
+	private async _searchSongURL(url: string) {
+		try {
+			const ytInfo = await ytdl.getBasicInfo(url);
+			if (ytInfo) { return new YTSong(this.guildHandler, { url, title: ytInfo.videoDetails.title }); }
+			else { return undefined; }
+		}
+		catch (error) {
+			this.debug(`{error:${error}} while validating song url using {url:${url}}`);
+			return undefined;
+		}
+	}
+
+	/**
+	 * _searchPlaylistURL()
+	 * 
+	 * @param url - url to use to search
+	 * @returns Playlist object or undefined
+	 */
+	private async _searchPlaylistURL(url: string) {
+		try {
+			const playlistInfo = await ytpl(url);
+			if (playlistInfo) { return new YTPlaylist(this.guildHandler, { url }); }
+			return undefined;
+		}
+		catch (error) {
+			this.debug(`{error:${error}} whiel validating playlist url using {url:${url}}`);
+			return undefined;
 		}
 	}
 
@@ -159,16 +158,16 @@ export default class Search extends GuildComponent {
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
-		const maxPage = Math.ceil(searchResults.items.length / 5);
+		const maxPage = Math.ceil(searchResults.items.length / ITEMS_PER_PAGE);
 		if (page > maxPage) { page = maxPage; }
 		if (page < 1) { page = 1; }
 
-		//const ytPageStart = Math.ceil((results.savedResults.gd.length + results.savedResults.yt.length) / 5);
-		const indexStart = (page - 1) * 5;
+		// find where in item list to start at
+		const indexStart = (page - 1) * ITEMS_PER_PAGE;
 
 		const numbers = new Discord.MessageActionRow();
 		let displayText = '';
-		for (let i = 0; i < 5; i++) {
+		for (let i = 0; i < ITEMS_PER_PAGE; i++) {
 			const loc = indexStart + i;
 
 			// Add headers when appropriate, add 'nothing found' if that group has nothing in it
@@ -248,9 +247,9 @@ export default class Search extends GuildComponent {
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('>> Youtube Results')
-					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / 5) + 1, special: 3 }))
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1, special: 3 }))
 					.setStyle('PRIMARY')
-					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / 5) + 1)
+					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1)
 			)
 			.addComponents(
 				new Discord.MessageButton()
@@ -259,5 +258,94 @@ export default class Search extends GuildComponent {
 					.setStyle('PRIMARY')
 			);
 		return { embeds: [searchUI], components: [numbers, navigation] };
+	}
+
+	/**
+	 * search()
+	 * 
+	 * Runs search and sends search UI
+	 * @param searchString - String to use to search
+	 */
+	async search(searchString: string) {
+		try {
+			const interactionHandler = async (interaction: InteractionInfo) => {
+				try {
+					const customId = JSON.parse(interaction.customId);
+
+					switch (customId.type) {
+						case ('page'): {
+							await this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, customId.pageNum));
+							break;
+						}
+						case ('close'): {
+							await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+							break;
+						}
+						case ('select'): {
+							searchResults.items[customId.index].reqBy = interaction.authorId;
+							this.queue.addQueue([searchResults.items[customId.index]]);
+							// if not connected to vc, connect
+							if (!this.vcPlayer.connected) {
+								const joined = await this.vcPlayer.join(interaction.authorId);
+								// should start playing from autoplay
+								if (joined) { this.queue.nextSong(); }
+								break;
+							}
+
+							// if not playing anything, start playing fron queue
+							if (!this.vcPlayer.playing) { this.queue.nextSong(); }
+							break;
+						}
+						default: { return false; }
+					}
+					return true;
+				}
+				catch (error) {
+					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+					return false;
+				}
+			};
+
+			const loadingMsg = new Discord.MessageEmbed().setTitle('Searching...');
+			const id = this.ui.sendEmbed({ embeds: [loadingMsg] }, -1, interactionHandler);
+
+			const searchURLResult = await this._searchSongURL(searchString);
+			if (searchURLResult) {
+				this.queue.addQueue([searchURLResult]);
+				// if not playing anything, start playing fron queue
+				if (!this.vcPlayer.playing) { this.queue.nextSong(); }
+
+				this.ui.deleteMsg(this.data.guildSettings.channelId, await id);
+				this.ui.updateUI();
+				return;
+			}
+			const searchPlaylistURLResult = await this._searchPlaylistURL(searchString);
+			if (searchPlaylistURLResult) {
+				await searchPlaylistURLResult.fetchData();
+				const songs = searchPlaylistURLResult.getAllSongs();
+				this.queue.addQueue(songs);
+
+				// if not playing anything, start playing fron queue
+				if (!this.vcPlayer.playing) { this.queue.nextSong(); }
+
+				this.ui.deleteMsg(this.data.guildSettings.channelId, await id);
+				this.ui.updateUI();
+				return;
+			}
+			const searchResults = await this._searchSongs(searchString);
+
+			if (searchResults) {
+				this.ui.updateMsg(this.data.guildSettings.channelId, await id, this._createSearchUI(searchResults));
+			}
+			else {
+				this.ui.updateMsg(this.data.guildSettings.channelId, await id, {
+					embeds: [new Discord.MessageEmbed().setTitle('Error while searching')]
+				});
+			}
+		}
+		catch (error) {
+			const errorId = this.ui.sendError(`Error while searching using search string: "${searchString}"`, true);
+			this.error(`{error: ${error}} while searching for songs using {searchString: ${searchString}}, {errorId: ${errorId}}`);
+		}
 	}
 }

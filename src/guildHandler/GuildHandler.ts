@@ -95,9 +95,9 @@ export default class GuildHandler {
 	 */
 	async messageHandler(message: MessageInfo) {
 		// ignore if bot isn't ready yet
-		if (!this._ready) return;
+		if (!this._ready) return false;
 		// ignore if not in right channel
-		if (message.channelId !== this.data.guildSettings.channelId && message.content.indexOf('set-channel') === -1) return;
+		if (message.channelId !== this.data.guildSettings.channelId && message.content.indexOf('set-channel') === -1) return false;
 
 		// split message into command and argument
 		let prefix = false;
@@ -173,8 +173,10 @@ export default class GuildHandler {
 					this.vcPlayer.leave();
 					break;
 				}
+				default: { return false; }
 			}
 		}
+		return true;
 	}
 
 	/**

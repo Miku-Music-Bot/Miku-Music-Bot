@@ -13,7 +13,8 @@ export type MessageInfo = {
 }
 export type Message = {
 	type: 'message',
-	content: MessageInfo
+	content: MessageInfo,
+	responseId: string
 }
 
 export type InteractionInfo = {
@@ -30,6 +31,14 @@ export type Interaction = {
 
 export type ParentCommand = StartMsg | Message | Interaction
 
+export type MessageSuccess = {
+	success: boolean
+}
+export type MessageResponse = {
+	responseId: string,
+	content: MessageSuccess
+}
+
 export type InteractionSuccess = {
 	success: boolean
 }
@@ -38,7 +47,7 @@ export type InteractionResponse = {
 	content: InteractionSuccess
 }
 
-export type ChildResponse = InteractionResponse;
+export type ChildResponse = MessageResponse | InteractionResponse;
 
 let guildHandler: GuildHandler;
 process.on('message', async (message: ParentCommand) => {
@@ -48,7 +57,12 @@ process.on('message', async (message: ParentCommand) => {
 			break;
 		}
 		case ('message'): {
-			guildHandler.messageHandler(message.content);
+			const success = await guildHandler.messageHandler(message.content);
+			const response: MessageResponse = {
+				responseId: message.responseId,
+				content: { success }
+			};
+			process.send(response);
 			break;
 		}
 		case ('interaction'): {

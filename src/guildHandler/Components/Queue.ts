@@ -111,10 +111,11 @@ export default class Queue extends GuildComponent {
 	 * Inserts a song to queue
 	 * @param song - song to add to queue
 	 */
-	addQueue(song: Song) {
-		if (song) {
-			this._queue.push(song);
-			this.ui.sendNotification(`Added "${song.title}" to queue`);
+	addQueue(songs: Array<Song>) {
+		if (songs) {
+			this._queue.push(...songs);
+			if (songs.length === 1) { this.ui.sendNotification(`Added "${songs[0].title}" to queue`); }
+			else { this.ui.sendNotification(`Added ${songs.length} songs to queue`); }
 			this.ui.updateUI();
 		}
 	}
@@ -266,24 +267,45 @@ export default class Queue extends GuildComponent {
 		info.lastPlayed = this._lastPlayed;
 		info.nowPlayingSong = this._nowPlayingSong;
 
-		if (this._currentLoc === -1) { info.playingFrom = 'autoplay'; }
-		else { info.playingFrom = 'queue'; }
-		for (let i = 0; i < 3; i++) {
-			if (this._queue[this._currentLoc + i + 1]) {
-				info.nextInQueue.push({
-					index: this._currentLoc + i + 1,
-					song: this._queue[this._currentLoc + i + 1]
-				});
+		if (this._currentLoc === -1) {
+			info.playingFrom = 'autoplay';
+			for (let i = 0; i < 3; i++) {
+				if (this._queue[this._currentLoc + i + 1]) {
+					info.nextInQueue.push({
+						index: this._currentLoc + i + 1,
+						song: this._queue[this._currentLoc + i + 1]
+					});
+				}
+			}
+			for (let i = 0; i < 3; i++) {
+				if (this._autoplayQueue[i + 1]) {
+					info.nextInAutoplay.push({
+						index: this._queue.length + i,
+						song: this._autoplayQueue[i]
+					});
+				}
 			}
 		}
-		for (let i = 0; i < 3; i++) {
-			if (this._autoplayQueue[i + 1]) {
-				info.nextInAutoplay.push({
-					index: this._queue.length + i + 1,
-					song: this._autoplayQueue[i]
-				});
+		else { 
+			info.playingFrom = 'queue';
+			for (let i = 0; i < 3; i++) {
+				if (this._queue[this._currentLoc + i + 1]) {
+					info.nextInQueue.push({
+						index: this._currentLoc + i + 1,
+						song: this._queue[this._currentLoc + i + 1]
+					});
+				}
+			}
+			for (let i = 0; i < 3; i++) {
+				if (this._autoplayQueue[i + 1]) {
+					info.nextInAutoplay.push({
+						index: this._queue.length + i,
+						song: this._autoplayQueue[i]
+					});
+				}
 			}
 		}
+
 		return info;
 	}
 }

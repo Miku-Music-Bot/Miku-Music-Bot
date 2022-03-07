@@ -211,9 +211,13 @@ export default class VCPlayer extends GuildComponent {
 
 		// catch error events
 		this._currentSource.events.on('fatalError', (error) => {
+			let errorTxt = '';
+			const lines = error.split('\n');
+			const last5 = lines.slice(-5);
+			for (let i = 0; i < last5.length; i++) { errorTxt += last5[i] + '\n'; }
 			const errorId = this.ui.sendError(
 				`There was an error playing song: ${this._currentSource.song.title}\n
-				The following might tell you why:\n\`\`\`${error}\`\`\``
+				The following might tell you why:\n\`\`\`${errorTxt}\`\`\``
 			);
 			this.error(`Error while playing song with {url: ${this._currentSource.song.url}}. {errorId: ${errorId}}`);
 			this.finishedSong();
@@ -226,13 +230,6 @@ export default class VCPlayer extends GuildComponent {
 			this._audioPlayer.play(this._currentResource);
 		
 			// catch finished stream event
-			this._currentOpusStream.on('end', () => {
-				clearInterval(this._finishedSongCheck);
-				try {
-					this.debug(`Finished playing song with {url: ${this._currentSource.song.url}}`);
-					this.finishedSong();
-				} catch {/* */ }
-			});
 			this._finishedSongCheck = setInterval(() => {
 				if (!this._currentResource.ended) return;
 

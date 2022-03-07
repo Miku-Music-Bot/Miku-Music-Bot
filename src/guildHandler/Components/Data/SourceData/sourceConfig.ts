@@ -26,10 +26,10 @@ export const SONG_DEFAULT: SongConfig = {
 
 // Individual Source Configuration data and defaults
 export type PlaylistConfig = {
-	id: number,
-	title: string,
+	id?: number,
+	title?: string,
 	url: string,
-	songs: Array<SongConfig>
+	songs?: Array<SongConfig>
 }
 export const PLAYLIST_DEFAULT: PlaylistConfig = {
 	id: undefined,
