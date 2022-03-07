@@ -31,7 +31,7 @@ export default class PermissionChecker extends GuildComponent {
 			// if command doesn't exist, return false
 			if (!allowedRoles) {
 				this.debug(`Command from {messageId: ${message.id}} does not exist.`);
-				this.ui.sendError(`<@${message.authorId}> "${message.content}" is not valid command!`, false, message.channelId);
+				this.ui.sendError(`<@${message.authorId}> "${this.ui.escapeString(message.content)}" is not valid command!`, false, message.channelId);
 				return false;
 			}
 

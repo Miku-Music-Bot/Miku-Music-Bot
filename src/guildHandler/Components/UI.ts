@@ -133,6 +133,8 @@ export default class UI extends GuildComponent {
 	 * @return Discord message embed
 	 */
 	private _createUI(): Discord.MessageOptions {
+		const songInfoMaxLength = 50;
+
 		const queueInfo = this.queue.getUIInfo();
 
 		const userInterface = new Discord.MessageEmbed();
@@ -151,7 +153,13 @@ export default class UI extends GuildComponent {
 			else if (this.vcPlayer.currentSource.buffering) { status = 'Buffering'; }
 			else { status = 'Playing'; }
 			userInterface.setAuthor({ name: status });
-			userInterface.setTitle(queueInfo.nowPlayingSong.title);
+
+			// Song title
+			let title = queueInfo.nowPlayingSong.title;
+			if (queueInfo.nowPlayingSong.title.length > songInfoMaxLength) {
+				title = queueInfo.nowPlayingSong.title.substring(0, songInfoMaxLength - 3) + '...';
+			}
+			userInterface.setTitle(this.ui.escapeString(title));
 
 			// Set thumbnail
 			userInterface.setThumbnail(queueInfo.nowPlayingSong.thumbnailURL);
@@ -198,17 +206,16 @@ export default class UI extends GuildComponent {
 				},
 				{
 					name: (queueInfo.nowPlayingSong.type === 'yt') ? 'Channel' : 'Artist',
-					value: (queueInfo.nowPlayingSong.artist) ? queueInfo.nowPlayingSong.artist : 'unknown',
+					value: (queueInfo.nowPlayingSong.artist) ? this.escapeString(queueInfo.nowPlayingSong.artist) : 'unknown',
 					inline: true
 				},
 				{
 					name: 'Link',
-					value: `[${sourceName}](${queueInfo.nowPlayingSong.url})`,
+					value: `[${this.escapeString(sourceName)}](${queueInfo.nowPlayingSong.url})`,
 					inline: true
 				}
 			]);
 
-			const songInfoMaxLength = 50;
 			// Last played information
 			if (queueInfo.lastPlayed) {
 				let lastPlayedText = '';
@@ -218,7 +225,7 @@ export default class UI extends GuildComponent {
 				else { lastPlayedText += queueInfo.lastPlayed.title; }
 				userInterface.addFields({
 					name: 'Last Played',
-					value: `${lastPlayedText} - [${(queueInfo.lastPlayed.reqBy) ? `<@${queueInfo.lastPlayed.reqBy}>` : 'Autoplay'}]`,
+					value: `${this.escapeString(lastPlayedText)} - [${(queueInfo.lastPlayed.reqBy) ? `<@${queueInfo.lastPlayed.reqBy}>` : 'Autoplay'}]`,
 					inline: false
 				});
 			}
@@ -235,7 +242,7 @@ export default class UI extends GuildComponent {
 				let itemText = `${(queueInfo.nextInQueue[i].index + 1).toString()}. `;
 				// Add title of song cut off to be the right length
 				if (queueInfo.nextInQueue[i].song.title.length > songInfoMaxLength) {
-					itemText += queueInfo.nextInQueue[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';
+					itemText += this.escapeString(queueInfo.nextInQueue[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...');
 				}
 				else { itemText += queueInfo.nextInQueue[i].song.title; }
 				queueTxt += `${itemText} - [${(queueInfo.nextInQueue[i].song.reqBy) ? `<@${queueInfo.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
@@ -255,7 +262,7 @@ export default class UI extends GuildComponent {
 					let itemText = `${(queueInfo.nextInAutoplay[i].index + 1).toString()}. `;
 					// Add title of song cut off to be the right length
 					if (queueInfo.nextInAutoplay[i].song.title.length > songInfoMaxLength) {
-						itemText += queueInfo.nextInAutoplay[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...';
+						itemText += this.escapeString(queueInfo.nextInAutoplay[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...');
 					}
 					else { itemText += queueInfo.nextInAutoplay[i].song.title; }
 					autoplayTxt += `${itemText}\n`;
@@ -286,7 +293,7 @@ export default class UI extends GuildComponent {
 				},
 				{
 					name: 'Repeat Queue',
-					value: `${queueInfo.repeatQueue} time${(queueInfo.repeatQueue > 1) ? 's' : ''}`,
+					value: `${queueInfo.repeatQueue} time${(queueInfo.repeatQueue !== 1) ? 's' : ''}`,
 					inline: true
 				}
 			]);
@@ -327,7 +334,7 @@ export default class UI extends GuildComponent {
 			.addComponents(
 				// Repeat button
 				new Discord.MessageButton()
-					.setLabel(`Repeat Song: ${queueInfo.repeatSong} time${(queueInfo.repeatSong > 1) ? 's' : ''}`)
+					.setLabel(`Repeat Song: ${queueInfo.repeatSong} time${(queueInfo.repeatSong !== 1) ? 's' : ''}`)
 					.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong, special: 5 }))
 					.setStyle('SECONDARY')
 					.setDisabled(!this.vcPlayer.playing)
@@ -507,6 +514,23 @@ export default class UI extends GuildComponent {
 			await message.edit(messageOptions);
 		}
 		catch (error) { this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`); }
+	}
+
+	/**
+	 * escapeString()
+	 * 
+	 * Escapes a string to be displayed as is in discord
+	 * @param string - string to escape
+	 * @returns escaped string
+	 */
+	escapeString(string: string) {
+		let escaped = '';
+		const toEscape = ['*', '_', '~', '`', '>', '|'];
+		for (let i = 0; i < string.length; i++) {
+			if (toEscape.indexOf(string[i]) === -1) { escaped += string[i]; }
+			else { escaped += `\\${string[i]}`; }
+		}
+		return escaped;
 	}
 
 	/**

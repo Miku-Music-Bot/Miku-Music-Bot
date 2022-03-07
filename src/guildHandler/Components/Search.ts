@@ -155,6 +155,7 @@ export default class Search extends GuildComponent {
 	 * @returns discord message options for embed to send
 	 */
 	private _createSearchUI(searchResults: SearchResults, page?: number): Discord.MessageOptions {
+		const maxTitleLength = 50;
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
@@ -192,23 +193,28 @@ export default class Search extends GuildComponent {
 				const song = searchResults.items[loc];
 
 				// set title of song in bold
-				displayText += `**${song.title}**\n`;
+				let songTitle = song.title;
+				if (song.title.length > maxTitleLength) {
+					songTitle = song.title.slice(maxTitleLength - 3) + '...';
+				}
+				displayText += `**${this.ui.escapeString(songTitle)}**\n`;
 
 				switch (song.type) {
 					case ('yt'): {
-						// Url, artist, and duration should all exist on youtube sources
 						displayText += `Url: **${song.url}**\n`;
-						displayText += `Uploaded By: **${song.artist}**\n`;
+						displayText += `Uploaded By: **${this.ui.escapeString(song.artist)}**\n`;
 						displayText += `Duration: **${song.durationString}**\n`;
 						break;
 					}
 					case ('gd'): {
-						// Artist and duration might not exist
-						if (song.artist) { displayText += `Artist: **${song.artist}**\n`; }
-						else { displayText += 'Artist: *unknown*\n'; }
-
-						if (song.duration) { displayText += `Duration: **${song.durationString}**\n`; }
-						else { displayText += 'Duration: *unknown*\n'; }
+						let artist = song.artist;
+						if (song.artist.length > maxTitleLength) {
+							artist = song.artist.slice(maxTitleLength - 3) + '...';
+						}
+						displayText += `Url: **${song.url}**\n`;
+						displayText += `Artist: **${this.ui.escapeString(artist)}**\n`;
+						displayText += `Duration: **${song.durationString}**\n`;
+						break;
 					}
 				}
 				displayText += '\n';
@@ -225,7 +231,7 @@ export default class Search extends GuildComponent {
 		}
 
 		const searchUI = new Discord.MessageEmbed()
-			.setTitle(`Search results for: ${searchResults.searchString}`)
+			.setTitle(`Search results for: ${this.ui.escapeString(searchResults.searchString.slice(0, 50))}`)
 			.setDescription(displayText)
 			.setFooter({ text: `Page ${page} of ${maxPage}` });
 

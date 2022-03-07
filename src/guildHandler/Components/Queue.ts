@@ -114,7 +114,7 @@ export default class Queue extends GuildComponent {
 	addQueue(songs: Array<Song>) {
 		if (songs) {
 			this._queue.push(...songs);
-			if (songs.length === 1) { this.ui.sendNotification(`Added "${songs[0].title}" to queue`); }
+			if (songs.length === 1) { this.ui.sendNotification(`Added "${this.ui.escapeString(songs[0].title)}" to queue`); }
 			else { this.ui.sendNotification(`Added ${songs.length} songs to queue`); }
 			this.ui.updateUI();
 		}
