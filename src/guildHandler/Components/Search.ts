@@ -155,7 +155,7 @@ export default class Search extends GuildComponent {
 	 * @returns discord message options for embed to send
 	 */
 	private _createSearchUI(searchResults: SearchResults, page?: number): Discord.MessageOptions {
-		const maxTitleLength = 50;
+		const maxTitleLength = 70;
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
@@ -195,7 +195,7 @@ export default class Search extends GuildComponent {
 				// set title of song in bold
 				let songTitle = song.title;
 				if (song.title.length > maxTitleLength) {
-					songTitle = song.title.slice(maxTitleLength - 3) + '...';
+					songTitle = song.title.slice(0, maxTitleLength - 3) + '...';
 				}
 				displayText += `**${this.ui.escapeString(songTitle)}**\n`;
 
@@ -209,7 +209,7 @@ export default class Search extends GuildComponent {
 					case ('gd'): {
 						let artist = song.artist;
 						if (song.artist.length > maxTitleLength) {
-							artist = song.artist.slice(maxTitleLength - 3) + '...';
+							artist = song.artist.slice(0, maxTitleLength - 3) + '...';
 						}
 						displayText += `Url: **${song.url}**\n`;
 						displayText += `Artist: **${this.ui.escapeString(artist)}**\n`;
