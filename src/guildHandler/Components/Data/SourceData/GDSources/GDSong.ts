@@ -1,4 +1,5 @@
 import * as path from 'path';
+import type { drive_v3 } from 'googleapis';
 import mm from 'music-metadata';
 import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
@@ -11,7 +12,7 @@ import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const GD_METADATA_READ_AMOUNT = parseInt(process.env.GD_METADATA_READ_AMOUNT);
+const GD_METADATA_READ_AMOUNT = process.env.GD_METADATA_READ_AMOUNT;
 const ASSETS_LOC = process.env.ASSETS_LOC;
 
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -72,21 +73,22 @@ export default class GDSong extends GuildComponent implements Song {
 					resolve();
 					return;
 				}
-
-				this.drive.files.get({ fileId: id, alt: 'media' }, { responseType: 'stream' })
-					.then((res) => {
+				this.drive.files.get(
+					{ fileId: id, alt: 'media', headers: { 'Range': `bytes=0-${GD_METADATA_READ_AMOUNT}` } } as drive_v3.Params$Resource$About$Get,
+					{ responseType: 'stream' },
+					(err, res) => {
+						if (err) {
+							this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this._songInfo.url}}`);
+							resolve();
+							return;
+						}
 						let header = Buffer.alloc(0);
 						res.data
-							.on('error', (e) => {
-								this.error(`{error: ${e}} while downloading info for song with {url: ${this._songInfo.url}}`);
+							.on('error', (e) => { 
+								this.error(`{error: ${e}} while downloading info for song with {url: ${this._songInfo.url}}`); 
 								resolve();
 							})
-							.on('data', (data) => {
-								if (Buffer.byteLength(header) < GD_METADATA_READ_AMOUNT) {
-									header = Buffer.concat([header, data]);
-								}
-							})
-
+							.on('data', (data) => { header = Buffer.concat([header, data]); })
 							.on('end', async () => {
 								try {
 									const metadata = await mm.parseBuffer(header);
@@ -107,7 +109,6 @@ export default class GDSong extends GuildComponent implements Song {
 										})
 										.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`); })
 										.run();
-
 									pass.write(header);
 									pass.end();
 								}
@@ -116,10 +117,6 @@ export default class GDSong extends GuildComponent implements Song {
 									resolve();
 								}
 							});
-					})
-					.catch((err) => {
-						this.error(`{error: ${err}} while getting info from google drive for song with {url:${this._songInfo.url}}`);
-						resolve();
 					});
 			}
 			catch (error) {

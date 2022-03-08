@@ -27,9 +27,9 @@ const SMALL_CHUNK_SIZE = SEC_PCM_SIZE / 10;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
- * GDSource
+ * YTSource
  *
- * Handles getting audio from Google Drive
+ * Handles getting audio from youtube
  */
 export default class GDSource extends GuildComponent implements AudioSource {
 	song: GDSong;
@@ -51,7 +51,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	private _gdPCMConverter: ffmpeg.FfmpegCommand;
 	private _gdPCMConverterInput: PassThrough;
 
-	// Layer between google drive download and output stream
+	// Layer between youtube download and output stream
 	private _largeChunkCount: number;
 	private _tempLocation: string;
 	private _chunkBuffer: Array<Buffer>;
@@ -80,7 +80,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		super(guildHandler);
 		this.song = song;
 		this.events = new EventEmitter();
-		this.buffering = true;								// if currently playing silence while waiting for google drive, set to true
+		this.buffering = true;								// if currently playing silence while waiting for youtube, set to true
 		this.destroyed = false;								// if source has been destroyed or not
 
 		this._errorMsg = '';
@@ -181,18 +181,23 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		// create gdPCMConverter input
+		// start download from google drive
+		this.drive.files.get(
+			{ fileId: this.song.getIdFromUrl(this.song.url), alt: 'media'},
+			{ responseType: 'stream' },
+			(err, res) => {
+				if (err) {
+					this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this.song.url}}`);
+					this._retryBuffer(attempts);
+					return;
+				}
+				res.data.pipe(this._gdPCMConverterInput);
+			}
+		);
+
+		// write data to ytPCMConverter input
 		this._gdPCMConverterInput = new PassThrough();
 		this._gdPCMConverterInput.on('error', (error) => { this.warn(`{error:${error}} on _gdPCMConverterInput for song with {url:${this.song.url}}`); });
-	
-		// start download from google drive
-		const id = this.song.getIdFromUrl(this.song.url);
-		this.drive.files.get({ fileId: id, alt: 'media' }, { responseType: 'stream' })
-			.then((res) => { res.data.pipe(this._gdPCMConverterInput); })
-			.catch((err) => {
-				this.error(`{error: ${err}} while getting info from google drive for song with {url:${this.song.url}}`);
-				this._retryBuffer(attempts);
-			});
 
 		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
@@ -249,7 +254,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
-			this._endOfSong = true;
+			if (this.song.live) { this._endOfSong = true; }
 
 			if (Buffer.byteLength(currentBuffer) === 0) return;
 
@@ -265,7 +270,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			this._gdPCMConverterInput.removeAllListeners();
 		}
 		this._gdPCMConverterOutput = new PassThrough();
-		this._gdPCMConverterOutput.on('error', (error) => { this.warn(`{error:${error}} on _gdPCMConverterOutput for song with {url:${this.song.url}}`); });
+		this._gdPCMConverterOutput.on('error', (error) => { this.warn(`{error:${error}} on _ytPCMConverterOutput for song with {url:${this.song.url}}`); });
 
 		this._gdPCMConverter.pipe(this._gdPCMConverterOutput);
 		this._gdPCMConverterOutput
@@ -276,6 +281,13 @@ export default class GDSource extends GuildComponent implements AudioSource {
 				this.warn(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
 				this._retryBuffer(attempts);
 			});
+
+		if (!this.song.live) return;
+		// restart stream every 5 hours
+		this._liveTimeout = setTimeout(() => {
+			this.debug(`Restarting buffer for song with {url: ${this.song.url}} to ensure youtube link is valid`);
+			this._retryBuffer(attempts - 1);
+		}, 18000000);
 	}
 
 	/**
@@ -422,7 +434,9 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * 
 	 * @returns number of seconds played
 	 */
-	getPlayedDuration() { return Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE)); }
+	getPlayedDuration() {
+		return Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
+	}
 
 	/**
 	 * destroy()
