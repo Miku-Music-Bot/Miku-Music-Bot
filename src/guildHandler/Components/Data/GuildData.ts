@@ -16,6 +16,7 @@ const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot datab
 const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME;				// name of collection for guild data
 const MAX_DATABASE_RETRY_WAIT = parseInt(process.env.MAX_DATABASE_RETRY_WAIT);
 const DATABASE_ACCESS_WAIT = parseInt(process.env.DATABASE_ACCESS_WAIT);
+const MAX_UPDATES_BEFORE_SAVE = parseInt(process.env.MAX_UPDATES_BEFORE_SAVE);
 
 type DatabaseData = {
 	guildId: string,
@@ -36,6 +37,7 @@ export default class GuildData extends GuildComponent {
 	audioSettings: AudioSettings;
 	permissionSettings: PermissionSettings;
 	sourceManager: SourceManager;
+	private _saveCount: number;
 	private _guildId: string;
 	private _collection: mongoDb.Collection;
 	private _saveTimeout: NodeJS.Timeout;
@@ -48,6 +50,7 @@ export default class GuildData extends GuildComponent {
 	 */
 	constructor(guildHandler: GuildHandler, id: string, cb: () => void) {
 		super(guildHandler);
+		this._saveCount = 0;
 		this._guildId = id;
 
 		this._initData(1000, cb);
@@ -124,6 +127,11 @@ export default class GuildData extends GuildComponent {
 	 * Queues up save to database to prevent spamming
 	 */
 	private _save() {
+		this._saveCount++;
+		if (this._saveCount > MAX_UPDATES_BEFORE_SAVE) { 
+			this._saveCount = 0;
+			this._saveData(); 
+		}
 		clearTimeout(this._saveTimeout);
 		this._saveTimeout = setTimeout(() => { this._saveData(); }, DATABASE_ACCESS_WAIT);
 	}

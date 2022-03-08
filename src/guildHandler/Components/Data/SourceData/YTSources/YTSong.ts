@@ -57,6 +57,8 @@ export default class YTSong extends GuildComponent implements Song {
 			this._songInfo.thumbnailURL = info.videoDetails.thumbnails[0].url;
 			this._songInfo.artist = info.videoDetails.author.name;
 			this._songInfo.live = info.videoDetails.isLiveContent;
+
+			this.events.emit('newSettings', this);
 		}
 		catch (error) {
 			this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);

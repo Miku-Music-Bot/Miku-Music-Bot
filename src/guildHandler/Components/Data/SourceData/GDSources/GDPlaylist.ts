@@ -1,5 +1,4 @@
 import Fuse from 'fuse.js';
-import ytpl = require('ytpl');
 import { EventEmitter } from 'events';
 
 import GuildHandler from '../../../../GuildHandler';
@@ -7,6 +6,9 @@ import GuildComponent from '../../../GuildComponent';
 import Playlist from '../Playlist';
 import { PlaylistConfig, PLAYLIST_DEFAULT } from '../sourceConfig';
 import GDSong from './GDSong';
+
+const SEARCH_THRESHOLD = parseFloat(process.env.SEARCH_THRESHOLD);
+const SEARCH_DISTANCE = parseInt(process.env.SEARCH_DISTANCE);
 
 export default class GDPlaylist extends GuildComponent implements Playlist {
 	events: EventEmitter;
@@ -33,16 +35,17 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 			this.data.guildSettings.playlistIdCount++;
 		}
 		Object.assign(info, plInfo);
-
 		this._id = info.id;
 		this._title = info.title;
 		this._url = info.url;
 		this._songs = [];
 
 		// Create fuse index
-		this._index = new Fuse(this._songs, { 
+		this._index = new Fuse(this._songs, {
+			distance: SEARCH_DISTANCE,
+			threshold: SEARCH_THRESHOLD,
 			useExtendedSearch: true,
-			keys: [ 'id', 'title', 'artist', 'url' ]
+			keys: ['id', 'title', 'artist', 'url']
 		});
 
 		// Create songs
@@ -89,59 +92,100 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	}
 
 	/**
+	 * _getIdFromUrl()
+	 * 
+	 * Get's the file or folder id from a url
+	 * @param url - google drive url
+	 * @returns google drive file/folder id
+	 */
+	private _getIdFromUrl(url: string) { return url.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]; }
+
+	/**
 	 * fetchData()
 	 * 
 	 * Grabs updated info for playlist
 	 */
-	async fetchData() {
-		if (!this._url) return;
-		try {
-			const info = await ytpl(this._url);
-			if (!info) {
-				this.info(`No song info found for playlist with {url: ${this._url}}`);
-				return;
-			}
-			this._title = info.title;
-			this._url = info.url;
+	async fetchData(): Promise<void> {
+		return new Promise((resolve) => {
+			if (!this._url) { resolve(); return; }
+			try {
+				const id = this._getIdFromUrl(this._url);
+				if (!id) {
+					this.error(`Google drive song with {url: ${this._url}} does not have a valid file id`);
+					resolve();
+					return;
+				}
 
-			// compares urls of objects in the two arrays, creating array of items that don't yet existing in songs
-			const notExisting = info.items.filter(
-				// grab url of element in info
-				({ shortUrl: urlInInfo }) => {
-					// check to see if an element in existing songs contains that same url
-					return !this._songs.some(
-						// grab url of element in info
-						({ url: urlInSongs }) => {
-							// see if urls match
-							return urlInSongs === urlInInfo;
+				// Get name of folder
+				this.drive.files.get({ fileId: id }, (err, res) => {
+					if (err) {
+						this.error(`{error: ${err}} while getting info from google drive for folder with {url: ${this._url}}`);
+						resolve();
+						return;
+					}
+					this._title = res.data.name;
+				});
+
+				// Get all of the files in the folder
+				const list: Array<{ id: string, name: string }> = [];
+				const fetchItems = (nextPageToken?: string): Promise<void> => {
+					return new Promise((resolve) => {
+						this.drive.files.list({
+							q: `'${id}' in parents and trashed = false`,
+							pageSize: 1000,
+							fields: 'nextPageToken, files(id, name)',
+							pageToken: nextPageToken
+						}, (err, res) => {
+							if (err) {
+								this.error(`{error: ${err}} while getting info from google drive for folder with {url: ${this._url}}`);
+								resolve();
+								return;
+							}
+							list.push(...res.data.files as Array<{ id: string, name: string }>);
+							// if we have exactly the maximum files, fetch more items
+							if (res.data.files.length === 1000) { fetchItems(res.data.nextPageToken).then(() => resolve()); }
+							else { resolve(); }
 						});
-				});
+					});
+				};
+				fetchItems()
+					.then(() => {
+						// compares urls of objects in the two arrays, creating array of items that don't yet existing in songs
+						const notExisting = list.filter(
+							// grab url of element in info
+							({ id: urlInInfo }) => {
+								// check to see if an element in existing songs contains that same url
+								return !this._songs.some(
+									// grab url of element in info
+									({ url: urlInSongs }) => {
+										// see if urls match
+										return urlInSongs === this._getIdFromUrl(urlInInfo);
+									});
+							});
 
-			// do the same thing but reversed, creating array of items in songs but not in items
-			const removed = this._songs.filter(({ url: urlInSongs }) => !info.items.some(({ shortUrl: urlInInfo }) => urlInInfo === urlInSongs));
+						// do the same thing but reversed, creating array of items in songs but not in items
+						const removed = this._songs.filter(({ url: urlInSongs }) => !list.some(({ id: urlInInfo }) => this._getIdFromUrl(urlInInfo) === urlInSongs));
 
-			// add new non existing songs to songs
-			for (let i = 0; i < notExisting.length; i++) {
-				// add new song after creating it
-				const song = new GDSong(this.guildHandler, {
-					title: notExisting[i].title,
-					url: notExisting[i].shortUrl,
-					duration: notExisting[i].durationSec,
-					thumbnailURL: notExisting[i].bestThumbnail.url,
-					artist: notExisting[i].author.name,
-					live: notExisting[i].isLive
-				});
-				this._addSong(song);
+						// add new non existing songs to songs
+						for (let i = 0; i < notExisting.length; i++) {
+							// add new song after creating it
+							const song = new GDSong(this.guildHandler, { title: notExisting[i].name, url: `https://drive.google.com/file/d/${notExisting[i].id}` });
+							this._addSong(song);
+						}
+
+						// remove removed songs from songs
+						for (let i = 0; i < removed.length; i++) {
+							this._removeSong(removed[i].id);
+						}
+
+						resolve();
+					});
 			}
-
-			// remove removed songs from songs
-			for (let i = 0; i < removed.length; i++) {
-				this._removeSong(removed[i].id);
+			catch (error) {
+				this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
+				resolve();
 			}
-		}
-		catch (error) {
-			this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
-		}
+		});
 	}
 
 	/**
@@ -154,7 +198,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	getSong(id: number) {
 		// search for song that exactly matches id property
 		const results = this._index.search({
-			$and: [{ id: '=' + id }]
+			$and: [{ id: `=${id}` }]
 		});
 
 		if (results.length === 0) return undefined;

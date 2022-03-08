@@ -8,7 +8,7 @@ import Playlist from '../Playlist';
 import { PlaylistConfig, PLAYLIST_DEFAULT } from '../sourceConfig';
 import YTSong from './YTSong';
 
-const SEARCH_THRESHOLD = parseInt(process.env.SEARCH_THRESHOLD);
+const SEARCH_THRESHOLD = parseFloat(process.env.SEARCH_THRESHOLD);
 const SEARCH_DISTANCE = parseInt(process.env.SEARCH_DISTANCE);
 
 export default class YTPlaylist extends GuildComponent implements Playlist {

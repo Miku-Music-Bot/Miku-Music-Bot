@@ -1,6 +1,8 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
+import { google, drive_v3 } from 'googleapis';
 
 import UI from './Components/UI';
 import GuildConfig from './Components/Data/GuildData';
@@ -13,6 +15,10 @@ import Search from './Components/Search';
 import { InteractionInfo, MessageInfo } from './GHChildInterface';
 
 const LOG_DIR = process.env.LOG_DIR;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 /**
@@ -26,6 +32,8 @@ export default class GuildHandler {
 	info: (msg: string) => void;
 	warn: (msg: string) => void;
 	error: (msg: string) => void;
+
+	drive: drive_v3.Drive;
 
 	private _ready: boolean;
 	bot: Discord.Client;
@@ -52,6 +60,14 @@ export default class GuildHandler {
 		this.error = (msg) => { logger.error(msg); };
 
 		this.info(`Creating guild handler for guild {id: ${id}}`);
+
+		// Authenticate with google drive api
+		const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+		const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
+		auth.setCredentials(JSON.parse(token));
+		this.drive = google.drive({ version: 'v3', auth });
+
+		// Create discord client
 		this.bot = new Discord.Client({						// set intent flags for bot
 			intents: [
 				Discord.Intents.FLAGS.GUILDS,					// for accessing guild roles
@@ -173,7 +189,6 @@ export default class GuildHandler {
 					this.vcPlayer.leave();
 					break;
 				}
-				default: { return false; }
 			}
 		}
 		return true;

@@ -120,8 +120,8 @@ export default class UI extends GuildComponent {
 		clearInterval(this._nextRefreshTimeout);
 		const ui = this._createUI();
 		if (this._lastMessageJSON !== JSON.stringify(ui)) {
-			this._lastMessageJSON = JSON.stringify(ui);
-			await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
+			const success = await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
+			if (success) { this._lastMessageJSON = JSON.stringify(ui); }
 		}
 		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, UI_REFRESH_RATE);
 	}
@@ -512,8 +512,12 @@ export default class UI extends GuildComponent {
 			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
 			const message = await channel.messages.fetch(messageId);
 			await message.edit(messageOptions);
+			return true;
 		}
-		catch (error) { this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`); }
+		catch (error) {
+			this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
+			return false;
+		}
 	}
 
 	/**

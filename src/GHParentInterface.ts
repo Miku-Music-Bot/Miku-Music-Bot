@@ -36,7 +36,7 @@ export default class GuildHandlerInterface {
 			if (error.toString().indexOf('SIGINT') !== -1) return;
 			this.log.error(`{error: ${error}} on GuildHandler process for {guildId: ${this._guildId}}`);
 		});
-		this._process.on('message', (message: ChildResponse) => { this._events.emit(message.responseId, message); });
+		this._process.on('message', (message: ChildResponse) => { this._events.emit(message.responseId, message.content); });
 
 		this._process.send({
 			type: 'start',
@@ -55,7 +55,7 @@ export default class GuildHandlerInterface {
 				authorId: message.author.id
 			};
 			const resId = (this._nextId++).toString();
-			this._events.once(resId, (message) => { resolve(message.content); });
+			this._events.once(resId, (message) => { resolve(message.success); });
 
 			this._process.send({ type: 'message', content, responseId: resId.toString() });
 			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
@@ -71,7 +71,7 @@ export default class GuildHandlerInterface {
 				parentChannelId: interaction.channelId,
 			};
 			const resId = (this._nextId++).toString();
-			this._events.once(resId, (message) => { resolve(message.content); });
+			this._events.once(resId, (message) => { resolve(message.success); });
 
 			this._process.send({ type: 'interaction', content, responseId: resId.toString() });
 

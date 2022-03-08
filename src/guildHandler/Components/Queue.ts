@@ -1,7 +1,9 @@
 import GuildComponent from '../Components/GuildComponent';
 import type GuildHandler from '../GuildHandler';
+import GDSong from './Data/SourceData/GDSources/GDSong';
 import Song from './Data/SourceData/Song';
 import AudioSource from './VCPlayer/AudioSources/AudioSource';
+import GDSource from './VCPlayer/AudioSources/GDAudioSource';
 import YTSource from './VCPlayer/AudioSources/YTAudioSource';
 
 type UIInfo = {
@@ -170,6 +172,10 @@ export default class Queue extends GuildComponent {
 		switch (song.type) {
 			case ('yt'): {
 				source = new YTSource(this.guildHandler, song);
+				break;
+			}
+			case ('gd'): {
+				source = new GDSource(this.guildHandler, song as GDSong);
 				break;
 			}
 		}
