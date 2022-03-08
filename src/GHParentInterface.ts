@@ -26,7 +26,7 @@ export default class GuildHandlerInterface {
 	private _startChild() {
 		if (this._process) { this._process.kill('SIGINT'); }
 
-		this._process = fork(path.join(__dirname, 'guildHandler', 'ghChildInterface.js'));
+		this._process = fork(path.join(__dirname, 'guildHandler', 'GHChildInterface.js'));
 		this._process.on('spawn', () => { this.log.debug(`GuildHandler child process started with {pid: ${this._process.pid}}`); });
 		this._process.on('exit', (code) => {
 			this.log.info(`GuildHandler child process exited with {code: ${code}}, restarting in 3 sec...`);
