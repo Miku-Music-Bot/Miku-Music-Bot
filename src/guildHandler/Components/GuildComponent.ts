@@ -1,5 +1,3 @@
-import type { drive_v3 } from 'googleapis';
-
 import type GuildHandler from '../GuildHandler';
 
 /**
@@ -15,7 +13,6 @@ export default class GuildComponent {
 	info: GuildHandler['info'];
 	warn: GuildHandler['warn'];
 	error: GuildHandler['error'];
-	drive: drive_v3.Drive;
 
 	/**
 	 * @param guildHandler
@@ -28,10 +25,9 @@ export default class GuildComponent {
 		this.info = guildHandler.info;
 		this.warn = guildHandler.warn;
 		this.error = guildHandler.error;
-
-		this.drive = guildHandler.drive;
 	}
 
+	get drive() { return this.guildHandler.drive; }
 	get bot() { return this.guildHandler.bot; }
 	get guild() { return this.guildHandler.guild; }
 	get data() { return this.guildHandler.data; }

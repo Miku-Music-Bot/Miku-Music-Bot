@@ -141,7 +141,7 @@ export default class Search extends GuildComponent {
 			return undefined;
 		}
 		catch (error) {
-			this.debug(`{error:${error}} whiel validating playlist url using {url:${url}}`);
+			this.debug(`{error:${error}} while validating playlist url using {url:${url}}`);
 			return undefined;
 		}
 	}
