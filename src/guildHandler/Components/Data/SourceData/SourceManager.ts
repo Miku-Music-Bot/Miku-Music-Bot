@@ -169,6 +169,16 @@ export default class SourceManager extends GuildComponent {
 	 * @param song - song to add to playlist
 	 */
 	resolveRef(ref: SourceRef): Array<Song> {
+		if (ref.id === -1 && ref.playlist === -1) {
+			const songs = [];
+			for (let i = 0; i < this._gdPlaylists.length; i++) {
+				songs.push(...this._gdPlaylists[i].getAllSongs());
+			}
+			for (let i = 0; i < this._ytPlaylists.length; i++) {
+				songs.push(...this._ytPlaylists[i].getAllSongs());
+			}
+			return songs;
+		}
 		// get the playlist
 		let playlist;
 		switch (ref.type) {
