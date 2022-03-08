@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as crypto from 'crypto';
+import mm from 'music-metadata';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
@@ -15,6 +16,8 @@ import type GDSong from '../../Data/SourceData/GDSources/GDSong';
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 
 // audio constants
+const ASSETS_LOC = process.env.ASSETS_LOC;
+const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
 const PCM_FORMAT = process.env.PCM_FORMAT;
 const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
@@ -182,16 +185,34 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		}
 
 		// start download from google drive
+		const id = this.song.getIdFromUrl(this.song.url);
 		this.drive.files.get(
-			{ fileId: this.song.getIdFromUrl(this.song.url), alt: 'media'},
+			{ fileId: id, alt: 'media' },
 			{ responseType: 'stream' },
-			(err, res) => {
+			async (err, res) => {
 				if (err) {
 					this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this.song.url}}`);
 					this._retryBuffer(attempts);
 					return;
 				}
 				res.data.pipe(this._gdPCMConverterInput);
+
+				try {
+					const metadata = await mm.parseStream(res.data);
+
+					if (!metadata || !metadata.common || !metadata.format) return;
+					if (metadata.common.title) { this.song.title = metadata.common.title; }
+					if (metadata.common.artist) { this.song.artist = metadata.common.artist; }
+					if (metadata.format.duration) { this.song.duration = Math.round(metadata.format.duration); }
+
+					ffmpeg(res.data)
+						.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
+						.on('end', () => { this.song.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`; })
+						.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this.song.url}}`); });
+				}
+				catch (error) {
+					this.error(`{error:${error}} while parsing metadata for song with {url:${this.song.url}}`);
+				}
 			}
 		);
 

@@ -1,8 +1,6 @@
 import * as path from 'path';
-import type { drive_v3 } from '@googleapis/drive';
 import mm from 'music-metadata';
 import { EventEmitter } from 'events';
-import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
 
@@ -12,7 +10,6 @@ import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
 
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const GD_METADATA_READ_AMOUNT = process.env.GD_METADATA_READ_AMOUNT;
 const ASSETS_LOC = process.env.ASSETS_LOC;
 
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -74,51 +71,34 @@ export default class GDSong extends GuildComponent implements Song {
 					return;
 				}
 				this.drive.files.get(
-					{ fileId: id, alt: 'media', headers: { 'Range': `bytes=0-${GD_METADATA_READ_AMOUNT}` } } as drive_v3.Params$Resource$About$Get,
+					{ fileId: id, alt: 'media' },
 					{ responseType: 'stream' },
-					(err, res) => {
+					async (err, res) => {
 						if (err) {
 							this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this._songInfo.url}}`);
 							resolve();
 							return;
 						}
-						let header = Buffer.alloc(0);
-						res.data
-							.on('error', (e) => { 
-								this.error(`{error: ${e}} while downloading info for song with {url: ${this._songInfo.url}}`); 
-								resolve();
-							})
-							.on('data', (data) => { header = Buffer.concat([header, data]); })
-							.on('end', async () => {
-								try {
 
-									console.log(Buffer.byteLength(header));
-									const metadata = await mm.parseBuffer(header);
+						try {
+							const metadata = await mm.parseStream(res.data);
 
-									if (!metadata || !metadata.common || !metadata.format) return;
-									if (metadata.common.title) { this._songInfo.title = metadata.common.title; }
-									if (metadata.common.artist) { this._songInfo.artist = metadata.common.artist; }
-									if (metadata.format.duration) { this._songInfo.duration = Math.round(metadata.format.duration); }
-									if (metadata.common.artist) { this._songInfo.artist = metadata.common.artist; }
+							if (!metadata || !metadata.common || !metadata.format) return;
+							if (metadata.common.title) { this._songInfo.title = metadata.common.title; }
+							if (metadata.common.artist) { this._songInfo.artist = metadata.common.artist; }
+							if (metadata.format.duration) { this._songInfo.duration = Math.round(metadata.format.duration); }
 
-									const pass = new PassThrough();
-									ffmpeg(pass)
-										.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
-										.on('end', () => {
-											this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
-											this.events.emit('newSettings', this);
-											resolve();
-										})
-										.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`); })
-										.run();
-									pass.write(header);
-									pass.end();
-								}
-								catch (e) {
-									this.error(`{error: ${e}} while parsing metadata for song with {url: ${this._songInfo.url}}`);
+							ffmpeg(res.data)
+								.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
+								.on('end', () => { 
+									this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
 									resolve();
-								}
-							});
+								})
+								.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`); });
+						}
+						catch (error) {
+							this.error(`{error:${error}} while parsing metadata for song with {url:${this._songInfo.url}}`);
+						}
 					});
 			}
 			catch (error) {
@@ -145,9 +125,17 @@ export default class GDSong extends GuildComponent implements Song {
 	get type() { return this._songInfo.type; }
 	get url() { return this._songInfo.url; }
 	get title() { return this._songInfo.title; }
+	set title(title: string) { this._songInfo.title = title; this.events.emit('newSettings'); }
+
 	get duration() { return this._songInfo.duration; }
+	set duration(duration: number) { this._songInfo.duration = duration; this.events.emit('newSettings'); }
+
 	get thumbnailURL() { return this._songInfo.thumbnailURL; }
+	set thumbnailURL(thumbnailURL: string) { this._songInfo.thumbnailURL = thumbnailURL; this.events.emit('newSettings'); }
+
 	get artist() { return this._songInfo.artist; }
+	set artist(artist: string) { this._songInfo.artist = artist; this.events.emit('newSettings'); }
+
 	get live() { return this._songInfo.live; }
 	get durationString() {
 		if (this.live) { return 'Unknown'; }

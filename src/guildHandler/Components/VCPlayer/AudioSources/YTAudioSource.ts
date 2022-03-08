@@ -155,7 +155,9 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		if (this.destroyed) return;
 		if (this._bufferStreamStarted) return;			// avoid starting 2 bufferStream functions at the same time
 		this._bufferStreamStarted = true;
-
+		
+		await this.song.fetchData();
+		
 		if (!attempts) { attempts = 0; }
 		attempts++;
 		if (attempts > 5) {								// stop trying after 5 attempts to get buffer
@@ -410,6 +412,10 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 */
 	async getStream() {
 		if (this._outputStreamStarted) return this._audioProcessorOutput;
+
+		// notify user that this might take a bit
+		if (this.song.live) {  this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient.'); }
+		
 		this._outputStreamStarted = true;
 		try {
 			this.bufferStream();
