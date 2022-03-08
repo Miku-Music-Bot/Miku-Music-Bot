@@ -91,6 +91,8 @@ export default class GDSong extends GuildComponent implements Song {
 							.on('data', (data) => { header = Buffer.concat([header, data]); })
 							.on('end', async () => {
 								try {
+
+									console.log(Buffer.byteLength(header));
 									const metadata = await mm.parseBuffer(header);
 
 									if (!metadata || !metadata.common || !metadata.format) return;

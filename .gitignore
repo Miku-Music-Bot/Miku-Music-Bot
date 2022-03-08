@@ -2,6 +2,8 @@
 /built
 /logs
 /temp
+/assets/thumbnails
 
+!/assets/thumbnails/defaultThumbnail.jpg
 .env
 token.json
