@@ -1,6 +1,6 @@
 import * as winston from 'winston';
 
-import GHInterface from './ghParentInterface';
+import GHInterface from './GHParentInterface';
 
 /**
  * BotMaster
