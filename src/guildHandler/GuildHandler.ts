@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as Discord from 'discord.js';
 import * as winston from 'winston';
-import { google, drive_v3 } from 'googleapis';
+import { drive, drive_v3 } from '@googleapis/drive';
+import { AuthPlus } from 'googleapis-common';
 
 import UI from './Components/UI';
 import GuildConfig from './Components/Data/GuildData';
@@ -62,10 +63,11 @@ export default class GuildHandler {
 		this.info(`Creating guild handler for guild {id: ${id}}`);
 
 		// Authenticate with google drive api
-		const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+		const authPlus = new AuthPlus();
+		const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
 		const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
 		auth.setCredentials(JSON.parse(token));
-		this.drive = google.drive({ version: 'v3', auth });
+		this.drive = drive({ version: 'v3', auth });
 
 		// Create discord client
 		this.bot = new Discord.Client({						// set intent flags for bot

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import express = require('express');
+import express from 'express';
 import * as winston from 'winston';
-import { google } from 'googleapis';
+import { AuthPlus } from 'googleapis-common';
 import * as path from 'path';
 
 import type BotMaster from '../GuildMaster';
@@ -26,7 +26,8 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 	const app = express();
 	app.use(express.static(ASSETS_LOC));
 
-	const oAuth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+	const authPlus = new AuthPlus();
+	const oAuth2Client = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
 
 	app.get('/', (req, res) => {
 		res.send('Hello World!');

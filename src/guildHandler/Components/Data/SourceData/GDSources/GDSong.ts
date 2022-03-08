@@ -1,5 +1,5 @@
 import * as path from 'path';
-import type { drive_v3 } from 'googleapis';
+import type { drive_v3 } from '@googleapis/drive';
 import mm from 'music-metadata';
 import { EventEmitter } from 'events';
 import { PassThrough } from 'stream';
