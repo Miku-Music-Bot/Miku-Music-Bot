@@ -187,8 +187,32 @@ export default class GuildHandler {
 					else { this.ui.sendError('Nothing to resume!'); }
 					break;
 				}
-				case('stop'): {
+				case('stop'): case('leave'): {
 					this.vcPlayer.leave();
+					break;
+				}
+				case('skip'): case('next'): {
+					break;
+				}
+				case('repeat'): case('repeat-song'): case('rs'): {
+					break;
+				}
+				case('repeat-queue'): case('rq'): {
+					break;
+				}
+				case('shuffle'): case('toggle-shuffle'): {
+					break;
+				}
+				case('show-queue'): case('sq'): {
+					break;
+				}
+				case('clear-queue'): case('cq'): {
+					break;
+				}
+				case('remove'): {
+					break;
+				}
+				case('advance'): {
 					break;
 				}
 			}

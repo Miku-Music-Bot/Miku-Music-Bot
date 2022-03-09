@@ -38,15 +38,15 @@ export default class PermissionSettings extends EventEmitter {
 
 			// give the default @everyone permissions to each command
 			for (let i = 0; i < PERMISSIONS_DEFAULT.everyone.length; i++) {
-				this._permissionSettings[PERMISSIONS_DEFAULT.everyone[i]] = [];
+				this._permissionSettings[PERMISSIONS_DEFAULT.everyone[i].name] = [];
 				this.addPermission(PERMISSIONS_DEFAULT.everyone[i], everyone.id);
 			}
 
 			// create default permissions for admins
 			for (let i = 0; i < PERMISSIONS_DEFAULT.admin.length; i++) {
-				this._permissionSettings[PERMISSIONS_DEFAULT.admin[i]] = [];
+				this._permissionSettings[PERMISSIONS_DEFAULT.admin[i].name] = [];
 			}
-			setImmediate(() => { this.emit('newSettings', this); });
+			setImmediate(() => { this.emit('newSettings'); });
 		}
 	}
 

@@ -276,19 +276,11 @@ export default class UI extends GuildComponent {
 			});
 		}
 
-		let autostopDisplay = 'off';
-		if (queueInfo.autostop === 'queue') { autostopDisplay = 'After this song'; }
-		if (queueInfo.autostop === 'song') { autostopDisplay = 'After finishing queue'; }
 		userInterface
 			.addFields([
 				{
 					name: 'Autoplay',
 					value: queueInfo.autoplay ? 'on' : 'off',
-					inline: true
-				},
-				{
-					name: 'Autostop',
-					value: autostopDisplay,
 					inline: true
 				},
 				{

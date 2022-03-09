@@ -19,7 +19,6 @@ type UIInfo = {
 		song: Song
 	}>,
 	nowPlaying: boolean,
-	autostop: string,
 	repeatQueue: number,
 	repeatSong: number,
 	shuffle: boolean,
@@ -41,7 +40,6 @@ export default class Queue extends GuildComponent {
 
 	private _repeatSong: number;
 	private _repeatQueue: number;
-	private _autostop: 'song' | 'queue' | 'off';
 
 	/**
 	 * @param guildHandler - guild handler for guild this queue object is responsible for
@@ -56,7 +54,6 @@ export default class Queue extends GuildComponent {
 
 		this._repeatSong = 0;
 		this._repeatQueue = 0;
-		this._autostop = 'off';
 
 		this._refreshAutoplay();
 	}
@@ -261,7 +258,6 @@ export default class Queue extends GuildComponent {
 			repeatQueue: this._repeatQueue,
 			repeatSong: this._repeatSong,
 			autoplay: this.data.guildSettings.autoplay,
-			autostop: this._autostop,
 			shuffle: this.data.guildSettings.shuffle,
 			nextInQueue: [],
 			nextInAutoplay: []
