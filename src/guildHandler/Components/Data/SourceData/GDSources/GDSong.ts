@@ -103,13 +103,13 @@ export default class GDSong extends GuildComponent implements Song {
 									.on('end', async () => {
 										this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
 										if (!save) { try { await fs.promises.unlink(tempLocation); } catch { /* */ } }
-										this.events.emit('newSettings');
+										this.events.emit('newSettings', this);
 										resolve(tempLocation);
 									})
 									.on('error', async (e) => { 
 										this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`);
 										if (!save) { try { await fs.promises.unlink(tempLocation); } catch { /* */ } }
-										this.events.emit('newSettings');
+										this.events.emit('newSettings', this);
 										resolve(tempLocation);
 									})
 									.run();
