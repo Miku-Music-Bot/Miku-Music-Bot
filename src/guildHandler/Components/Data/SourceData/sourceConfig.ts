@@ -11,6 +11,9 @@ export type SongConfig = {
 	artist?: string
 	live?: boolean,
 	reqBy?: string
+	optional?: {
+		ext?: string
+	}
 };
 export const SONG_DEFAULT: SongConfig = {
 	id: undefined,
@@ -21,7 +24,8 @@ export const SONG_DEFAULT: SongConfig = {
 	thumbnailURL: `${BOT_DOMAIN}/default-thumbnail.jpg`,
 	artist: 'unknown',
 	live: true,
-	reqBy: ''
+	reqBy: '',
+	optional: {}
 };
 
 // Individual Source Configuration data and defaults

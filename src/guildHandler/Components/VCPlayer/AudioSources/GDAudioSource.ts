@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as crypto from 'crypto';
-import mm from 'music-metadata';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
@@ -16,8 +15,6 @@ import type GDSong from '../../Data/SourceData/GDSources/GDSong';
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 
 // audio constants
-const ASSETS_LOC = process.env.ASSETS_LOC;
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
 const PCM_FORMAT = process.env.PCM_FORMAT;
 const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
@@ -51,6 +48,8 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	private _liveTimeout: NodeJS.Timeout;
 
 	// For google drive audio conversion to pcm
+	private _sourceLoc: string;
+	private _gdSource: fs.ReadStream;
 	private _gdPCMConverter: ffmpeg.FfmpegCommand;
 	private _gdPCMConverterInput: PassThrough;
 
@@ -185,40 +184,21 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		}
 
 		// start download from google drive
-		const id = this.song.getIdFromUrl(this.song.url);
-		this.drive.files.get(
-			{ fileId: id, alt: 'media' },
-			{ responseType: 'stream' },
-			async (err, res) => {
-				if (err) {
-					this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this.song.url}}`);
-					this._retryBuffer(attempts);
-					return;
-				}
-				res.data.pipe(this._gdPCMConverterInput);
+		this._sourceLoc = await this.song.fetchData(true);
+		if (this._gdSource) { this._gdSource.destroy(); }
 
-				try {
-					const metadata = await mm.parseStream(res.data);
+		this._gdSource = fs.createReadStream(this._sourceLoc);
+		this._gdSource.on('error', (error) => {
+			this.error(`{error:${error}} while reading google drive file from disk at {location:${this._sourceLoc}}`);
+			this._errorMsg += 'Error getting file from google drive';
+			this._retryBuffer(attempts);
+		});
 
-					if (!metadata || !metadata.common || !metadata.format) return;
-					if (metadata.common.title) { this.song.title = metadata.common.title; }
-					if (metadata.common.artist) { this.song.artist = metadata.common.artist; }
-					if (metadata.format.duration) { this.song.duration = Math.round(metadata.format.duration); }
-
-					ffmpeg(res.data)
-						.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
-						.on('end', () => { this.song.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`; })
-						.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this.song.url}}`); });
-				}
-				catch (error) {
-					this.error(`{error:${error}} while parsing metadata for song with {url:${this.song.url}}`);
-				}
-			}
-		);
-
-		// write data to ytPCMConverter input
+		// write data to gdPCMConverter input
 		this._gdPCMConverterInput = new PassThrough();
 		this._gdPCMConverterInput.on('error', (error) => { this.warn(`{error:${error}} on _gdPCMConverterInput for song with {url:${this.song.url}}`); });
+		this._gdSource.pipe(this._gdPCMConverterInput);
+
 
 		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
 
@@ -479,6 +459,9 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		if (this._audioProcessor) { this._audioProcessor.destroy(); }
 		if (this._audioProcessorOutput) { this._audioProcessorOutput.end(); }
 
-		try { await fs.promises.rm(this._tempLocation, { recursive: true }); } catch { /* */ }
+		try {
+			await fs.promises.unlink(this._sourceLoc);
+			await fs.promises.rm(this._tempLocation, { recursive: true });
+		} catch { /* */ }
 	}
 }

@@ -71,7 +71,6 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 			this._addSong(s);
 			this.events.emit('newSettings');
 		});
-		song.events.on('newSettings', () => { this.events.emit('newSettings'); });
 		this.events.emit('newSettings');
 	}
 
@@ -170,6 +169,8 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 						for (let i = 0; i < notExisting.length; i++) {
 							// add new song after creating it
 							const song = new GDSong(this.guildHandler, { title: notExisting[i].name, url: `https://drive.google.com/file/d/${notExisting[i].id}` });
+							const fileNameSplit = notExisting[i].name.split('.');
+							song.ext = fileNameSplit[fileNameSplit.length - 1];
 							this._addSong(song);
 						}
 

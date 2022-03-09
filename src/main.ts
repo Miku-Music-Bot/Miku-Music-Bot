@@ -64,7 +64,7 @@ bot.on('messageCreate', async (message) => {
 	const guild = botMaster.getGuild(message.guildId);
 	if (guild) { 
 		const success = await guild.messageHandler(message); 
-		if (success) { try { message.delete(); } catch { /* */ } }
+		if (success) { try { await message.delete(); } catch { /* */ } }
 	}
 });
 

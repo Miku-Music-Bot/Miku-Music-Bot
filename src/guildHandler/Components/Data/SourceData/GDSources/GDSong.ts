@@ -1,14 +1,17 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import mm from 'music-metadata';
 import { EventEmitter } from 'events';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
+import crypto from 'crypto';
 
 import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
 import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
 
+const TEMP_DIR = process.env.TEMP_DIR;
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const ASSETS_LOC = process.env.ASSETS_LOC;
 
@@ -60,50 +63,60 @@ export default class GDSong extends GuildComponent implements Song {
 	 * 
 	 * Grabs updated info for song
 	 */
-	async fetchData(): Promise<void> {
+	async fetchData(save?: boolean): Promise<string> {
 		return new Promise((resolve) => {
 			try {
-				setTimeout(() => resolve(), 5000);
+				const tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
+
 				const id = this.getIdFromUrl(this._songInfo.url);
 				if (!id) {
 					this.error(`Google drive song with {url: ${this._songInfo.url}} does not have a valid file id`);
-					resolve();
+					resolve(tempLocation);
 					return;
 				}
+
 				this.drive.files.get(
 					{ fileId: id, alt: 'media' },
 					{ responseType: 'stream' },
 					async (err, res) => {
 						if (err) {
 							this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this._songInfo.url}}`);
-							resolve();
+							resolve(tempLocation);
 							return;
 						}
 
-						try {
-							const metadata = await mm.parseStream(res.data);
+						res.data.pipe(fs.createWriteStream(tempLocation));
 
-							if (!metadata || !metadata.common || !metadata.format) return;
-							if (metadata.common.title) { this._songInfo.title = metadata.common.title; }
-							if (metadata.common.artist) { this._songInfo.artist = metadata.common.artist; }
-							if (metadata.format.duration) { this._songInfo.duration = Math.round(metadata.format.duration); }
+						res.data.on('end', async () => {
+							try {
+								const metadata = await mm.parseFile(tempLocation);
 
-							ffmpeg(res.data)
-								.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
-								.on('end', () => { 
-									this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
-									resolve();
-								})
-								.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`); });
-						}
-						catch (error) {
-							this.error(`{error:${error}} while parsing metadata for song with {url:${this._songInfo.url}}`);
-						}
+								if (!metadata || !metadata.common || !metadata.format) return;
+								if (metadata.common.title) { this._songInfo.title = metadata.common.title; }
+								if (metadata.common.artist) { this._songInfo.artist = metadata.common.artist; }
+								if (metadata.format.duration) { this._songInfo.duration = Math.round(metadata.format.duration); }
+
+								ffmpeg(tempLocation)
+									.audioCodec('copy')
+									.videoCodec('copy')
+									.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
+									.on('end', async () => {
+										this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
+										if (!save) { try { await fs.promises.unlink(tempLocation); } catch { /* */ } }
+										resolve(tempLocation);
+									})
+									.on('error', (e) => { this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`); })
+									.run();
+							}
+							catch (error) {
+								this.error(`{error:${error}} while parsing metadata for song with {url:${this._songInfo.url}}`);
+							}
+						});
 					});
 			}
 			catch (error) {
 				this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);
-				resolve();
+				resolve('');
 			}
 		});
 	}
@@ -152,4 +165,7 @@ export default class GDSong extends GuildComponent implements Song {
 	}
 	get reqBy() { return this._songInfo.reqBy; }
 	set reqBy(reqBy: string) { this._songInfo.reqBy = reqBy; }
+
+	get ext() { return this._songInfo.optional.ext; }
+	set ext(ext: string) { this._songInfo.optional.ext = ext; }
 }

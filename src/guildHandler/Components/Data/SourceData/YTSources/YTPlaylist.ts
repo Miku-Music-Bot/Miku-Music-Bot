@@ -73,7 +73,6 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			this._addSong(s);
 			this.events.emit('newSettings');
 		});
-		song.events.on('newSettings', () => { this.events.emit('newSettings'); });
 		this.events.emit('newSettings');
 	}
 
