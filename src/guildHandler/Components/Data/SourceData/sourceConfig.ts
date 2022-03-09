@@ -21,7 +21,7 @@ export const SONG_DEFAULT: SongConfig = {
 	type: undefined,
 	url: undefined,
 	duration: undefined,
-	thumbnailURL: `${BOT_DOMAIN}/default-thumbnail.jpg`,
+	thumbnailURL: `${BOT_DOMAIN}/defaultThumbnail.jpg`,
 	artist: 'unknown',
 	live: true,
 	reqBy: '',
