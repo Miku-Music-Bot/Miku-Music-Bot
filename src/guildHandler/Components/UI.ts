@@ -29,6 +29,7 @@ export default class UI extends GuildComponent {
 	private _interactionListeners: {
 		[key: string]: {
 			timeout?: NodeJS.Timeout,
+			life?: number,
 			interactionHandler: (interaction: InteractionInfo) => Promise<boolean>
 		}
 	};
@@ -47,7 +48,7 @@ export default class UI extends GuildComponent {
 	 *
 	 * Sends UI to channel
 	 */
-	async sendUI() {
+	async sendUI(reset?: boolean) {
 		// Delete ui if it already exists
 		if (this._uiMessageId) { await this.deleteMsg(this._uiChannelId, this._uiMessageId); }
 
@@ -79,7 +80,6 @@ export default class UI extends GuildComponent {
 					}
 					case ('stop'): {
 						this.vcPlayer.leave();
-						this.queue.stop();
 						break;
 					}
 					case ('skip'): {
@@ -88,6 +88,10 @@ export default class UI extends GuildComponent {
 					}
 					case ('repeat'): {
 						this.queue.setRepeatSong(customId.repeat + 1);
+						break;
+					}
+					case ('shuffle'): {
+						this.queue.toggleShuffle();
 						break;
 					}
 					default: { return false; }
@@ -104,9 +108,12 @@ export default class UI extends GuildComponent {
 		// Create and send message
 		this._uiChannelId = this.data.guildSettings.channelId;
 		const ui = this._createUI();
-		if (this._lastMessageJSON !== JSON.stringify(ui)) {
-			this._lastMessageJSON = JSON.stringify(ui);
-			this._uiMessageId = await this.sendEmbed(ui, -1, interactionHandler);
+		if (reset || this._lastMessageJSON !== JSON.stringify(ui)) {
+			const id = await this.sendEmbed(ui, -1, interactionHandler);
+			if (id) {
+				this._uiMessageId = id;
+				this._lastMessageJSON = JSON.stringify(ui);
+			}
 		}
 		this.updateUI();
 	}
@@ -285,7 +292,7 @@ export default class UI extends GuildComponent {
 				},
 				{
 					name: 'Repeat Queue',
-					value: `${queueInfo.repeatQueue} time${(queueInfo.repeatQueue !== 1) ? 's' : ''}`,
+					value: `${queueInfo.repeatQueue === -1 ? 'infinite' : queueInfo.repeatQueue} time${(queueInfo.repeatQueue !== 1) ? 's' : ''}`,
 					inline: true
 				}
 			]);
@@ -296,14 +303,14 @@ export default class UI extends GuildComponent {
 				// Play pause button
 				new Discord.MessageButton()
 					.setLabel('Play/Pause')
-					.setCustomId(JSON.stringify({ type: 'play/pause', special: 1 }))
+					.setCustomId(JSON.stringify({ type: 'play/pause', special: 0 }))
 					.setStyle('PRIMARY')
 			)
 			.addComponents(
 				// Stop button
 				new Discord.MessageButton()
 					.setLabel('Stop')
-					.setCustomId(JSON.stringify({ type: 'stop', special: 2 }))
+					.setCustomId(JSON.stringify({ type: 'stop', special: 1 }))
 					.setStyle('DANGER')
 					.setDisabled(!this.vcPlayer.connected)
 			)
@@ -311,7 +318,7 @@ export default class UI extends GuildComponent {
 				// Skip button
 				new Discord.MessageButton()
 					.setLabel('Skip')
-					.setCustomId(JSON.stringify({ type: 'skip', special: 3 }))
+					.setCustomId(JSON.stringify({ type: 'skip', special: 2 }))
 					.setStyle('SUCCESS')
 					.setDisabled(!this.vcPlayer.playing)
 			)
@@ -319,15 +326,15 @@ export default class UI extends GuildComponent {
 				// Shuffle button
 				new Discord.MessageButton()
 					.setLabel(`Shuffle: ${(queueInfo.shuffle) ? 'on' : 'off'}`)
-					.setCustomId(JSON.stringify({ type: 'shuffle', repeat: !queueInfo.shuffle, special: 4 }))
+					.setCustomId(JSON.stringify({ type: 'shuffle', special: 3 }))
 					.setStyle('SECONDARY')
 					.setDisabled(!this.vcPlayer.playing)
 			)
 			.addComponents(
 				// Repeat button
 				new Discord.MessageButton()
-					.setLabel(`Repeat Song: ${queueInfo.repeatSong} time${(queueInfo.repeatSong !== 1) ? 's' : ''}`)
-					.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong, special: 5 }))
+					.setLabel(`Repeat Song: ${queueInfo.repeatSong === -1 ? 'infinite' : queueInfo.repeatSong} time${(queueInfo.repeatSong !== 1) ? 's' : ''}`)
+					.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong, special: 4 }))
 					.setStyle('SECONDARY')
 					.setDisabled(!this.vcPlayer.playing)
 			);
@@ -406,7 +413,7 @@ export default class UI extends GuildComponent {
 				return false;
 			};
 
-			this.sendEmbed({ embeds: [notification], components: [row] }, 60_000, interactionHandler);
+			this.sendEmbed({ embeds: [notification], components: [row] }, 15_000, interactionHandler);
 		}
 		catch (error) { this.error(`{error: ${error}} while creating/sending notification message with {message: ${message}}`); }
 	}
@@ -437,7 +444,7 @@ export default class UI extends GuildComponent {
 				if (saveErrorId) { error.setFooter({ text: `Error id ${errorId}` }); }
 
 				const row = new Discord.MessageActionRow()
-					.addComponents(
+					.addComponents( 
 						// close button
 						new Discord.MessageButton()
 							.setLabel('Close')
@@ -482,7 +489,10 @@ export default class UI extends GuildComponent {
 				this._interactionListeners[msg.id] = { interactionHandler };
 
 				// set timeout if given
-				if (life !== -1) { this._interactionListeners[msg.id].timeout = setTimeout(() => { this.deleteMsg(channel.id, msg.id); }, life); }
+				if (life !== -1) { 
+					this._interactionListeners[msg.id].timeout = setTimeout(() => { this.deleteMsg(channel.id, msg.id); }, life); 
+					this._interactionListeners[msg.id].life = life;
+				}
 				return msg.id;
 			}
 			else { this.debug(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`); }
@@ -503,6 +513,10 @@ export default class UI extends GuildComponent {
 		try {
 			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
 			const message = await channel.messages.fetch(messageId);
+			if (this._interactionListeners[messageId].life) {
+				clearInterval(this._interactionListeners[messageId].timeout);
+				this._interactionListeners[messageId].timeout = setTimeout(() => { this.deleteMsg(channelId, messageId); }, this._interactionListeners[messageId].life); 
+			}
 			await message.edit(messageOptions);
 			return true;
 		}

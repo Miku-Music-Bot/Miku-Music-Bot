@@ -108,6 +108,7 @@ export default class VCPlayer extends GuildComponent {
 			this.paused = false;
 			this.finishedSong();
 			this._voiceConnection.destroy();
+			this.queue.stop();
 		}
 		catch (error) {
 			this.error(`{error: ${error}} while leaving voice channel`);
@@ -225,15 +226,16 @@ export default class VCPlayer extends GuildComponent {
 			this._audioPlayer.play(this._currentResource);
 		
 			// catch finished stream event
-			this._finishedSongCheck = setInterval(() => {
+			const finishCheck = setInterval(() => {
 				if (!this._currentResource.ended) return;
 
-				clearInterval(this._finishedSongCheck);
+				clearInterval(finishCheck);
 				try {
 					this.debug(`Finished playing song with {url: ${this._currentSource.song.url}}`);
 					this.finishedSong();
 				} catch {/* */ }
 			}, 100);
+			this._finishedSongCheck = finishCheck;
 		}
 		catch { /* */ }
 	}

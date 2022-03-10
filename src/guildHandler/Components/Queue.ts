@@ -1,4 +1,7 @@
+import Discord from 'discord.js';
+
 import GuildComponent from '../Components/GuildComponent';
+import { InteractionInfo } from '../GHChildInterface';
 import type GuildHandler from '../GuildHandler';
 import GDSong from './Data/SourceData/GDSources/GDSong';
 import Song from './Data/SourceData/Song';
@@ -25,6 +28,8 @@ type UIInfo = {
 	autoplay: boolean
 };
 
+const SHOW_QUEUE_ITEMS = parseInt(process.env.SHOW_QUEUE_ITEMS);
+
 /**
  * Queue
  * 
@@ -40,6 +45,8 @@ export default class Queue extends GuildComponent {
 
 	private _repeatSong: number;
 	private _repeatQueue: number;
+
+	private _msgId: string;
 
 	/**
 	 * @param guildHandler - guild handler for guild this queue object is responsible for
@@ -93,15 +100,17 @@ export default class Queue extends GuildComponent {
 	 * 
 	 * Removes a song with the given id from the queue
 	 * @param id - id of song to remove
+	 * @returns song that was removed
 	 */
 	removeSong(id: number) {
 		const loc = this._resolveIndex(id - 1);
 		let removed;
 		if (loc.from === 'queue') { removed = this._queue.splice(loc.index, 1); }
 		else if (loc.from === 'autoplay') { removed = this._autoplayQueue.splice(loc.index, 1); }
-		else { this.ui.sendError('That song doens\'t exist in the queue or in autoplay'); }
+		else { this.ui.sendError('That song with does not exist in the queue or in autoplay'); }
 		if (removed) { removed[0].reqBy = ''; }
 		this.ui.updateUI();
+		return removed;
 	}
 
 	/**
@@ -200,7 +209,8 @@ export default class Queue extends GuildComponent {
 		this._currentLoc++;
 		if (this._currentLoc >= this._queue.length) {
 			// refresh the queue if it has ended and we want to repeat it, otherwise clear the queue
-			if (this._repeatQueue) {
+			if (this._repeatQueue > 0 || this._repeatQueue === -1) {
+				if (this._repeatQueue !== -1) { this._repeatQueue--; }
 				this._refreshQueue();
 				this._currentLoc = 0;
 			}
@@ -245,7 +255,157 @@ export default class Queue extends GuildComponent {
 	 */
 	setRepeatSong(repeats: number) { if (repeats >= -1) { this._repeatSong = repeats; } }
 
-	stop() { this._nowPlaying = false; }
+	/**
+	 * setRepeatQueue()
+	 * 
+	 * Sets the number of times to repeat song
+	 * @param repeats - number of times to repeat
+	 */
+	setRepeatQueue(repeats: number) { if (repeats >= -1) { this._repeatQueue = repeats; } }
+
+	/**
+	 * toggleShuffle()
+	 * 
+	 * Toggles the shuffle on or off if no argument given, sets state to given state otherwise
+	 * @param state - state to set shuffle to
+	 */
+	toggleShuffle(state?: boolean) {
+		if (typeof state === 'undefined') { state = !this.data.guildSettings.shuffle; }
+		this.data.guildSettings.shuffle = state;
+	}
+
+	/**
+	 * clearQueue()
+	 * 
+	 * Clears the current queue
+	 */
+	clearQueue() {
+		this._queue = [];
+		this._currentLoc = 0;
+		this._repeatQueue = 0;
+		this._repeatSong = 0;
+	}
+
+	/**
+	 * stop()
+	 * 
+	 * Tells the queue that we have stopped playing
+	 */
+	stop() {
+		this._nowPlaying = false;
+		this.clearQueue();
+	}
+
+	/**
+	 * showPage()
+	 * 
+	 * Displays the queue
+	 * @param page - page of the queue to show
+	 */
+	async showPage(page: number) {
+		if (this._msgId) {
+			const success = await this.ui.updateMsg(this.data.guildSettings.channelId, this._msgId, this._createShowQueueMsg(page));
+			if (success) return;
+		}
+
+		const interactionHandler = async (interaction: InteractionInfo) => {
+			try {
+				const customId = JSON.parse(interaction.customId);
+
+				switch (customId.type) {
+					case ('page'): {
+						this.showPage(customId.pageNum);
+						break;
+					}
+					case ('close'): {
+						await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+						break;
+					}
+					default: { return false; }
+				}
+				return true;
+			}
+			catch (error) {
+				this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+				return false;
+			}
+		};
+		this._msgId = await this.ui.sendEmbed(this._createShowQueueMsg(page), 30_000, interactionHandler);
+	}
+
+	private _createShowQueueMsg(page: number): Discord.MessageOptions {
+		const maxTitleLength = 50;
+
+		if (!page) { page = 1; }
+		const maxPage = Math.ceil((this._queue.length + this._autoplayQueue.length) / SHOW_QUEUE_ITEMS);
+		if (page > maxPage) { page = maxPage; }
+		if (page < 1) { page = 1; }
+
+		// find where in item list to start at
+		const indexStart = (page - 1) * SHOW_QUEUE_ITEMS;
+
+		// Get items to show
+		let displayText = '';
+		for (let i = 0; i < SHOW_QUEUE_ITEMS; i++) {
+			const ref = this._resolveIndex(indexStart + i);
+			if (ref.from !== 'notFound') {
+				if (indexStart + i === 0) {
+					displayText += '**Queue**\n\n';
+					if (this._queue.length === 0) { displayText += 'Nothing in queue!\n\n'; }
+				}
+				if (indexStart + i === this._queue.length) {
+					displayText += '**Autoplay**\n\n';
+					if (this._autoplayQueue.length === 0) { displayText += 'Nothing in autoplay!\n\n'; }
+				}
+				let songTitle = ref.song.title;
+				if (ref.song.title.length > maxTitleLength) {
+					songTitle = ref.song.title.slice(0, maxTitleLength - 3) + '...';
+				}
+				displayText += `${indexStart + i + 1}. ${this.ui.escapeString(songTitle)}\n`;
+			}
+			else { break; }
+		}
+
+		const embed = new Discord.MessageEmbed()
+			.setTitle('Showing Items in Queue and Autoplay')
+			.setDescription(displayText)
+			.setFooter({ text: `Page ${page} of ${maxPage}` });
+
+		const navigation = new Discord.MessageActionRow()
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('Done')
+					.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
+					.setStyle('PRIMARY')
+			)
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('<')
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page - 1, special: 1 }))
+					.setStyle('PRIMARY')
+					.setDisabled(page === 1)
+			)
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('>')
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: page + 1, special: 2 }))
+					.setStyle('PRIMARY')
+					.setDisabled(page === maxPage)
+			);
+
+		return { embeds: [embed], components: [navigation] };
+	}
+
+	/**
+	 * advance()
+	 * 
+	 * Advances a song to the top of the queue
+	 * @param index - index of the song to advance
+	 */
+	advance(index: number) {
+		const removed = this.removeSong(index);
+		if (removed) { this.addQueue(removed); }
+	}
 
 	/**
 	 * getUIInfo()
@@ -288,7 +448,7 @@ export default class Queue extends GuildComponent {
 				}
 			}
 		}
-		else { 
+		else {
 			info.playingFrom = 'queue';
 			for (let i = 0; i < 3; i++) {
 				if (this._queue[this._currentLoc + i + 1]) {

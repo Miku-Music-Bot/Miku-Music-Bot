@@ -16,7 +16,9 @@ export const PERMISSIONS_DEFAULT = {
 		'show-queue', 'sq',
 		'clear-queue', 'cq',
 		'remove',
-		'advance'
+		'advance',
+		'clear-channel', 'cc',
+		'autoplay', 'toggle-autoplay'
 	],
 	admin: ['set-channel']
 };

@@ -115,9 +115,10 @@ export default class GuildHandler {
 		// ignore if bot isn't ready yet
 		if (!this._ready) return false;
 		// ignore if not in right channel
-		if (message.channelId !== this.data.guildSettings.channelId && message.content.indexOf('set-channel') === -1) return false;
+		if (message.channelId !== this.data.guildSettings.channelId && message.content.toLowerCase().indexOf('set-channel') === -1) return false;
 
 		// split message into command and argument
+		message.content = message.content.toLowerCase();
 		let prefix = false;
 		if (message.content.startsWith(this.data.guildSettings.prefix)) {
 			prefix = true;
@@ -154,7 +155,7 @@ export default class GuildHandler {
 				}
 				case ('play'): {
 					// if not connected to vc, connect
-					if (!this.vcPlayer.connected) { 
+					if (!this.vcPlayer.connected) {
 						const joined = await this.vcPlayer.join(message.authorId);
 						if (!joined) break;
 					}
@@ -187,36 +188,112 @@ export default class GuildHandler {
 					else { this.ui.sendError('Nothing to resume!'); }
 					break;
 				}
-				case('stop'): case('leave'): {
+				case ('stop'): case ('leave'): {
 					this.vcPlayer.leave();
 					break;
 				}
-				case('skip'): case('next'): {
+				case ('skip'): case ('next'): {
+					this.vcPlayer.finishedSong();
 					break;
 				}
-				case('repeat'): case('repeat-song'): case('rs'): {
+				case ('repeat'): case ('repeat-song'): case ('rs'): {
+					let count;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					else {
+						if (argument.indexOf('infinite') !== -1 || argument.indexOf('infinity') !== -1) { count = -1; }
+						else {
+							this.ui.sendNotification(`<@${message.authorId}> "${argument}" is not a number!`);
+							break;
+						}
+					}
+
+					this.queue.setRepeatSong(count);
 					break;
 				}
-				case('repeat-queue'): case('rq'): {
+				case ('repeat-queue'): case ('rq'): {
+					let count;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					else {
+						if (argument.indexOf('infinite') !== -1 || argument.indexOf('infinity') !== -1) { count = -1; }
+						else {
+							this.ui.sendNotification(`<@${message.authorId}> "${argument}" is not a number!`);
+							break;
+						}
+					}
+
+					this.queue.setRepeatQueue(count);
 					break;
 				}
-				case('shuffle'): case('toggle-shuffle'): {
+				case ('shuffle'): case ('toggle-shuffle'): {
+					let state = undefined;
+					if (argument.indexOf('on') !== -1 || argument.indexOf('true') !== -1) { state = true; }
+					if (argument.indexOf('off') !== -1 || argument.indexOf('false') !== -1) { state = false; }
+					this.queue.toggleShuffle(state);
 					break;
 				}
-				case('show-queue'): case('sq'): {
+				case ('show-queue'): case ('sq'): {
+					let count = 1;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					this.queue.showPage(count);
 					break;
 				}
-				case('clear-queue'): case('cq'): {
+				case ('clear-queue'): case ('cq'): {
+					this.queue.clearQueue();
 					break;
 				}
-				case('remove'): {
+				case ('remove'): {
+					let count;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					else {
+						this.ui.sendNotification(`<@${message.authorId}> "${argument}" is not a number!`);
+						break;
+					}
+					this.queue.removeSong(count);
 					break;
 				}
-				case('advance'): {
+				case ('advance'): {
+					let count;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					else {
+						this.ui.sendNotification(`<@${message.authorId}> "${argument}" is not a number!`);
+						break;
+					}
+					this.queue.advance(count);
+					break;
+				}
+				case ('clear-channel'): case ('cc'): {
+					let count = 50;
+					const parsed = parseInt(argument);
+					if (!isNaN(parsed)) { count = parsed; }
+					// grab text channel
+					const channel = await this.bot.channels.fetch(message.channelId);
+					if (channel instanceof Discord.TextChannel) {
+						try {
+							await channel.bulkDelete(count);
+							this.ui.sendUI(true);
+							this.ui.sendNotification(`Deleted ${count} messages`);
+						} catch {
+							this.ui.sendNotification(`Failed to delete ${count} messages, maybe they are too old?`);
+						}
+					}
+					break;
+				}
+				case ('toggle-autoplay'): case ('autoplay'): {
+					let state = !this.data.guildSettings.autoplay;
+					if (argument.indexOf('on') !== -1 || argument.indexOf('true') !== -1) { state = true; }
+					if (argument.indexOf('off') !== -1 || argument.indexOf('false') !== -1) { state = false; }
+					this.data.guildSettings.autoplay = state;
+					if (!state) { this.queue.clearQueue(); }
 					break;
 				}
 			}
 		}
+		this.ui.updateUI();
 		return true;
 	}
 
@@ -229,7 +306,7 @@ export default class GuildHandler {
 	 */
 	async interactionHandler(interaction: InteractionInfo) {
 		if (!this._ready) { return false; }
-		return await this.ui.buttonPressed(interaction); 
+		return await this.ui.buttonPressed(interaction);
 	}
 
 	/**

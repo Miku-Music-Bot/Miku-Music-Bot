@@ -36,6 +36,7 @@ const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
  * Handles saerching for guild
  */
 export default class Search extends GuildComponent {
+	private _msgId: string;
 	/**
 	 * @param guildHandler 
 	 */
@@ -225,9 +226,19 @@ export default class Search extends GuildComponent {
 						.setLabel((i + 1).toString())
 						.setCustomId(JSON.stringify({ type: 'select', index: loc.toString() }))
 						.setStyle('SECONDARY')
+						.setDisabled(false)
 				);
 			}
-			else { break; }
+			else {
+				numbers.addComponents(
+					// Song selector button
+					new Discord.MessageButton()
+						.setLabel((i + 1).toString())
+						.setCustomId(JSON.stringify({ type: 'select', index: loc.toString() }))
+						.setStyle('SECONDARY')
+						.setDisabled(true)
+				);
+			}
 		}
 
 		const searchUI = new Discord.MessageEmbed()
@@ -236,6 +247,12 @@ export default class Search extends GuildComponent {
 			.setFooter({ text: `Page ${page} of ${maxPage}` });
 
 		const navigation = new Discord.MessageActionRow()
+			.addComponents(
+				new Discord.MessageButton()
+					.setLabel('Done')
+					.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
+					.setStyle('PRIMARY')
+			)
 			.addComponents(
 				new Discord.MessageButton()
 					.setLabel('<')
@@ -256,13 +273,8 @@ export default class Search extends GuildComponent {
 					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1, special: 3 }))
 					.setStyle('PRIMARY')
 					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1)
-			)
-			.addComponents(
-				new Discord.MessageButton()
-					.setLabel('Done')
-					.setCustomId(JSON.stringify({ type: 'close', special: 4 }))
-					.setStyle('PRIMARY')
 			);
+
 		return { embeds: [searchUI], components: [numbers, navigation] };
 	}
 
@@ -274,6 +286,8 @@ export default class Search extends GuildComponent {
 	 */
 	async search(searchString: string) {
 		try {
+			if (this._msgId) { this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId); }
+
 			const interactionHandler = async (interaction: InteractionInfo) => {
 				try {
 					const customId = JSON.parse(interaction.customId);
@@ -313,7 +327,7 @@ export default class Search extends GuildComponent {
 			};
 
 			const loadingMsg = new Discord.MessageEmbed().setTitle('Searching...');
-			const id = this.ui.sendEmbed({ embeds: [loadingMsg] }, -1, interactionHandler);
+			this._msgId = await this.ui.sendEmbed({ embeds: [loadingMsg] }, 15_000, interactionHandler);
 
 			const searchURLResult = await this._searchSongURL(searchString);
 			if (searchURLResult) {
@@ -321,7 +335,7 @@ export default class Search extends GuildComponent {
 				// if not playing anything, start playing fron queue
 				if (!this.vcPlayer.playing) { this.queue.nextSong(); }
 
-				this.ui.deleteMsg(this.data.guildSettings.channelId, await id);
+				this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId);
 				this.ui.updateUI();
 				return;
 			}
@@ -334,17 +348,17 @@ export default class Search extends GuildComponent {
 				// if not playing anything, start playing fron queue
 				if (!this.vcPlayer.playing) { this.queue.nextSong(); }
 
-				this.ui.deleteMsg(this.data.guildSettings.channelId, await id);
+				this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId);
 				this.ui.updateUI();
 				return;
 			}
 			const searchResults = await this._searchSongs(searchString);
 
 			if (searchResults) {
-				this.ui.updateMsg(this.data.guildSettings.channelId, await id, this._createSearchUI(searchResults));
+				this.ui.updateMsg(this.data.guildSettings.channelId, this._msgId, this._createSearchUI(searchResults));
 			}
 			else {
-				this.ui.updateMsg(this.data.guildSettings.channelId, await id, {
+				this.ui.updateMsg(this.data.guildSettings.channelId, this._msgId, {
 					embeds: [new Discord.MessageEmbed().setTitle('Error while searching')]
 				});
 			}
