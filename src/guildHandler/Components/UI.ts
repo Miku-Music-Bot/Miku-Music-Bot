@@ -334,7 +334,7 @@ export default class UI extends GuildComponent {
 		// Handles interactions for ui
 		const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
 			try {
-				this.debug(`Handling interaction with UI message with {customId:${interaction.customId}}`);
+				this.debug(`Handling interaction on UI message with {customId:${interaction.customId}}`);
 				const customId = JSON.parse(interaction.customId);
 
 				switch (customId.type) {
@@ -415,7 +415,7 @@ export default class UI extends GuildComponent {
 				this._uiMessageId = id;
 				this._lastMessageJSON = JSON.stringify(ui);
 			}
-			this.warn('UI was not sent successfully');
+			this.error('UI was not sent successfully');
 		}
 
 		// Update message once done
@@ -463,7 +463,7 @@ export default class UI extends GuildComponent {
 			}
 			this.warn(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`);
 		}
-		catch (error) { this.warn(`{error: ${error}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}.`); }
+		catch (error) { this.error(`{error: ${error}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}.`); }
 		return undefined;
 	}
 
@@ -497,7 +497,7 @@ export default class UI extends GuildComponent {
 			return true;
 		}
 		catch (error) {
-			this.warn(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
+			this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
 			return false;
 		}
 	}
@@ -574,7 +574,7 @@ export default class UI extends GuildComponent {
 
 			const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
 				try {
-					this.debug(`Handling interaction with notification message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
+					this.debug(`Handling interaction on notification message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
 					const customId = JSON.parse(interaction.customId);
 
 					switch (customId.type) {
@@ -643,7 +643,7 @@ export default class UI extends GuildComponent {
 
 				const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
 					try {
-						this.debug(`Handling interaction with error message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
+						this.debug(`Handling interaction on error message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
 						const customId = JSON.parse(interaction.customId);
 
 						switch (customId.type) {

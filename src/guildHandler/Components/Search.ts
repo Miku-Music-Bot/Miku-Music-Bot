@@ -52,8 +52,9 @@ export default class Search extends GuildComponent {
 	 * @param searchString - string to use to search
 	 * @returns SearchResults object
 	 */
-	private async _searchSongs(searchString: string) {
+	private async _searchSongs(searchString: string): SearchResults | undefined {
 		try {
+			this.debug(`Searching for songs using {searchString:${searchString}}`);
 			const searchResults: SearchResults = {
 				searchString,
 				items: [],
@@ -64,6 +65,7 @@ export default class Search extends GuildComponent {
 				}
 			};
 
+			this.debug('Searching in saved songs');
 			const savedResults = this.data.sourceManager.searchSaved(searchString);
 			// add to results
 			searchResults.indexes.savedGD = {
@@ -76,10 +78,14 @@ export default class Search extends GuildComponent {
 				items: savedResults.yt.length
 			};
 			searchResults.items.push(...savedResults.yt);
+			this.debug(`Found {results:${savedResults.gd.length}} songs in saved google drive songs`);
+			this.debug(`Found {results:${savedResults.yt.length}} songs in saved youtube songs`);
 
+			this.debug(`Searching on youtube`);
 			const ytsrResults = await ytsr(searchString, { limit: MAX_YT_RESULTS });
 			// filter out non video and premiers
 			const filteredYTResults: ytsr.Video[] = ytsrResults.items.filter((result) => result.type === 'video' && !result.isUpcoming) as ytsr.Video[];
+			this.debug(`Found {results:${filteredYTResults.length}} videos from youtube`);
 			// add to results
 			searchResults.indexes.ytSearch = {
 				loc: searchResults.items.length,
@@ -121,14 +127,20 @@ export default class Search extends GuildComponent {
 	 * @param url - url to use to search
 	 * @returns Song object or undefined
 	 */
-	private async _searchSongURL(url: string) {
+	private async _searchSongURL(url: string): Song | undefined {
 		try {
+			// check to see if this is a valid youtube link
+			this.debug(`Checking if {url:${url}} is a valid youtube url`);
 			const ytInfo = await ytdl.getBasicInfo(url);
-			if (ytInfo) { return new YTSong(this.guildHandler, { url, title: ytInfo.videoDetails.title }); }
-			else { return undefined; }
+			if (ytInfo) {
+				this.debug(`{url:${url}} was a youtube video with {title:${ytInfo.videoDetails.title}}`);
+				return new YTSong(this.guildHandler, { url, title: ytInfo.videoDetails.title });
+			}
+			else { this.debug(`{url:${url}} was not a valid youtube video`); }
+			return undefined;
 		}
 		catch (error) {
-			this.debug(`{error:${error}} while validating song url using {url:${url}}`);
+			this.warn(`{error:${error}} while validating song url using {url:${url}}`);
 			return undefined;
 		}
 	}
@@ -139,14 +151,20 @@ export default class Search extends GuildComponent {
 	 * @param url - url to use to search
 	 * @returns Playlist object or undefined
 	 */
-	private async _searchPlaylistURL(url: string) {
+	private async _searchPlaylistURL(url: string): Playlist | undefined {
 		try {
+			// Check to see if this is a valid youtube playlist link
+			this.debug(`Checking if {url:${url}} is a valid youtube playlist url`)
 			const playlistInfo = await ytpl(url);
-			if (playlistInfo) { return new YTPlaylist(this.guildHandler, { url }); }
+			if (playlistInfo) {
+				this.debug(`{url:${url}} was a youtube playlist with {title:${playlistInfo.title}}`)
+				return new YTPlaylist(this.guildHandler, { url });
+			}
+			else { this.debug(`{url:${url}} was not a valid youtube playlist`); }
 			return undefined;
 		}
 		catch (error) {
-			this.debug(`{error:${error}} whiel validating playlist url using {url:${url}}`);
+			this.warn(`{error:${error}} whiel validating playlist url using {url:${url}}`);
 			return undefined;
 		}
 	}
@@ -253,12 +271,14 @@ export default class Search extends GuildComponent {
 
 		const navigation = new Discord.MessageActionRow()
 			.addComponents(
+				// Close button
 				new Discord.MessageButton()
 					.setLabel('Done')
 					.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
 					.setStyle('PRIMARY')
 			)
 			.addComponents(
+				// Prev page button
 				new Discord.MessageButton()
 					.setLabel('<')
 					.setCustomId(JSON.stringify({ type: 'page', pageNum: page - 1, special: 1 }))
@@ -266,6 +286,7 @@ export default class Search extends GuildComponent {
 					.setDisabled(page === 1)
 			)
 			.addComponents(
+				// Next page button
 				new Discord.MessageButton()
 					.setLabel('>')
 					.setCustomId(JSON.stringify({ type: 'page', pageNum: page + 1, special: 2 }))
@@ -273,6 +294,7 @@ export default class Search extends GuildComponent {
 					.setDisabled(page === maxPage)
 			)
 			.addComponents(
+				// Jump to youtube results button
 				new Discord.MessageButton()
 					.setLabel('>> Youtube Results')
 					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1, special: 3 }))
@@ -289,39 +311,61 @@ export default class Search extends GuildComponent {
 	 * Runs search and sends search UI
 	 * @param searchString - String to use to search
 	 */
-	async search(searchString: string) {
+	async search(searchString: string): Promise<void> {
 		try {
-			if (this._msgId) { this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId); }
+			this.debug(`Started search process for {searchString:${searchString}}`);
+			if (this._msgId) {
+				this.debug(`Previous search message exists, deleting it`);
+				this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId);
+				this._msgId = undefined;
+			}
 
-			const interactionHandler = async (interaction: InteractionInfo) => {
+			const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
 				try {
+					this.debug(`Handling interaction on search message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
 					const customId = JSON.parse(interaction.customId);
 
 					switch (customId.type) {
 						case ('page'): {
+							this.debug(`Recieved "page" interaction, showing {page:${customId.pageNum}}`);
 							await this.ui.updateMsg(interaction.parentChannelId, interaction.parentMessageId, this._createSearchUI(searchResults, customId.pageNum));
 							break;
 						}
 						case ('close'): {
+							this.debug('Recieved "close" interaction, deleting message');
 							await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 							break;
 						}
 						case ('select'): {
-							searchResults.items[customId.index].reqBy = interaction.authorId;
+							this.debug(`Recieved "select" interaction, selecting {index:${customId.index}}`);
+
+							const song = searchResults.items[customId.index];
+							song.reqBy = interaction.authorId;
+							this.debug(`Setting song with {url:${song.url}} reqBy to {authorId:${interaction.authorId}}`);
+
+							this.debug(`Adding song with {url:${song.url}} to the queue`);
 							this.queue.addQueue([searchResults.items[customId.index]]);
+
 							// if not connected to vc, connect
 							if (!this.vcPlayer.connected) {
+								this.info('Not in voice channel, joining');
 								const joined = await this.vcPlayer.join(interaction.authorId);
 								// should start playing from autoplay
-								if (joined) { this.queue.nextSong(); }
+								if (!joined) { this.warn('Failed to join voice channel, will not play song'); }
 								break;
 							}
 
 							// if not playing anything, start playing fron queue
-							if (!this.vcPlayer.playing) { this.queue.nextSong(); }
+							if (!this.vcPlayer.playing) {
+								this.info('Currently not playing a song, playing next song in queue');
+								this.queue.nextSong();
+							}
 							break;
 						}
-						default: { return false; }
+						default: {
+							this.warn(`Interaction with {customId:${interaction.customId}} was not handled in switch case`);
+							return false;
+						}
 					}
 					return true;
 				}
@@ -331,8 +375,15 @@ export default class Search extends GuildComponent {
 				}
 			};
 
+			const cancel = Discord.MessageActionRow()
+				.addComponents(
+					new Discord.MessageButton()
+						.setLabel('Cancel')
+						.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
+						.setStyle('DANGER')
+				);
 			const loadingMsg = new Discord.MessageEmbed().setTitle('Searching...');
-			this._msgId = await this.ui.sendEmbed({ embeds: [loadingMsg] }, 15_000, interactionHandler);
+			this._msgId = await this.ui.sendEmbed({ embeds: [loadingMsg], components: [cancel] }, 15_000, interactionHandler);
 
 			const searchURLResult = await this._searchSongURL(searchString);
 			if (searchURLResult) {
@@ -360,11 +411,21 @@ export default class Search extends GuildComponent {
 			const searchResults = await this._searchSongs(searchString);
 
 			if (searchResults) {
+				this.debug('Searching successful, displaying results');
 				this.ui.updateMsg(this.data.guildSettings.channelId, this._msgId, this._createSearchUI(searchResults));
 			}
 			else {
+				this.debug('Searching failed, displaying error message');
+				const close = Discord.MessageActionRow()
+					.addComponents(
+						new Discord.MessageButton()
+							.setLabel('Close')
+							.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
+							.setStyle('DANGER')
+					);
 				this.ui.updateMsg(this.data.guildSettings.channelId, this._msgId, {
-					embeds: [new Discord.MessageEmbed().setTitle('Error while searching')]
+					embeds: [new Discord.MessageEmbed().setTitle('Error while searching')],
+					components: [close]
 				});
 			}
 		}
