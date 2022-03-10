@@ -4,7 +4,7 @@ import * as winston from 'winston';
 import { ChildProcess, fork } from 'child_process';
 import { EventEmitter } from 'events';
 
-import { InteractionInfo, MessageInfo, ChildResponse } from './guildHandler/GHChildInterface';
+import { InteractionInfo, MessageInfo, RemoveGuildInfo, ChildResponse } from './guildHandler/GHChildInterface';
 
 const MAX_RESPONSE_WAIT = parseInt(process.env.MAX_RESPONSE_WAIT);
 
@@ -44,9 +44,14 @@ export default class GuildHandlerInterface {
 		});
 	}
 
-	removeGuild() { if (this._process) { this._process.kill('SIGINT'); } }
-
-	messageHandler(message: Discord.Message) {
+	/**
+	 * messageHandler()
+	 *
+	 * Handles all messages the bot recieves
+	 * @param message - discord message object
+	 * @returms Promise resolves to true if handled message, false if not
+	 */
+	messageHandler(message: Discord.Message): Promise<boolean> {
 		return new Promise((resolve) => {
 			const content: MessageInfo = {
 				id: message.id,
@@ -62,7 +67,14 @@ export default class GuildHandlerInterface {
 		});
 	}
 
-	interactionHandler(interaction: Discord.ButtonInteraction) {
+	/**
+	 * interactionHandler()
+	 * 
+	 * Handles all interactions the bot recieves
+	 * @param interaction - discord interaction object
+	 * @return Promise resovles to true if the interaction was handled, false if not
+	 */
+	interactionHandler(interaction: Discord.ButtonInteraction): Promise<boolean> {
 		return new Promise((resolve) => {
 			const content: InteractionInfo = {
 				customId: interaction.customId,
@@ -74,6 +86,24 @@ export default class GuildHandlerInterface {
 			this._events.once(resId, (message) => { resolve(message.success); });
 
 			this._process.send({ type: 'interaction', content, responseId: resId.toString() });
+
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
+		});
+	}
+
+	/**
+	 * removeGuild();
+	 * 
+	 * Call to stop the guild handler and clean up
+	 */
+	removeGuild(purge?: boolean): Promise<void> {
+		if (!purge) { purge = false; }
+		return new Promise((resolve) => {
+			const content: RemoveGuildInfo = { purge };
+			const resId = (this._nextId++).toString();
+			this._events.once(resId, (message) => { resolve(message.done); });
+
+			this._process.send({ type: 'removeGuild', content, responseId: resId.toString() });
 
 			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
 		});

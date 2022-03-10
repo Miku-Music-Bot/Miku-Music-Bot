@@ -1,4 +1,5 @@
 import * as Voice from '@discordjs/voice';
+import * as path from 'path';
 import { PassThrough } from 'stream';
 
 import GuildComponent from '../GuildComponent';
@@ -19,7 +20,7 @@ export default class VCPlayer extends GuildComponent {
 	private _currentSource: AudioSource;
 	private _currentResource: Voice.AudioResource;
 	private _finishedSongCheck: NodeJS.Timer;
-	
+
 	connected: boolean;
 	playing: boolean;
 	paused: boolean;
@@ -28,7 +29,7 @@ export default class VCPlayer extends GuildComponent {
 	 * @param guildHandler - guildHandler for this vcplayer
 	 */
 	constructor(guildHandler: GuildHandler) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.playing = false;
 		this.paused = false;
 	}
@@ -46,14 +47,15 @@ export default class VCPlayer extends GuildComponent {
 				selfDeaf: true,
 				adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
 			});
-		} catch (error) {
+
+			this._voiceConnection.on('error', (error) => {
+				this.error(`{error: ${error}} on voice connection to {channelId: ${channelId}}`);
+				this.leave();
+			});
+		} 
+		catch (error) {
 			this.debug(`Error while joining voice channel with {channelId: ${channelId}}`);
 		}
-
-		this._voiceConnection.on('error', (error) => {
-			this.error(`{error: ${error}} on voice connection to {channelId: ${channelId}}`);
-			this.leave();
-		});
 
 		return Voice.entersState(this._voiceConnection, Voice.VoiceConnectionStatus.Ready, 5000);
 	}
@@ -188,7 +190,7 @@ export default class VCPlayer extends GuildComponent {
 		this.playing = true;
 
 		// stop previous stream
-		if (this._currentOpusStream) { 
+		if (this._currentOpusStream) {
 			this._currentOpusStream.removeAllListeners();
 			this._currentOpusStream.end();
 		}
@@ -224,7 +226,7 @@ export default class VCPlayer extends GuildComponent {
 			this._currentOpusStream = await this._currentSource.getStream();
 			this._currentResource = Voice.createAudioResource(this._currentOpusStream, { inputType: Voice.StreamType.OggOpus });
 			this._audioPlayer.play(this._currentResource);
-		
+
 			// catch finished stream event
 			const finishCheck = setInterval(() => {
 				if (!this._currentResource.ended) return;
@@ -240,5 +242,5 @@ export default class VCPlayer extends GuildComponent {
 		catch { /* */ }
 	}
 
-	get currentSource() {return this._currentSource; }
+	get currentSource() { return this._currentSource; }
 }

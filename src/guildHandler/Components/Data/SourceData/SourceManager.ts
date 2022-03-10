@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import * as path from 'path';
 
 import GuildHandler from '../../../GuildHandler';
 import GuildComponent from '../../GuildComponent';
@@ -24,7 +25,7 @@ export default class SourceManager extends GuildComponent {
 	 * @param info - sourceData of source manager you want to create
 	 */
 	constructor(guildHandler: GuildHandler, sourceData?: SourceDataConfig) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter();
 
 		// Set defaults

@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import GuildComponent from './GuildComponent.js';
 import type GuildHandler from '../GuildHandler.js';
 import { MessageInfo } from '../GHChildInterface.js';
@@ -12,7 +14,7 @@ export default class PermissionChecker extends GuildComponent {
 	 * @param guildHandler - guild handler for guild this permissions object is responsible for
 	 */
 	constructor(guildHandler: GuildHandler) { 
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.data.permissionSettings.initPermissions(this.guild);
 	}
 

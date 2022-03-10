@@ -1,4 +1,5 @@
 import Discord from 'discord.js';
+import * as path from 'path';
 
 import GuildComponent from '../Components/GuildComponent';
 import { InteractionInfo } from '../GHChildInterface';
@@ -52,7 +53,7 @@ export default class Queue extends GuildComponent {
 	 * @param guildHandler - guild handler for guild this queue object is responsible for
 	 */
 	constructor(guildHandler: GuildHandler) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 
 		this._queue = [];
 		this._autoplayQueue = [];

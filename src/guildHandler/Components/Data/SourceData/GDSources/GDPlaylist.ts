@@ -1,4 +1,5 @@
 import Fuse from 'fuse.js';
+import * as path from 'path';
 import { EventEmitter } from 'events';
 
 import GuildHandler from '../../../../GuildHandler';
@@ -23,7 +24,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * @param info - songInfo of song you want to create
 	 */
 	constructor(guildHandler: GuildHandler, plInfo?: PlaylistConfig) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter();
 
 		// set defaults

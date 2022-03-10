@@ -1,4 +1,5 @@
 import * as Discord from 'discord.js';
+import * as path from 'path';
 
 import GuildComponent from './GuildComponent';
 import type GuildHandler from '../GuildHandler';
@@ -39,7 +40,7 @@ export default class UI extends GuildComponent {
 	 * @param guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */
 	constructor(guildHandler: GuildHandler) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this._interactionListeners = {};
 	}
 
@@ -47,10 +48,15 @@ export default class UI extends GuildComponent {
 	 * sendUI()
 	 *
 	 * Sends UI to channel
+	 * @param reset - resend the ui or not
+	 * @returns promise that resolves even if it sending fails
 	 */
-	async sendUI(reset?: boolean) {
+	async sendUI(reset?: boolean): Promise<void> {
 		// Delete ui if it already exists
-		if (this._uiMessageId) { await this.deleteMsg(this._uiChannelId, this._uiMessageId); }
+		if (this._uiMessageId) { 
+			this.debug(`UI already exists with {messageId:${this._uiMessageId}}, deleting it`);
+			await this.deleteMsg(this._uiChannelId, this._uiMessageId); 
+		}
 
 		// Handles interactions
 		const interactionHandler = async (interaction: InteractionInfo) => {
@@ -115,7 +121,7 @@ export default class UI extends GuildComponent {
 				this._lastMessageJSON = JSON.stringify(ui);
 			}
 		}
-		this.updateUI();
+		await this.updateUI();
 	}
 
 	/**
@@ -523,6 +529,18 @@ export default class UI extends GuildComponent {
 		catch (error) {
 			this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
 			return false;
+		}
+	}
+
+	/**
+	 * deleteAllMsg()
+	 * 
+	 * Deletes all messages that have been sent
+	 */
+	async deleteAllMsg(): Promise<void> {
+		this.debug('Deleting all bot messages');
+		for (const key in this._interactionListeners) {
+			await this.deleteMsg(this.data.guildSettings.channelId, key);
 		}
 	}
 

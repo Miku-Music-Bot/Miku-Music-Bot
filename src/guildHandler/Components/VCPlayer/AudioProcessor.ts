@@ -1,4 +1,4 @@
-
+import * as path from 'path';
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
@@ -39,7 +39,7 @@ export default class AudioProcessor extends GuildComponent {
 	 * @param audioSettings - settings that the audio processor should start with
 	 */
 	constructor(guildHandler: GuildHandler) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter();
 		this._shouldEnd = true;
 	}

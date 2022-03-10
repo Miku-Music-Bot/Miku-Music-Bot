@@ -31,7 +31,7 @@ export default class GDSong extends GuildComponent implements Song {
 	 * @param info - songInfo of song you want to create
 	 */
 	constructor(guildHandler: GuildHandler, info: SongConfig) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter();
 
 		// set defaults

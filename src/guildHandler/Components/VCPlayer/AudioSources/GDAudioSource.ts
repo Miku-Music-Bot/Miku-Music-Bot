@@ -79,7 +79,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * @param song - Song object for song to create source from
 	 */
 	constructor(guildHandler: GuildHandler, song: GDSong) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.song = song;
 		this.events = new EventEmitter();
 		this.buffering = true;								// if currently playing silence while waiting for youtube, set to true

@@ -1,4 +1,5 @@
 import * as Discord from 'discord.js';
+import * as path from 'path';
 import ytdl = require('ytdl-core');
 import ytpl = require('ytpl');
 import ytsr = require('ytsr');
@@ -40,7 +41,7 @@ export default class Search extends GuildComponent {
 	/**
 	 * @param guildHandler 
 	 */
-	constructor(guildHandler: GuildHandler) { super(guildHandler); }
+	constructor(guildHandler: GuildHandler) { super(guildHandler, path.basename(__filename)); }
 
 	/**
 	 * _searchSongs()

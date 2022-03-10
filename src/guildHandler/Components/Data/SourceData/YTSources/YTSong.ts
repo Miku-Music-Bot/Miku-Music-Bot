@@ -1,4 +1,5 @@
 import * as ytdl from 'ytdl-core';
+import * as path from 'path';
 import { EventEmitter } from 'events';
 
 import Song from '../Song';
@@ -20,7 +21,7 @@ export default class YTSong extends GuildComponent implements Song {
 	 * @param info - songInfo of song you want to create
 	 */
 	constructor(guildHandler: GuildHandler, info: SongConfig) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter();
 
 		// set defaults

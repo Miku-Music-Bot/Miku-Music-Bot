@@ -1,4 +1,5 @@
 import * as mongoDb from 'mongodb';
+import * as path from 'path';
 
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../../GuildHandler';
@@ -49,7 +50,7 @@ export default class GuildData extends GuildComponent {
 	 * @param cb - callback for when done getting data
 	 */
 	constructor(guildHandler: GuildHandler, id: string, cb: () => void) {
-		super(guildHandler);
+		super(guildHandler, path.basename(__filename));
 		this._saveCount = 0;
 		this._guildId = id;
 
@@ -128,9 +129,9 @@ export default class GuildData extends GuildComponent {
 	 */
 	private _save() {
 		this._saveCount++;
-		if (this._saveCount > MAX_UPDATES_BEFORE_SAVE) { 
+		if (this._saveCount > MAX_UPDATES_BEFORE_SAVE) {
 			this._saveCount = 0;
-			this._saveData(); 
+			this._saveData();
 		}
 		clearTimeout(this._saveTimeout);
 		this._saveTimeout = setTimeout(() => { this._saveData(); }, DATABASE_ACCESS_WAIT);
@@ -156,6 +157,19 @@ export default class GuildData extends GuildComponent {
 			this.error(`{error: ${error}} saving data from database. Trying again in ${MAX_DATABASE_RETRY_WAIT} ms`);
 			this._retrySave = setInterval(() => this._saveData(), MAX_DATABASE_RETRY_WAIT);
 		}
+	}
+
+	/**
+	 * deleteGuild()
+	 * 
+	 * Deletes guild data in the database
+	 */
+	async deleteGuild(): Promise<void> {
+		try {
+			this.debug(`Deleting guild data in database for guild with {guildId:${this._guildId}}`);
+			await this._collection.deleteOne({ guildId: this._guildId });
+		}
+		catch (error) { this.warn(`{error:${error}} while deleting guild data in database`); }
 	}
 
 	// getter for guildId

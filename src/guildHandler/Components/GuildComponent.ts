@@ -20,14 +20,14 @@ export default class GuildComponent {
 	/**
 	 * @param guildHandler
 	 */
-	constructor(guildHandler: GuildHandler) {
+	constructor(guildHandler: GuildHandler, filename: string) {
 		this.guildHandler = guildHandler;
+		
 		// logging
-		this.logger = guildHandler.logger;
-		this.debug = guildHandler.debug;
-		this.info = guildHandler.info;
-		this.warn = guildHandler.warn;
-		this.error = guildHandler.error;
+		this.debug = (msg) => { guildHandler.logger.debug(`{filename: ${filename}} ${msg}`); };
+		this.info = (msg) => { guildHandler.logger.info(`{filename: ${filename}} ${msg}`); };
+		this.warn = (msg) => { guildHandler.logger.warn(`{filename: ${filename}} ${msg}`); };
+		this.error = (msg) => { guildHandler.logger.error(`{filename: ${filename}} ${msg}`); };
 
 		this.drive = guildHandler.drive;
 	}
