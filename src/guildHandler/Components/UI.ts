@@ -6,17 +6,12 @@ import type GuildHandler from '../GuildHandler';
 import { InteractionInfo } from '../GHChildInterface';
 
 const UI_REFRESH_RATE = parseInt(process.env.UI_REFRESH_RATE);
-/* eslint-disable */
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const DEFAULT_THUMBNAIL_URL = process.env.DEFAULT_THUMBNAIL_URL;
 
-const GREY = '#5a676b';			// colors to be used
-const TEAL = '#86cecb';
-const PINK = '#e12885';
-const YT_RED = '#FF0000';
-const SC_ORANGE = '#FE5000';
-const GD_BLUE = '#4688F4';
-/* eslint-enable */
+const BOT_DOMAIN = process.env.BOT_DOMAIN;
+
+export const GREY = '#5a676b';			// colors to be used
+export const TEAL = '#86cecb';
+export const PINK = '#e12885';
 
 /**
  * UI
@@ -45,98 +40,22 @@ export default class UI extends GuildComponent {
 	}
 
 	/**
-	 * sendUI()
-	 *
-	 * Sends UI to channel
-	 * @param reset - resend the ui or not
-	 * @returns promise that resolves even if it sending fails
-	 */
-	async sendUI(reset?: boolean): Promise<void> {
-		// Delete ui if it already exists
-		if (this._uiMessageId) { 
-			this.debug(`UI already exists with {messageId:${this._uiMessageId}}, deleting it`);
-			await this.deleteMsg(this._uiChannelId, this._uiMessageId); 
-		}
-
-		// Handles interactions
-		const interactionHandler = async (interaction: InteractionInfo) => {
-			try {
-				const customId = JSON.parse(interaction.customId);
-
-				switch (customId.type) {
-					case ('play/pause'): {
-						// if not connected to vc, connect
-						if (!this.vcPlayer.connected) {
-							const joined = await this.vcPlayer.join(interaction.authorId);
-							// should start playing from autoplay
-							if (joined) { this.queue.nextSong(); }
-							break;
-						}
-
-						// if not playing anything, start playing fron queue
-						if (!this.vcPlayer.playing) {
-							this.queue.nextSong();
-							break;
-						}
-
-						// toggle pause/play
-						if (this.vcPlayer.paused) { this.vcPlayer.resume(); }
-						else { this.vcPlayer.pause(); }
-						break;
-					}
-					case ('stop'): {
-						this.vcPlayer.leave();
-						break;
-					}
-					case ('skip'): {
-						this.vcPlayer.finishedSong();
-						break;
-					}
-					case ('repeat'): {
-						this.queue.setRepeatSong(customId.repeat + 1);
-						break;
-					}
-					case ('shuffle'): {
-						this.queue.toggleShuffle();
-						break;
-					}
-					default: { return false; }
-				}
-				await this.updateUI();
-				return true;
-			}
-			catch (error) {
-				this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
-				return false;
-			}
-		};
-
-		// Create and send message
-		this._uiChannelId = this.data.guildSettings.channelId;
-		const ui = this._createUI();
-		if (reset || this._lastMessageJSON !== JSON.stringify(ui)) {
-			const id = await this.sendEmbed(ui, -1, interactionHandler);
-			if (id) {
-				this._uiMessageId = id;
-				this._lastMessageJSON = JSON.stringify(ui);
-			}
-		}
-		await this.updateUI();
-	}
-
-	/**
-	 * updateUI()
+	 * escapeString()
 	 * 
-	 * Updates the UI of the bot
+	 * Escapes a string to be displayed as is in discord
+	 * @param string - string to escape
+	 * @returns escaped string
 	 */
-	async updateUI() {
-		clearInterval(this._nextRefreshTimeout);
-		const ui = this._createUI();
-		if (this._lastMessageJSON !== JSON.stringify(ui)) {
-			const success = await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
-			if (success) { this._lastMessageJSON = JSON.stringify(ui); }
+	escapeString(string: string) {
+		this.debug(`Recieved {string:${string}} to escape`);
+		let escaped = '';
+		const toEscape = ['*', '_', '~', '`', '>', '|'];
+		for (let i = 0; i < string.length; i++) {
+			if (toEscape.indexOf(string[i]) === -1) { escaped += string[i]; }
+			else { escaped += `\\${string[i]}`; }
 		}
-		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, UI_REFRESH_RATE);
+		this.debug(`Escaped string: ${escaped}}`);
+		return escaped;
 	}
 
 	/**
@@ -146,18 +65,21 @@ export default class UI extends GuildComponent {
 	 * @return Discord message embed
 	 */
 	private _createUI(): Discord.MessageOptions {
+		// Max length of string to show song info
 		const songInfoMaxLength = 50;
 
+		// Get info about the queue
 		const queueInfo = this.queue.getUIInfo();
 
-		const userInterface = new Discord.MessageEmbed();
+		// Create embed
+		const userInterface = new Discord.MessageEmbed().setColor(TEAL);
 
 		if (!queueInfo.nowPlaying) {
 			// If not playing right now, show idle UI
 			userInterface
 				.setTitle('Idle - Listening for Commands')
 				.setDescription('Click the "help" button below if you need help')
-				.setThumbnail(DEFAULT_THUMBNAIL_URL);
+				.setThumbnail(`${BOT_DOMAIN}/thumbnails/defaultThumbnail.jps`);
 		}
 		else {
 			// Check song status, (paused over buffering over playing)
@@ -372,16 +294,252 @@ export default class UI extends GuildComponent {
 		return { embeds: [userInterface], components: [audioControls, links] };
 	}
 
-	async deleteMsg(channelId: string, messageId: string) {
+	/**
+	 * updateUI()
+	 * 
+	 * Updates the UI of the bot
+	 */
+	async updateUI(): Promise<void> {
+		this.debug('Updating UI');
+		clearInterval(this._nextRefreshTimeout);
+		const ui = this._createUI();
+		if (this._lastMessageJSON !== JSON.stringify(ui)) {
+			const success = await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
+			if (success) {
+				this.debug('UI was updated successfully');
+				this._lastMessageJSON = JSON.stringify(ui);
+			}
+			this.warn('UI was not updated successfully');
+		}
+		this._nextRefreshTimeout = setTimeout(() => {
+			this.debug(`${UI_REFRESH_RATE} ms has passed since UI was last updated, updating UI`);
+			this.updateUI();
+		}, UI_REFRESH_RATE);
+	}
+
+	/**
+	 * sendUI()
+	 *
+	 * Sends UI to channel
+	 * @param sendNew - resend the ui or not
+	 * @returns promise that resolves even if it sending fails
+	 */
+	async sendUI(sendNew?: boolean): Promise<void> {
+		// Delete ui if it already exists
+		if (this._uiMessageId) {
+			this.debug(`UI already exists with {messageId:${this._uiMessageId}}, deleting it`);
+			await this.deleteMsg(this._uiChannelId, this._uiMessageId);
+		}
+
+		// Handles interactions for ui
+		const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
+			try {
+				this.debug(`Handling interaction with UI message with {customId:${interaction.customId}}`);
+				const customId = JSON.parse(interaction.customId);
+
+				switch (customId.type) {
+					case ('play/pause'): {
+						this.info('Recieved "play/pause" interaction');
+						// if not connected to vc, connect
+						if (!this.vcPlayer.connected) {
+							this.info('Not in voice channel, joining');
+							const joined = await this.vcPlayer.join(interaction.authorId);
+							if (!joined) {
+								this.warn('Did not successfully join voice channel, will not try to play song');
+								break;
+							}
+						}
+
+						// if not playing anything, start playing fron queue
+						if (!this.vcPlayer.playing) {
+							this.info('Nothing playing right now, playing what\'s next in the queue');
+							this.queue.nextSong();
+							break;
+						}
+
+						// toggle pause/play
+						if (this.vcPlayer.paused) {
+							this.info('Currently paused, resuming');
+							this.vcPlayer.resume();
+						}
+						else {
+							this.info('Currently playing, pausing');
+							this.vcPlayer.pause();
+						}
+						break;
+					}
+					case ('stop'): {
+						this.info('Recieved "stop" interaction, leaving voice channel');
+						this.vcPlayer.leave();
+						break;
+					}
+					case ('skip'): {
+						this.info('Recieved "skip" interaction, ending current song early');
+						this.vcPlayer.finishedSong();
+						break;
+					}
+					case ('repeat'): {
+						this.info(`Recieved "repeat" interaction, setting repeat song to: ${customId.repeat + 1}`);
+						this.queue.setRepeatSong(customId.repeat + 1);
+						break;
+					}
+					case ('shuffle'): {
+						this.info('Recieved "shuffle" interaction, toggling shuffle');
+						this.queue.toggleShuffle();
+						break;
+					}
+					default: {
+						this.warn(`Interaction with {customId:${interaction.customId}} was not handled in switch case`);
+						return false;
+					}
+				}
+
+				this.debug('Updating UI after handling interaction');
+				await this.updateUI();
+				return true;
+			}
+			catch (error) {
+				this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+				return false;
+			}
+		};
+
+		// Create and send message
+		const ui = this._createUI();
+		this._uiChannelId = this.data.guildSettings.channelId;
+		if (sendNew) {
+			this.debug(`{sendNew:${sendNew}} was true, sending new UI message`);
+			const id = await this.sendEmbed(ui, -1, interactionHandler);
+			if (id) {
+				this.debug(`UI was sent successfully with {messageId:${id}}`);
+				this._uiMessageId = id;
+				this._lastMessageJSON = JSON.stringify(ui);
+			}
+			this.warn('UI was not sent successfully');
+		}
+
+		// Update message once done
+		await this.updateUI();
+	}
+
+	/**
+	 * sendEmbed()
+	 *
+	 * Sends an already made embed
+	 * @param messageOptions - messageOptions for you want to send
+	 * @param life - time in miliseconds you want this to be, -1 if infinite
+	 * @param interactionHandler - function called to handle when mesage recieves an interaction
+	 * @returns promise resolves to messageId string if successfully sent, undefined if not
+	 */
+	async sendEmbed(messageOptions: Discord.MessageOptions, life?: number, interactionHandler?: (interaction: InteractionInfo) => Promise<boolean>): Promise<string | undefined> {
+		if (!life) {
+			this.debug('Message life was not given assumming infinite, setting life to -1');
+			life = -1;
+		}
+		if (!interactionHandler) {
+			this.debug('No interaction handler given, using default interaction handler');
+			interactionHandler = async () => { return false; };
+		}
+
 		try {
+			// grab text channel
+			const channel = await this.bot.channels.fetch(this.data.guildSettings.channelId);
+			if (channel instanceof Discord.TextChannel) {
+				// send embed if it is a text channel
+				const msg = await channel.send(messageOptions);
+				this.debug(`Embed with {title: ${messageOptions.embeds[0].title}} and {description:${messageOptions.embeds[0].description}} sent, {messageId: ${msg.id}}`);
+
+				this._interactionListeners[msg.id] = { interactionHandler };
+
+				// set timeout if given
+				if (life !== -1) {
+					this._interactionListeners[msg.id].timeout = setTimeout(() => {
+						this.debug(`Life for message with {messageId:${msg.id}} has expired, deleting message`);
+						this.deleteMsg(channel.id, msg.id);
+					}, life);
+					this._interactionListeners[msg.id].life = life;
+				}
+				return msg.id;
+			}
+			this.warn(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`);
+		}
+		catch (error) { this.warn(`{error: ${error}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}.`); }
+		return undefined;
+	}
+
+	/**
+	 * updateMsg()
+	 * 
+	 * Updates a message
+	 * @param channelId - id of channel message is in
+	 * @param messageId - id of message to edit
+	 * @param messageOptions - data to update message with
+	 * @returns promise resolves to true if successfully updated, false if not
+	 */
+	async updateMsg(channelId: string, messageId: string, messageOptions: Discord.MessageOptions): Promise<boolean> {
+		try {
+			this.debug(`Updating message in {channelId:${channelId}} with {messageId:${messageId}}`);
+
+			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
+			const message = await channel.messages.fetch(messageId);
+
+			if (this._interactionListeners[messageId].life) {
+				this.debug(`Message with {messageId:${messageId}} has a finite life, reseting timeout`);
+
+				clearInterval(this._interactionListeners[messageId].timeout);
+				this._interactionListeners[messageId].timeout = setTimeout(() => {
+					this.debug(`Life for message with {messageId:${messageId}} has expired, deleting message`);
+					this.deleteMsg(channelId, messageId);
+				}, this._interactionListeners[messageId].life);
+			}
+			await message.edit(messageOptions);
+			this.debug(`Successfully updated message in {channelId:${channelId}} with {messageId:${messageId}}`);
+			return true;
+		}
+		catch (error) {
+			this.warn(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
+			return false;
+		}
+	}
+
+	/**
+	 * deleteMsg()
+	 * 
+	 * Deletes a message
+	 * @param channelId - channel id of message to delete
+	 * @param messageId - message id of message to delete
+	 */
+	async deleteMsg(channelId: string, messageId: string): Promise<boolean> {
+		try {
+			this.debug(`Attempting to delete message in {channelId:${channelId}} with {messageId:${messageId}}`);
 			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
 			const message = await channel.messages.fetch(messageId);
 
 			await message.delete();
 			clearTimeout(this._interactionListeners[messageId].timeout);
 			delete this._interactionListeners[messageId];
+			return true;
 		}
-		catch (error) { this.error(`{error: ${error}} while deleting message with {messageId: ${messageId}} in {channelId: ${channelId}}`); }
+		catch (error) {
+			this.warn(`{error: ${error}} while deleting message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
+			return false;
+		}
+	}
+
+	/**
+	 * deleteAllMsg()
+	 * 
+	 * Deletes all messages that have been sent
+	 */
+	async deleteAllMsg(): Promise<void> {
+		this.info('Deleting all bot messages');
+		let count = 0;
+		let success = 0;
+		for (const key in this._interactionListeners) {
+			if (await this.deleteMsg(this.data.guildSettings.channelId, key)) { success++; }
+			count++;
+		}
+		this.info(`Successfully deleted ${success} out of ${count} messages`);
 	}
 
 	/**
@@ -392,36 +550,55 @@ export default class UI extends GuildComponent {
 	 * @param channelId - discord channel id for text channel for message to be sent
 	 */
 	async sendNotification(message: string, channelId: string | void): Promise<void> {
-		if (!channelId) { channelId = this.data.guildSettings.channelId; }
+		if (!channelId) {
+			channelId = this.data.guildSettings.channelId;
+			this.debug(`No channel id give, using guild default {channelId:${channelId}}`);
+		}
 
 		try {
 			this.debug(`Sending notification with {message: ${message}} to {channelId: ${channelId}}`);
+			// create notification embed
 			const notification = new Discord.MessageEmbed()
 				.setTitle('Notification')
 				.setColor(GREY)
 				.setDescription(message);
-
 
 			const row = new Discord.MessageActionRow()
 				.addComponents(
 					// close button
 					new Discord.MessageButton()
 						.setLabel('Close')
-						.setCustomId('close')
+						.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
 						.setStyle('DANGER')
 				);
 
-			const interactionHandler = async (interaction: InteractionInfo) => {
-				if (interaction.customId === 'close') {
-					this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+			const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
+				try {
+					this.debug(`Handling interaction with notification message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
+					const customId = JSON.parse(interaction.customId);
+
+					switch (customId.type) {
+						case ('close'): {
+							this.debug('Received "close" interaction, deleting message');
+							this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+							break;
+						}
+						default: {
+							this.warn(`Interaction with {customId:${interaction.customId}} was not handled in switch case`);
+							return false;
+						}
+					}
 					return true;
 				}
-				return false;
+				catch (error) {
+					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+					return false;
+				}
 			};
 
 			this.sendEmbed({ embeds: [notification], components: [row] }, 15_000, interactionHandler);
 		}
-		catch (error) { this.error(`{error: ${error}} while creating/sending notification message with {message: ${message}}`); }
+		catch (error) { this.warn(`{error: ${error}} while creating/sending notification message with {message: ${message}}`); }
 	}
 
 	/**
@@ -434,7 +611,10 @@ export default class UI extends GuildComponent {
 	 * @return randomized error id
 	 */
 	sendError(message: string, saveErrorId: boolean | void, channelId: string | void): number {
-		if (!channelId) { channelId = this.data.guildSettings.channelId; }
+		if (!channelId) {
+			channelId = this.data.guildSettings.channelId;
+			this.debug(`No channel id give, using guild default {channelId:${channelId}}`);
+		}
 
 		// Unix Timestamp + random number between 100000000000000-999999999999999
 		const errorId = Date.now() + Math.floor(Math.random() * (999999999999999 - 100000000000000) + 100000000000000);
@@ -447,118 +627,49 @@ export default class UI extends GuildComponent {
 					.setColor(PINK)
 					.setDescription(message);
 
-				if (saveErrorId) { error.setFooter({ text: `Error id ${errorId}` }); }
+				if (saveErrorId) {
+					this.debug(`Error id should be displayed, adding {errorId:${errorId}} to footer`);
+					error.setFooter({ text: `Error id ${errorId}` });
+				}
 
 				const row = new Discord.MessageActionRow()
-					.addComponents( 
+					.addComponents(
 						// close button
 						new Discord.MessageButton()
 							.setLabel('Close')
-							.setCustomId('close')
+							.setCustomId(JSON.stringify({ type: 'close', special: 0 }))
 							.setStyle('DANGER')
 					);
 
-				const interactionHandler = async (interaction: InteractionInfo) => {
-					if (interaction.customId === 'close') {
-						this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+				const interactionHandler = async (interaction: InteractionInfo): Promise<boolean> => {
+					try {
+						this.debug(`Handling interaction with error message with {messageId:${interaction.parentMessageId}} with {customId:${interaction.customId}}`);
+						const customId = JSON.parse(interaction.customId);
+
+						switch (customId.type) {
+							case ('close'): {
+								this.debug('Received "close" interaction, deleting message');
+								this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
+								break;
+							}
+							default: {
+								this.warn(`Interaction with {customId:${interaction.customId}} was not handled in switch case`);
+								return false;
+							}
+						}
 						return true;
 					}
-					return false;
+					catch (error) {
+						this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+						return false;
+					}
 				};
 
 				this.sendEmbed({ embeds: [error], components: [row] }, -1, interactionHandler);
 			}
-			catch (error) { this.error(`{error: ${error}} while creating/sending error message with {message: ${message}}.`); }
+			catch (error) { this.warn(`{error: ${error}} while creating/sending error message with {message: ${message}}.`); }
 		})();
 		return errorId;
-	}
-
-	/**
-	 * sendEmbed()
-	 *
-	 * Sends an already made embed
-	 * @param messageOptions - messageOptions for you want to send
-	 * @param life - time in miliseconds you want this to be, -1 if infinite
-	 * @param interactionHandler - function called to handle when mesage recieves an interaction
-	 */
-	async sendEmbed(messageOptions: Discord.MessageOptions, life?: number, interactionHandler?: (interaction: InteractionInfo) => Promise<boolean>) {
-		if (!life) { life = -1; }
-		if (!interactionHandler) { interactionHandler = async () => { return false; }; }
-		try {
-			// grab text channel
-			const channel = await this.bot.channels.fetch(this.data.guildSettings.channelId);
-			if (channel instanceof Discord.TextChannel) {
-				// send embed if it is a text channel
-				const msg = await channel.send(messageOptions);
-				this.debug(`Embed with {title: ${messageOptions.embeds[0].title}} sent, {messageId: ${msg.id}}`);
-
-				this._interactionListeners[msg.id] = { interactionHandler };
-
-				// set timeout if given
-				if (life !== -1) { 
-					this._interactionListeners[msg.id].timeout = setTimeout(() => { this.deleteMsg(channel.id, msg.id); }, life); 
-					this._interactionListeners[msg.id].life = life;
-				}
-				return msg.id;
-			}
-			else { this.debug(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`); }
-		}
-		catch (error) { this.error(`{error: ${error}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}.`); }
-		return null;
-	}
-
-	/**
-	 * updateMsg()
-	 * 
-	 * Updates a message
-	 * @param channelId - id of channel message is in
-	 * @param messageId - id of message to edit
-	 * @param messageOptions - data to update message with
-	 */
-	async updateMsg(channelId: string, messageId: string, messageOptions: Discord.MessageOptions) {
-		try {
-			const channel = await this.bot.channels.fetch(channelId) as Discord.TextChannel;
-			const message = await channel.messages.fetch(messageId);
-			if (this._interactionListeners[messageId].life) {
-				clearInterval(this._interactionListeners[messageId].timeout);
-				this._interactionListeners[messageId].timeout = setTimeout(() => { this.deleteMsg(channelId, messageId); }, this._interactionListeners[messageId].life); 
-			}
-			await message.edit(messageOptions);
-			return true;
-		}
-		catch (error) {
-			this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
-			return false;
-		}
-	}
-
-	/**
-	 * deleteAllMsg()
-	 * 
-	 * Deletes all messages that have been sent
-	 */
-	async deleteAllMsg(): Promise<void> {
-		this.debug('Deleting all bot messages');
-		for (const key in this._interactionListeners) {
-			await this.deleteMsg(this.data.guildSettings.channelId, key);
-		}
-	}
-
-	/**
-	 * escapeString()
-	 * 
-	 * Escapes a string to be displayed as is in discord
-	 * @param string - string to escape
-	 * @returns escaped string
-	 */
-	escapeString(string: string) {
-		let escaped = '';
-		const toEscape = ['*', '_', '~', '`', '>', '|'];
-		for (let i = 0; i < string.length; i++) {
-			if (toEscape.indexOf(string[i]) === -1) { escaped += string[i]; }
-			else { escaped += `\\${string[i]}`; }
-		}
-		return escaped;
 	}
 
 	/**
@@ -567,9 +678,15 @@ export default class UI extends GuildComponent {
 	 * Handles what happens when a button on a message is pressed
 	 * @param interaction - interaction object of button that was pressed
 	 */
-	async buttonPressed(interaction: InteractionInfo) {
+	async buttonPressed(interaction: InteractionInfo): Promise<boolean> {
 		// grabs the right interaction handler and calls it
-		try { return await this._interactionListeners[interaction.parentMessageId].interactionHandler(interaction); }
-		catch { return false; }
+		try { 
+			this.debug(`Recieved interaction with {customId:${interaction.customId}}`);
+			return await this._interactionListeners[interaction.parentMessageId].interactionHandler(interaction);
+		}
+		catch (error) {
+			this.warn(`{error:${error}} while calling interaction on {parentMessageId:${interaction.parentMessageId}}`);
+			return false;
+		}
 	}
 }

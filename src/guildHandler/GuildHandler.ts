@@ -437,8 +437,8 @@ export default class GuildHandler {
 				}
 			}
 		}
-		this.debug('Updating UI after handling messages');
-		this.ui.updateUI();
+		this.debug('Updating UI after handling message');
+		await this.ui.updateUI();
 		return true;
 	}
 

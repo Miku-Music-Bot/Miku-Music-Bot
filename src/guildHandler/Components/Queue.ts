@@ -1,6 +1,7 @@
 import Discord from 'discord.js';
 import * as path from 'path';
 
+import { TEAL } from './UI';
 import GuildComponent from '../Components/GuildComponent';
 import { InteractionInfo } from '../GHChildInterface';
 import type GuildHandler from '../GuildHandler';
@@ -368,6 +369,7 @@ export default class Queue extends GuildComponent {
 		}
 
 		const embed = new Discord.MessageEmbed()
+			.setColor(TEAL)
 			.setTitle('Showing Items in Queue and Autoplay')
 			.setDescription(displayText)
 			.setFooter({ text: `Page ${page} of ${maxPage}` });

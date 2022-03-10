@@ -3,6 +3,8 @@ import * as path from 'path';
 import ytdl = require('ytdl-core');
 import ytpl = require('ytpl');
 import ytsr = require('ytsr');
+
+import { TEAL } from './UI';
 import { InteractionInfo } from '../GHChildInterface';
 import GuildHandler from '../GuildHandler';
 import Song from './Data/SourceData/Song';
@@ -31,6 +33,7 @@ type SearchResults = {
 
 const ITEMS_PER_PAGE = parseInt(process.env.ITEMS_PER_PAGE);
 const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
+
 /**
  * Search
  * 
@@ -243,6 +246,7 @@ export default class Search extends GuildComponent {
 		}
 
 		const searchUI = new Discord.MessageEmbed()
+			.setColor(TEAL)
 			.setTitle(`Search results for: ${this.ui.escapeString(searchResults.searchString.slice(0, 50))}`)
 			.setDescription(displayText)
 			.setFooter({ text: `Page ${page} of ${maxPage}` });
