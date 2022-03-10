@@ -11,6 +11,7 @@ import Song from './Data/SourceData/Song';
 import YTPlaylist from './Data/SourceData/YTSources/YTPlaylist';
 import YTSong from './Data/SourceData/YTSources/YTSong';
 import GuildComponent from './GuildComponent';
+import Playlist from './Data/SourceData/Playlist';
 
 type SearchResults = {
 	searchString: string,
@@ -53,7 +54,7 @@ export default class Search extends GuildComponent {
 	 * @param searchString - string to use to search
 	 * @returns SearchResults object
 	 */
-	private async _searchSongs(searchString: string): SearchResults | undefined {
+	private async _searchSongs(searchString: string): Promise<SearchResults | undefined> {
 		try {
 			this.debug(`Searching for songs using {searchString:${searchString}}`);
 			const searchResults: SearchResults = {
@@ -82,7 +83,7 @@ export default class Search extends GuildComponent {
 			this.debug(`Found {results:${savedResults.gd.length}} songs in saved google drive songs`);
 			this.debug(`Found {results:${savedResults.yt.length}} songs in saved youtube songs`);
 
-			this.debug(`Searching on youtube`);
+			this.debug('Searching on youtube');
 			const ytsrResults = await ytsr(searchString, { limit: MAX_YT_RESULTS });
 			// filter out non video and premiers
 			const filteredYTResults: ytsr.Video[] = ytsrResults.items.filter((result) => result.type === 'video' && !result.isUpcoming) as ytsr.Video[];
@@ -128,7 +129,7 @@ export default class Search extends GuildComponent {
 	 * @param url - url to use to search
 	 * @returns Song object or undefined
 	 */
-	private async _searchSongURL(url: string): Song | undefined {
+	private async _searchSongURL(url: string): Promise<Song | undefined> {
 		try {
 			// check to see if this is a valid youtube link
 			this.debug(`Checking if {url:${url}} is a valid youtube url`);
@@ -152,13 +153,13 @@ export default class Search extends GuildComponent {
 	 * @param url - url to use to search
 	 * @returns Playlist object or undefined
 	 */
-	private async _searchPlaylistURL(url: string): Playlist | undefined {
+	private async _searchPlaylistURL(url: string): Promise<Playlist | undefined> {
 		try {
 			// Check to see if this is a valid youtube playlist link
-			this.debug(`Checking if {url:${url}} is a valid youtube playlist url`)
+			this.debug(`Checking if {url:${url}} is a valid youtube playlist url`);
 			const playlistInfo = await ytpl(url);
 			if (playlistInfo) {
-				this.debug(`{url:${url}} was a youtube playlist with {title:${playlistInfo.title}}`)
+				this.debug(`{url:${url}} was a youtube playlist with {title:${playlistInfo.title}}`);
 				return new YTPlaylist(this.guildHandler, { url });
 			}
 			else { this.debug(`{url:${url}} was not a valid youtube playlist`); }
@@ -316,7 +317,7 @@ export default class Search extends GuildComponent {
 		try {
 			this.debug(`Started search process for {searchString:${searchString}}`);
 			if (this._msgId) {
-				this.debug(`Previous search message exists, deleting it`);
+				this.debug('Previous search message exists, deleting it');
 				this.ui.deleteMsg(this.data.guildSettings.channelId, this._msgId);
 				this._msgId = undefined;
 			}
@@ -376,7 +377,7 @@ export default class Search extends GuildComponent {
 				}
 			};
 
-			const cancel = Discord.MessageActionRow()
+			const cancel = new Discord.MessageActionRow()
 				.addComponents(
 					new Discord.MessageButton()
 						.setLabel('Cancel')
@@ -417,7 +418,7 @@ export default class Search extends GuildComponent {
 			}
 			else {
 				this.debug('Searching failed, displaying error message');
-				const close = Discord.MessageActionRow()
+				const close = new Discord.MessageActionRow()
 					.addComponents(
 						new Discord.MessageButton()
 							.setLabel('Close')
