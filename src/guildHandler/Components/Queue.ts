@@ -142,19 +142,19 @@ export default class Queue extends GuildComponent {
 		if (loc.from === 'queue') {
 			removed = this._queue.splice(loc.index, 1);
 			removed[0].reqBy;
-			this.debug(`Removed song with {url:${removed.url}} from queue`);
+			this.debug(`Removed song with {url:${removed[0].url}} from queue`);
 		}
 		else if (loc.from === 'autoplay') {
 			removed = this._autoplayQueue.splice(loc.index, 1);
 			removed[0].reqBy;
-			this.debug(`Removed song with {url:${removed.url}} from autoplay queue`)
+			this.debug(`Removed song with {url:${removed[0].url}} from autoplay queue`);
 		}
 		else {
 			this.debug(`Could not find song with {index:${index}}, did not remove anything`);
 			this.ui.sendError('That song with does not exist in the queue or in autoplay');
 		}
 		this.ui.updateUI();
-		return removed;
+		return removed[0];
 	}
 
 	/**
@@ -549,7 +549,7 @@ export default class Queue extends GuildComponent {
 	 * Sets the number of times to repeat song
 	 * @param repeats - number of times to repeat
 	 */
-	 setRepeatSong(repeats: number) {
+	setRepeatSong(repeats: number) {
 		this.debug(`Attempting to set repeat song to {repeats:${repeats}}`);
 		if (repeats >= -1) {
 			this.debug(`{repeats:${repeats}} was a valid setting, setting repeat song to it`);
