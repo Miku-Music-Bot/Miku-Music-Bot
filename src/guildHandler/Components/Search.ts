@@ -40,7 +40,8 @@ const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
  * Handles saerching for guild
  */
 export default class Search extends GuildComponent {
-	private _msgId: string;
+	private _msgId: string;		// message id of search message, undefined if not sent
+
 	/**
 	 * @param guildHandler 
 	 */
