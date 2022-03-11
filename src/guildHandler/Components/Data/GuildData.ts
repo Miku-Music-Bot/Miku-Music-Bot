@@ -132,7 +132,7 @@ export default class GuildData extends GuildComponent {
 	 */
 	private _save(): void {
 		this._saveCount++;
-		this.debug(`Queueing save currently ${saveCount} saves in queue`);
+		this.debug(`Queueing save currently ${this._saveCount} saves in queue`);
 		if (this._saveCount > MAX_UPDATES_BEFORE_SAVE) {
 			this.debug('Max number of queued saves reached, saving');
 			this._saveCount = 0;
@@ -178,7 +178,7 @@ export default class GuildData extends GuildComponent {
 			this.debug(`Deleting guild data in database for guild with {guildId:${this._guildId}}`);
 			await this._collection.deleteOne({ guildId: this._guildId });
 		}
-		catch (error) { this.error(`{error:${error.message}} while deleting guild data in database. {stack:${stack}}`); }
+		catch (error) { this.error(`{error:${error.message}} while deleting guild data in database. {stack:${error.stack}}`); }
 	}
 
 	// getter for guildId
