@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import * as path from 'path';
+import TypedEmitter from 'typed-emitter';
 
 import GuildHandler from '../../../GuildHandler';
 import GuildComponent from '../../GuildComponent';
@@ -9,16 +10,21 @@ import Song from './Song';
 import { SourceDataConfig, SourceRef, SOURCE_DATA_DEFAULT } from './sourceConfig';
 import YTPlaylist from './YTSources/YTPlaylist';
 
+type EventTypes = {
+	fatalError: (errorMsg: string) => void,
+}
+
 const REFRESH_PLAYLIST_INTERVAL = parseInt(process.env.REFRESH_PLAYLIST_INTERVAL);
+
 /**
  * SourceManager
  * 
  * Manages all the saved sources for a guild
  */
 export default class SourceManager extends GuildComponent {
-	events: EventEmitter;
-	private _gdPlaylists: Array<Playlist>;
-	private _ytPlaylists: Array<Playlist>;
+	events: EventEmitter;							// events
+	private _gdPlaylists: Array<Playlist>;			// list of google drive playlists
+	private _ytPlaylists: Array<Playlist>;			// list of youtube playlists
 
 	/**
 	 * @param guildHandler
@@ -26,7 +32,7 @@ export default class SourceManager extends GuildComponent {
 	 */
 	constructor(guildHandler: GuildHandler, sourceData?: SourceDataConfig) {
 		super(guildHandler, path.basename(__filename));
-		this.events = new EventEmitter();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 
 		// Set defaults
 		let save = false;
