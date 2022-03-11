@@ -188,7 +188,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this._youtubeDLPSource.kill('SIGINT');
 		}
 		if (this._ytPCMConverter) {
-			this.debug('ytPCMConverter ffmpeg process exists, killing it')
+			this.debug('ytPCMConverter ffmpeg process exists, killing it');
 			this._ytPCMConverter.kill('SIGINT');
 		}
 		if (this._ytPCMConverterOutput) {
@@ -254,7 +254,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this._ytPCMConverterInput.end();
 		});
 		this._youtubeDLPSource.on('exit', () => {
-			this.debug('YT-DLP process exited')
+			this.debug('YT-DLP process exited');
 			this._ytPCMConverterInput.end();
 		});
 
@@ -291,7 +291,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			}
 			catch (e) {
 				this._errorMsg += 'Failed to write song to buffer\n';
-				this.warn(`{error: ${e.message}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
+				this.warn(`{error: ${e.message}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}. {stack:${e.stack}}`);
 				this._retryBuffer(attempts);
 			}
 		};
@@ -314,7 +314,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this._startReadingFrom = this._largeChunkCount - 2;
 				const loc = path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm');
 				try { await fs.promises.unlink(loc); }
-				catch (e) { this.warn(`{error:${e}} while attempting to delete chunk at {location:${loc}}`) }
+				catch (e) { this.warn(`{error:${e}} while attempting to delete chunk at {location:${loc}}`); }
 			}
 		};
 		// handles finished download for video / livestream
@@ -347,7 +347,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			.on('end', finished)
 			.on('error', (e) => {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
-				this.error(`{error: ${e.message}} on convertedStream for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
+				this.error(`{error: ${e.message}} on convertedStream for song with {url: ${this.song.url}}. {stack:${e.stack}}`);
 				this._retryBuffer(attempts);
 			});
 
@@ -369,7 +369,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @param chunkNum - chunk number to prepare
 	 * @param attempts - number of attempts to read file
 	 */
-	private async _queueChunk(chunkNum: number, attempts: number | undefined): void {
+	private async _queueChunk(chunkNum: number, attempts?: number): Promise<void> {
 		if (this.destroyed) return;
 		if (!attempts) { attempts = 0; }
 		attempts++;
@@ -511,7 +511,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * 
 	 * @returns number of seconds played
 	 */
-	getPlayedDuration(): void {
+	getPlayedDuration(): number {
 		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
 		this.debug(`Determined that song has payed for ${duration}`);
 		return duration;
@@ -523,7 +523,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * Sets the chunk timing for stream
 	 * @param timing - chunk timing, should be 100 for normal playback
 	 */
-	 setChunkTiming(timing: number): void {
+	setChunkTiming(timing: number): void {
 		this.debug(`Setting chunk timing to {timing:${timing}}`);
 		this._chunkTiming = timing;
 	}
@@ -537,8 +537,8 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this.debug('Destroying audio source');
 		if (this.destroyed) {
 			this.debug('Already destroyed');
-			return
-		};
+			return;
+		}
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
@@ -576,7 +576,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.debug('Successfully deleted temp files');
 		}
 		catch (error) {
-			this.error(`{error:${error.message}} while trying to delete temp files at {directory:${this._tempLocation}}. {stack:${stack}}`);
+			this.error(`{error:${error.message}} while trying to delete temp files at {directory:${this._tempLocation}}. {stack:${error.stack}}`);
 		}
 	}
 }

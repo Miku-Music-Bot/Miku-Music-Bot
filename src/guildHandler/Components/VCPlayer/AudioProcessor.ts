@@ -156,7 +156,7 @@ export default class AudioProcessor extends GuildComponent {
 			.outputFormat('opus')
 			.on('start', (command) => { this.debug(`Started audioConverter ffmpeg process with {command:${command}}`); })
 			.on('error', (error) => {
-				if (e.toString().indexOf('SIGINT') !== -1) {
+				if (error.toString().indexOf('SIGINT') !== -1) {
 					this.debug('udioConverter ffmpeg process ended with signal SIGINT, ignoring error');
 					return;
 				}

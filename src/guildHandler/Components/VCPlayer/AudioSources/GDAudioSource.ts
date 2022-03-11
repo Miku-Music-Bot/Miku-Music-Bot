@@ -181,7 +181,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 
 		// clean up any streams from before just in case
 		if (this._gdPCMConverter) {
-			this.debug('gdPCMConverter ffmpeg process exists, killing it')
+			this.debug('gdPCMConverter ffmpeg process exists, killing it');
 			this._gdPCMConverter.kill('SIGINT');
 		}
 		if (this._gdPCMConverterOutput) {
@@ -248,7 +248,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			}
 			catch (e) {
 				this._errorMsg += 'Failed to write song to buffer\n';
-				this.error(`{error: ${error.message}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
+				this.error(`{error: ${e.message}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}. {stack:${e.stack}}`);
 				this._retryBuffer(attempts);
 			}
 		};
@@ -269,8 +269,9 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			if (this._largeChunkCount === 3) { this.events.emit('bufferReady'); }
 			if (this.song.live && this._largeChunkCount > 5 && !this._outputStreamStarted) {
 				this._startReadingFrom = this._largeChunkCount - 2;
+				const loc = path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm');
 				try { await fs.promises.unlink(loc); }
-				catch (e) { this.warn(`{error:${e}} while attempting to delete chunk at {location:${loc}}`) }
+				catch (e) { this.warn(`{error:${e}} while attempting to delete chunk at {location:${loc}}`); }
 			}
 		};
 		// handles finished download for video / livestream
@@ -302,7 +303,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			.on('end', finished)
 			.on('error', (e) => {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
-				this.error(`{error: ${e.message}} on convertedStream for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
+				this.error(`{error: ${e.message}} on convertedStream for song with {url: ${this.song.url}}. {stack:${e.stack}}`);
 				this._retryBuffer(attempts);
 			});
 	}
@@ -314,7 +315,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * @param chunkNum - chunk number to prepare
 	 * @param attempts - number of attempts to read file
 	 */
-	private async _queueChunk(chunkNum: number, attempts: number | undefined): void {
+	private async _queueChunk(chunkNum: number, attempts?: number): Promise<void> {
 		if (this.destroyed) return;
 		if (!attempts) { attempts = 0; }
 		attempts++;
@@ -432,7 +433,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * 
 	 * Pauses source
 	 */
-	 pause(): void { 
+	pause(): void { 
 		this.debug('Setting paused to true');
 		this._paused = true;
 	}
@@ -452,7 +453,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * 
 	 * @returns number of seconds played
 	 */
-	getPlayedDuration(): void {
+	getPlayedDuration(): number {
 		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
 		this.debug(`Determined that song has payed for ${duration}`);
 		return duration;
@@ -464,7 +465,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 * Sets the chunk timing for stream
 	 * @param timing - chunk timing, should be 100 for normal playback
 	 */
-	 setChunkTiming(timing: number): void {
+	setChunkTiming(timing: number): void {
 		this.debug(`Setting chunk timing to {timing:${timing}}`);
 		this._chunkTiming = timing;
 	}
@@ -478,8 +479,8 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		this.debug('Destroying audio source');
 		if (this.destroyed) {
 			this.debug('Already destroyed');
-			return
-		};
+			return;
+		}
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
@@ -493,7 +494,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 		}
 		if (this._gdPCMConverterInput) {
 			this.debug('gdPCMConverterInput exists, killing it');
-			this._ytPCMConverterInput.end();
+			this._gdPCMConverterInput.end();
 		}
 		if (this._audioProcessorInput) {
 			this.debug('audioProcessorInput exists, killing it');
@@ -513,7 +514,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			await fs.promises.rm(this._tempLocation, { recursive: true });
 			this.debug('Successfully deleted temp files');
 		} catch (error) {
-			this.error(`{error:${error.message}} while trying to delete temp files at {location:${this._sourceLoc}} and {directory:${this._tempLocation}}. {stack:${stack}}`);
+			this.error(`{error:${error.message}} while trying to delete temp files at {location:${this._sourceLoc}} and {directory:${this._tempLocation}}. {stack:${error.stack}}`);
 		}
 	}
 }
