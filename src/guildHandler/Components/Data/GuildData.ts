@@ -117,7 +117,7 @@ export default class GuildData extends GuildComponent {
 
 			cb();				// call callback once done
 		} catch (error) {
-			this.error(`{error: ${error}} retrieving/saving data from database. Trying again in ${wait} seconds...`);
+			this.error(`{error: ${error.message}} retrieving/saving data from database. Trying again in ${wait} seconds. {stack:${error.stack}}`);
 			setTimeout(() => { this._initData(wait * 10, cb); }, wait);
 		}
 	}
@@ -154,7 +154,7 @@ export default class GuildData extends GuildComponent {
 			};
 			await this._collection.replaceOne({ guildId: this._guildId }, newData);
 		} catch (error) {
-			this.error(`{error: ${error}} saving data from database. Trying again in ${MAX_DATABASE_RETRY_WAIT} ms`);
+			this.error(`{error: ${error.message}} saving data from database. Trying again in ${MAX_DATABASE_RETRY_WAIT} ms. {stack:${error.stack}}`);
 			this._retrySave = setInterval(() => this._saveData(), MAX_DATABASE_RETRY_WAIT);
 		}
 	}

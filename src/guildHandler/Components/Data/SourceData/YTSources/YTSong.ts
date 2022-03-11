@@ -62,7 +62,7 @@ export default class YTSong extends GuildComponent implements Song {
 			this.events.emit('newSettings', this);
 		}
 		catch (error) {
-			this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);
+			this.error(`{error: ${error.message}} while updating info for song with {url: ${this._songInfo.url}}. {stack:${error.stack}}`);
 		}
 	}
 

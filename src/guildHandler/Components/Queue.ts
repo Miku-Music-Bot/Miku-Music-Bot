@@ -11,6 +11,7 @@ import AudioSource from './VCPlayer/AudioSources/AudioSource';
 import GDSource from './VCPlayer/AudioSources/GDAudioSource';
 import YTSource from './VCPlayer/AudioSources/YTAudioSource';
 
+// Information about guild for UI to use
 type UIInfo = {
 	lastPlayed?: Song,
 	nowPlayingSong?: Song,
@@ -30,6 +31,7 @@ type UIInfo = {
 	autoplay: boolean
 };
 
+// Information about a resolved index
 type ResolvedIndex = {
 	from: 'queue' | 'autoplay' | 'notFound',
 	index: number,
@@ -269,7 +271,7 @@ export default class Queue extends GuildComponent {
 				break;
 			}
 			default: {
-				this.error('Failed to create audio source for song with {type:${song.type}}, type is not valid');
+				this.error(`Failed to create audio source for song with {type:${song.type}}, type is not valid.`);
 				break;
 			}
 		}

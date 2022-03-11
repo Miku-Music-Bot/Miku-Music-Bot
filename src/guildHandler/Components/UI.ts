@@ -463,7 +463,7 @@ export default class UI extends GuildComponent {
 			}
 			this.warn(`Channel with {channelId: ${this.data.guildSettings.channelId}} was not a text channel, embed with {title: ${messageOptions.embeds[0].title}} was not sent`);
 		}
-		catch (error) { this.error(`{error: ${error}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}.`); }
+		catch (error) { this.error(`{error: ${error.message}} while creating/sending embed with {title: ${messageOptions.embeds[0].title}}. {stack:${error.stack}}`); }
 		return undefined;
 	}
 
@@ -497,7 +497,7 @@ export default class UI extends GuildComponent {
 			return true;
 		}
 		catch (error) {
-			this.error(`{error: ${error}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}`);
+			this.error(`{error: ${error.message}} while updating message with {messageId: ${messageId}} in {channelId: ${channelId}}. {stack:${error.stack}}`);
 			return false;
 		}
 	}

@@ -145,7 +145,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			}
 		}
 		catch (error) {
-			this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
+			this.error(`{error: ${error.message}} while updating info for playlist with {url: ${this._url}}. {stack:${error.stack}}`);
 		}
 	}
 

@@ -189,7 +189,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 
 		this._gdSource = fs.createReadStream(this._sourceLoc);
 		this._gdSource.on('error', (error) => {
-			this.error(`{error:${error}} while reading google drive file from disk at {location:${this._sourceLoc}}`);
+			this.error(`{error:${error.message}} while reading google drive file from disk at {location:${this._sourceLoc}}. {stack:${error.stack}}`);
 			this._errorMsg += 'Error getting file from google drive';
 			this._retryBuffer(attempts);
 		});
@@ -328,7 +328,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			}
 		}
 		else {
-			this.error(`Tried 20 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
+			this.error(`Tried 20 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}, giving up`);
 
 			if (!this._finishedBuffering) {
 				this._errorMsg += 'Source stream was to slow to mantain buffer. Playback stopped prematurely.';

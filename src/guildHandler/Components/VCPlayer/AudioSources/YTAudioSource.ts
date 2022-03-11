@@ -348,7 +348,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			}
 		}
 		else {
-			this.error(`Tried 20 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}`);
+			this.error(`Tried 20 times to read {chunkNum: ${chunkNum}} from buffer for song with {url: ${this.song.url}}, giving up`);
 
 			if (!this._finishedBuffering) {
 				this._errorMsg += 'Source stream was to slow to mantain buffer. Playback stopped prematurely.';

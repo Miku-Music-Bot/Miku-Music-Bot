@@ -27,23 +27,23 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
  * Handles all bot functions for a specific guild
  */
 export default class GuildHandler {
-	logger: winston.Logger;
+	logger: winston.Logger;					// logging
 	debug: (msg: string) => void;
 	info: (msg: string) => void;
 	warn: (msg: string) => void;
 	error: (msg: string) => void;
 
-	private _ready: boolean;
-	bot: Discord.Client;
-	guild: Discord.Guild;
+	private _ready: boolean;				// bot ready or not
+	bot: Discord.Client;					// bot client
+	guild: Discord.Guild;					// bot guild
 
-	drive: drive_v3.Drive;
-	ui: UI;
-	data: GuildConfig;
-	vcPlayer: VCPlayer;
-	queue: Queue;
-	permissions: CommandPermissions;
-	search: Search;
+	drive: drive_v3.Drive;					// google drive api object
+	ui: UI;									// ui component
+	data: GuildConfig;						// guildData component
+	vcPlayer: VCPlayer;						// vcPlayer component
+	queue: Queue;							// queue component
+	permissions: CommandPermissions;		// permissions component
+	search: Search;							// search component
 
 	/**
 	 * Creates data object and once data is ready, calls startbot
@@ -54,7 +54,6 @@ export default class GuildHandler {
 		// set up logger
 		const filename = path.basename(__filename);
 		const logger = newLogger(path.join(LOG_DIR, id));
-
 		this.logger = logger;
 		this.debug = (msg) => { logger.debug(`{filename: ${filename}} ${msg}`); };
 		this.info = (msg) => { logger.info(msg); };
@@ -65,10 +64,9 @@ export default class GuildHandler {
 		this.info(`Creating guild handler for guild id: ${id}`);
 
 		// Authenticate with google drive api
-		const authPlus = new AuthPlus();
-		const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
-
 		try {
+			const authPlus = new AuthPlus();
+			const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
 			this.info(`Attempting to read google drive token from: "${GOOGLE_TOKEN_LOC}"`);
 			const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
 			auth.setCredentials(JSON.parse(token));
@@ -81,14 +79,14 @@ export default class GuildHandler {
 		}
 
 		// Create discord client
-		this.bot = new Discord.Client({							// set intent flags for bot
+		this.bot = new Discord.Client({								// set intent flags for bot
 			intents: [
 				Discord.Intents.FLAGS.GUILDS,						// for accessing guild roles
 				Discord.Intents.FLAGS.GUILD_VOICE_STATES,			// for checking who is in vc and connecting to vc
 			],
 		});
 
-		this._ready = false;										// bot ready or not to process messages/interactions
+		this._ready = false;										// bot is not ready yet
 		this.bot.once('ready', () => {
 			// get the guild object
 			this.guild = this.bot.guilds.cache.get(this.data.guildId);

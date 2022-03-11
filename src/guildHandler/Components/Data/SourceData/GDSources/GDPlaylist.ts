@@ -111,15 +111,15 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 			try {
 				const id = this._getIdFromUrl(this._url);
 				if (!id) {
-					this.error(`Google drive song with {url: ${this._url}} does not have a valid file id`);
+					this.warn(`Google drive song with {url: ${this._url}} does not have a valid file id`);
 					resolve();
 					return;
 				}
 
 				// Get name of folder
-				this.drive.files.get({ fileId: id }, (err, res) => {
-					if (err) {
-						this.error(`{error: ${err}} while getting info from google drive for folder with {url: ${this._url}}`);
+				this.drive.files.get({ fileId: id }, (error, res) => {
+					if (error) {
+						this.error(`{error: ${error.message}} while getting info from google drive for folder with {url: ${this._url}}. {stack:${error.stack}}`);
 						resolve();
 						return;
 					}
@@ -135,9 +135,9 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 							pageSize: 1000,
 							fields: 'nextPageToken, files(id, name)',
 							pageToken: nextPageToken
-						}, (err, res) => {
-							if (err) {
-								this.error(`{error: ${err}} while getting info from google drive for folder with {url: ${this._url}}`);
+						}, (error, res) => {
+							if (error) {
+								this.error(`{error: ${error.message}} while getting info from google drive for folder with {url: ${this._url}}. {stack:${error.stack}}`);
 								resolve();
 								return;
 							}
@@ -184,7 +184,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 					});
 			}
 			catch (error) {
-				this.error(`{error: ${error}} while updating info for playlist with {url: ${this._url}}`);
+				this.error(`{error: ${error.message}} while updating info for playlist with {url: ${this._url}}. {stack:${error.stack}}`);
 				resolve();
 			}
 		});

@@ -27,15 +27,16 @@ export default class PermissionChecker extends GuildComponent {
 	 */
 	async checkMessage(command: string, message: MessageInfo): Promise<boolean> {
 		try {
-			this.debug(`Checking permissions for {messageId: ${message.id}}`);
+			this.debug(`Checking permissions for {authorId: ${message.authorId}} and {command:${command}}`);
 			const allowedRoles = this.data.permissionSettings.getFor(command);
-
+			
 			// if command doesn't exist, return false
 			if (!allowedRoles) {
 				this.debug(`Command from {messageId: ${message.id}} does not exist.`);
 				this.ui.sendError(`<@${message.authorId}> "${this.ui.escapeString(message.content)}" is not valid command!`, false, message.channelId);
 				return false;
 			}
+			this.debug(`{allowedRoles:${allowedRoles}} found for {command:${command}}`);
 
 			// if the user is the guild owner, return true no matter what
 			if (this.guild.ownerId === message.authorId) {
@@ -55,12 +56,12 @@ export default class PermissionChecker extends GuildComponent {
 			}
 
 			// if we get here, they don't have permission
-			this.debug(`Permission rejected to command with {messageId: ${message.id}}`);
+			this.debug(`Permission rejected to command with {messageId: ${message.id}}, sending error message`);
 			this.ui.sendError(`<@${message.authorId}> You don't have permission to use the "${command}" command!`, false, message.channelId);
 			return false;
 		} catch (error) {
 			const errorId = this.ui.sendError(`<@${message.authorId}> Sorry! There was an error while checking permissions for your command.`, true);
-			this.error(`{error: ${error}} while checking permissions for {messageId: ${message.id}}. {errorId: ${errorId}}`);
+			this.error(`{error: ${error.message}} while checking permissions for {messageId: ${message.id}}. {stack:${error.stack}} {errorId: ${errorId}}`);
 			return false;
 		}
 	}

@@ -70,7 +70,7 @@ export default class GDSong extends GuildComponent implements Song {
 
 				const id = this.getIdFromUrl(this._songInfo.url);
 				if (!id) {
-					this.error(`Google drive song with {url: ${this._songInfo.url}} does not have a valid file id`);
+					this.warn(`Google drive song with {url: ${this._songInfo.url}} does not have a valid file id`);
 					resolve(tempLocation);
 					return;
 				}
@@ -78,9 +78,9 @@ export default class GDSong extends GuildComponent implements Song {
 				this.drive.files.get(
 					{ fileId: id, alt: 'media' },
 					{ responseType: 'stream' },
-					async (err, res) => {
-						if (err) {
-							this.error(`{error: ${err}} while getting info from google drive for song with {url: ${this._songInfo.url}}`);
+					async (error, res) => {
+						if (error) {
+							this.error(`{error: ${error.message}} while getting info from google drive for song with {url: ${this._songInfo.url}}. {stack:${error.stack}}`);
 							resolve(tempLocation);
 							return;
 						}
@@ -115,13 +115,13 @@ export default class GDSong extends GuildComponent implements Song {
 									.run();
 							}
 							catch (error) {
-								this.error(`{error:${error}} while parsing metadata for song with {url:${this._songInfo.url}}`);
+								this.error(`{error:${error.message}} while parsing metadata for song with {url:${this._songInfo.url}}. {stack:${error.stack}}`);
 							}
 						});
 					});
 			}
 			catch (error) {
-				this.error(`{error: ${error}} while updating info for song with {url: ${this._songInfo.url}}`);
+				this.error(`{error: ${error.message}} while updating info for song with {url: ${this._songInfo.url}}. {stack:${error.stack}}`);
 				resolve('');
 			}
 		});

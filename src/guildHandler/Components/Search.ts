@@ -118,7 +118,7 @@ export default class Search extends GuildComponent {
 			return searchResults;
 		}
 		catch (error) {
-			this.error(`{error:${error}} while searching for songs using {searchString:${searchString}}`);
+			this.error(`{error:${error.message}} while searching for songs using {searchString:${searchString}}. {stack:${error.stack}}`);
 			return undefined;
 		}
 	}
@@ -433,7 +433,7 @@ export default class Search extends GuildComponent {
 		}
 		catch (error) {
 			const errorId = this.ui.sendError(`Error while searching using search string: "${searchString}"`, true);
-			this.error(`{error: ${error}} while searching for songs using {searchString: ${searchString}}, {errorId: ${errorId}}`);
+			this.error(`{error: ${error.message}} while searching for songs using {searchString: ${searchString}}. {stack:${error.stack}} {errorId: ${errorId}}`);
 		}
 	}
 }
