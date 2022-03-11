@@ -156,16 +156,18 @@ export default class AudioProcessor extends GuildComponent {
 			.outputFormat('opus')
 			.on('start', (command) => { this.debug(`Started audioConverter ffmpeg process with {command:${command}}`); })
 			.on('error', (error) => {
-				if (error.toString().indexOf('SIGINT') !== -1) return;
-
-				this.error(`AudioConverter ffmpeg process encountered {error: ${error.message}} while converting song with {url: ${this._source.song.url}} from pcm to opus. {stack:${error.stack}}`);
+				if (e.toString().indexOf('SIGINT') !== -1) {
+					this.debug('udioConverter ffmpeg process ended with signal SIGINT, ignoring error');
+					return;
+				}
+				this.error(`audioConverter ffmpeg process encountered {error: ${error.message}} while converting song with {url: ${this._source.song.url}} from pcm to opus. {stack:${error.stack}}`);
 				this.events.emit('fatalError', 'Error while converting pcm to opus');
 			});
 
 		this._audioConverter.pipe()
 			.on('data', (data) => { this._opusPassthrough.write(data); })
 			.on('end', () => {
-				this.debug('AudioConverter output has ended, ending opusPassthrough');
+				this.debug('audioConverter output has ended, ending opusPassthrough');
 				this._opusPassthrough.end();
 			})
 			.on('error', (error) => { this.error(`{error:${error.message}} on _audioConverter for song with {url:${this._source.song.url}}. {stack:${error.stack}}`); });
@@ -188,13 +190,11 @@ export default class AudioProcessor extends GuildComponent {
 		this.debug('Destroying audio processor');
 		if (this._audioFilter) {
 			this.debug('Attempting to stop audioFilter process');
-			try { this._audioFilter.kill('SIGINT'); }
-			catch (error) { this.warn(`{error:${error}} when trying to kill audioFilter`); }
+			this._audioFilter.kill('SIGINT');
 		}
 		if (this._audioConverter) {
 			this.debug('Attempting to stop audioConverter process');
-			try { this._audioConverter.kill('SIGINT'); }
-			catch (error) { this.warn(`{error:${error}} when trying to kill audioConverter`); }
+			this._audioConverter.kill('SIGINT');
 		}
 		this._audioFilterInput.end();
 		this._audioConverterInput.end();

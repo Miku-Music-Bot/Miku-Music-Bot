@@ -6,12 +6,18 @@ import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
 import { ChildProcess, spawn } from 'child_process';
+import TypedEmitter from 'typed-emitter';
 
 import AudioSource from './AudioSource';
 import AudioProcessor from '../AudioProcessor';
 import GuildComponent from '../../GuildComponent';
 import type Song from '../../Data/SourceData/Song';
 import type GuildHandler from '../../../GuildHandler';
+
+type EventTypes = {
+	fatalError: (errorMsg: string) => void,
+	bufferReady: () => void
+}
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
@@ -82,7 +88,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	constructor(guildHandler: GuildHandler, song: Song) {
 		super(guildHandler, path.basename(__filename));
 		this.song = song;
-		this.events = new EventEmitter();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 		this.buffering = true;								// if currently playing silence while waiting for youtube, set to true
 		this.destroyed = false;								// if source has been destroyed or not
 
@@ -96,7 +102,10 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this.debug(`Buffer ready for song with {url: ${this.song.url}}`);
 				resolve();
 			});
-			this.events.once('error', reject);
+			this.events.once('error', () => {
+				this.error(`Song with {url:${this.song.url}} encountered error before buffer was ready`);
+				reject();
+			});
 		});
 
 		this._largeChunkCount = 0;							// how many 10 sec "largeChunks" there are on disk
@@ -111,7 +120,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		this._smallChunkCount = 0;							// number of 0.1 sec "smallChunks" that have been played
 
 		this._audioProcessorInput = new PassThrough;		// pcm data input for audioProcessor
-		this._audioProcessorInput.on('error', (error) => { this.warn(`{error:${error}} on _audioProcessorInput for song with {url:${this.song.url}}`); });
+		this._audioProcessorInput.on('error', (error) => { this.error(`{error:${error.message}} on _audioProcessorInput for song with {url:${this.song.url}}. {stack:${error.stack}}`); });
 
 		this._outputStreamStarted = false;					// if the output stream has already been started to avoid starting another one
 	}
@@ -139,10 +148,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * Call to retry buffer stream in 1 sec
 	 * @param attempts - attempt number
 	 */
-	private _retryBuffer(attempts: number) {
+	private _retryBuffer(attempts: number): void {
+		this.debug('Retrying buffer in 1 sec');
 		clearInterval(this._bufferingRetryTimeout);
 		this._bufferStreamStarted = false;
-		this._bufferingRetryTimeout = setTimeout(() => { this.bufferStream(attempts); }, 1000);
+		this._bufferingRetryTimeout = setTimeout(() => {
+			this.debug('Retrying buffer timeout ended, retrying buffer');
+			this.bufferStream(attempts);
+		}, 1_000);
 	}
 
 	/**
@@ -151,13 +164,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * Starts downloading video from youtube and saving to file
 	 * @param attempts - number of attempts to buffer song
 	 */
-	async bufferStream(attempts?: number) {
+	async bufferStream(attempts?: number): Promise<void> {
 		if (this.destroyed) return;
 		if (this._bufferStreamStarted) return;			// avoid starting 2 bufferStream functions at the same time
 		this._bufferStreamStarted = true;
-		
+
 		await this.song.fetchData();
-		
+
 		if (!attempts) { attempts = 0; }
 		attempts++;
 		if (attempts > 5) {								// stop trying after 5 attempts to get buffer
@@ -170,27 +183,43 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		clearTimeout(this._bufferingRetryTimeout);
 
 		// clean up any streams from before just in case
-		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill('SIGINT'); }
-		if (this._ytPCMConverterOutput) { this._ytPCMConverterOutput.removeAllListeners('end'); }
-		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
+		if (this._youtubeDLPSource) {
+			this.debug('YT-DLP process already exists, killing it');
+			this._youtubeDLPSource.kill('SIGINT');
+		}
+		if (this._ytPCMConverter) {
+			this.debug('ytPCMConverter ffmpeg process exists, killing it')
+			this._ytPCMConverter.kill('SIGINT');
+		}
+		if (this._ytPCMConverterOutput) {
+			this.debug('ytPCMConverter output exists, ending stream');
+			this._ytPCMConverterOutput.removeAllListeners('end');
+		}
 		clearTimeout(this._liveTimeout);
 
-		if (!this.song.live) { this._largeChunkCount = 0; }
+		if (!this.song.live) {
+			this.debug('Song is not live, setting large chunk count to 0');
+			this._largeChunkCount = 0;
+		}
 
 		// make directory for buffer
 		try { await fs.promises.mkdir(this._tempLocation, { recursive: true }); }
 		catch (error) {
 			// retry if this fails
 			this._errorMsg += 'Failed to create a temp directory for song on disk\n';
-			this.warn(`{error: ${error}} while creating temp directory while downloading song with {url: ${this.song.url}}`);
+			this.warn(`{error: ${error.messsage}} while creating temp directory while downloading song with {url: ${this.song.url}}`);
 			this._retryBuffer(attempts);
 			return;
 		}
 
 		// start download from youtube
 		let format = '-f bestaudio';
-		if (this.song.live) { format = '93/92/91/94/95/96'; }
+		if (this.song.live) {
+			this.debug('Song is live, setting yt-dlp download format to live itags');
+			format = '93/92/91/94/95/96';
+		}
 
+		this.debug('Spawing yt-dlp process');
 		this._youtubeDLPSource = spawn(YT_DLP_PATH, [
 			'-o', '-',
 			format,
@@ -205,35 +234,47 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			if (error.toString().indexOf('SIGINT') !== -1) return;
 
 			this._errorMsg += 'Error on stream from youtube\n';
-			this.warn(`{error: ${error}} on stream from youtube for song with {url: ${this.song.url}}`);
+			this.error(`{error: ${error.message}} on stream from youtube for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
 			this._retryBuffer(attempts);
 			return;
 		});
 
 		// write data to ytPCMConverter input
 		this._ytPCMConverterInput = new PassThrough();
-		this._ytPCMConverterInput.on('error', (error) => { this.warn(`{error:${error}} on _ytPCMConverterInput for song with {url:${this.song.url}}`); });
+		this._ytPCMConverterInput.on('error', (error) => { this.error(`{error:${error.message}} on _ytPCMConverterInput for song with {url:${this.song.url}}. {stack:${error.stack}}`); });
 
 		this._youtubeDLPSource.stdout.on('data', (data) => { this._ytPCMConverterInput.write(data); });
-		this._youtubeDLPSource.stdout.on('end', () => { this._ytPCMConverterInput.end(); });
+		this._youtubeDLPSource.stdout.on('end', () => {
+			this.debug('YT-DLP stdout ended');
+			this._ytPCMConverterInput.end();
+		});
 
-		this._youtubeDLPSource.on('close', () => { this._ytPCMConverterInput.end(); });
-		this._youtubeDLPSource.on('exit', () => { this._ytPCMConverterInput.end(); });
-
-		this.debug(`Audio stream obtained for song with {url: ${this.song.url}}, starting conversion to pcm`);
+		this._youtubeDLPSource.on('close', () => {
+			this.debug('YT-DLP process closed');
+			this._ytPCMConverterInput.end();
+		});
+		this._youtubeDLPSource.on('exit', () => {
+			this.debug('YT-DLP process exited')
+			this._ytPCMConverterInput.end();
+		});
 
 		// convert song to pcm using ffmpeg
+		this.debug('Starting ytPCMConverter');
 		this._ytPCMConverter = ffmpeg(this._ytPCMConverterInput)
 			.audioChannels(AUDIO_CHANNELS)
 			.audioFrequency(AUDIO_FREQUENCY)
 			.format(PCM_FORMAT)
+			.on('start', (command) => { this.debug(`Started ytPCMConverter ffmpeg process with {command:${command}}`); })
 			.on('error', (e) => {
 				// ignore if stopped because of SIGINT
-				if (e.toString().indexOf('SIGINT') !== -1) return;
+				if (e.toString().indexOf('SIGINT') !== -1) {
+					this.debug('ytPCMConverter ffmpeg process ended with signal SIGINT, ignoring error');
+					return;
+				}
 
 				// restart if there is an error
 				this._errorMsg += `Buffer Attempt: ${attempts} - Error while converting stream to raw pcm\n`;
-				this.warn(`Ffmpeg encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
+				this.error(`ytPCMConverter ffmpeg process encountered {error: ${e}} while converting song with {url: ${this.song.url}} to raw pcm`);
 				this._retryBuffer(attempts);
 			});
 
@@ -243,10 +284,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		// writes a file, emits fatalEvent if fails
 		const writeFile = async (data: Buffer, chunkName: number) => {
 			// save the chunk as <chunkNumber>.pcm
-			try { await fs.promises.writeFile(path.join(this._tempLocation, chunkName.toString() + '.pcm'), data); }
+			try {
+				const loc = path.join(this._tempLocation, chunkName.toString() + '.pcm');
+				this.debug(`Writing chunk to {location:${loc}}`);
+				await fs.promises.writeFile(loc, data);
+			}
 			catch (e) {
 				this._errorMsg += 'Failed to write song to buffer\n';
-				this.warn(`{error: ${e}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}`);
+				this.warn(`{error: ${e.message}} while saving chunk with {chunkCount: ${chunkName}} for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
 				this._retryBuffer(attempts);
 			}
 		};
@@ -267,7 +312,9 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			if (this._largeChunkCount === 3) { this.events.emit('bufferReady'); }
 			if (this.song.live && this._largeChunkCount > 5 && !this._outputStreamStarted) {
 				this._startReadingFrom = this._largeChunkCount - 2;
-				try { await fs.promises.unlink(path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm')); } catch { /* */ }
+				const loc = path.join(this._tempLocation, this._largeChunkCount - 5 + '.pcm');
+				try { await fs.promises.unlink(loc); }
+				catch (e) { this.warn(`{error:${e}} while attempting to delete chunk at {location:${loc}}`) }
 			}
 		};
 		// handles finished download for video / livestream
@@ -275,7 +322,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
-			if (this.song.live) { this._endOfSong = true; }
+			this._endOfSong = true;
 
 			if (Buffer.byteLength(currentBuffer) === 0) return;
 
@@ -287,11 +334,12 @@ export default class YTSource extends GuildComponent implements AudioSource {
 
 		// want to turn stream into a stream with equal sized chunks for duration counting
 		if (this._ytPCMConverterOutput) {
+			this.debug('ytPCMConverter output exists, ending it');
 			this._ytPCMConverterOutput.end();
 			this._ytPCMConverterInput.removeAllListeners();
 		}
 		this._ytPCMConverterOutput = new PassThrough();
-		this._ytPCMConverterOutput.on('error', (error) => { this.warn(`{error:${error}} on _ytPCMConverterOutput for song with {url:${this.song.url}}`); });
+		this._ytPCMConverterOutput.on('error', (error) => { this.error(`{error:${error.message}} on _ytPCMConverterOutput for song with {url:${this.song.url}}. {stack:${error.stack}}`); });
 
 		this._ytPCMConverter.pipe(this._ytPCMConverterOutput);
 		this._ytPCMConverterOutput
@@ -299,11 +347,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			.on('end', finished)
 			.on('error', (e) => {
 				this._errorMsg += 'Error while converting stream to raw pcm\n';
-				this.warn(`{error: ${e}} on convertedStream for song with {url: ${this.song.url}}`);
+				this.error(`{error: ${e.message}} on convertedStream for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
 				this._retryBuffer(attempts);
 			});
 
-		if (!this.song.live) return;
+		if (!this.song.live) {
+			this.debug('Song is not live, not starting live timeout');
+			return;
+		}
 		// restart stream every 5 hours
 		this._liveTimeout = setTimeout(() => {
 			this.debug(`Restarting buffer for song with {url: ${this.song.url}} to ensure youtube link is valid`);
@@ -312,21 +363,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	}
 
 	/**
-	 * setChunkTiming()
-	 * 
-	 * Sets the chunk timing for stream
-	 * @param timing - chunk timing, should be 100 for normal playback
-	 */
-	setChunkTiming(timing: number) { this._chunkTiming = timing; }
-
-	/**
 	 * queueChunk()
 	 * 
 	 * Reads the requested chunk and points this.nextChunk to the data
 	 * @param chunkNum - chunk number to prepare
 	 * @param attempts - number of attempts to read file
 	 */
-	private async _queueChunk(chunkNum: number, attempts: number | void) {
+	private async _queueChunk(chunkNum: number, attempts: number | undefined): void {
 		if (this.destroyed) return;
 		if (!attempts) { attempts = 0; }
 		attempts++;
@@ -337,13 +380,15 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		}
 
 		if (attempts < 21) {
+			const loc = path.join(this._tempLocation, chunkNum.toString() + '.pcm');
 			try {
-				this._chunkBuffer.push(...this._bufferToChunks(await fs.promises.readFile(path.join(this._tempLocation, chunkNum.toString() + '.pcm')), SMALL_CHUNK_SIZE));
-				await fs.promises.unlink(path.join(this._tempLocation, chunkNum.toString() + '.pcm'));
+				const chunk = await fs.promises.readFile(loc);
+				this._chunkBuffer.push(...this._bufferToChunks(chunk, SMALL_CHUNK_SIZE));
+				await fs.promises.unlink(loc);
 			}
 			catch (error) {
 				this._errorMsg += 'Failed to read chunk from buffer\n';
-				this.warn(`{error: ${error}} while reading chunk with {chunkNum: ${chunkNum}} for song with {url: ${this.song.url}}`);
+				this.error(`{error: ${error.message}} while reading chunk from {location:${loc}} for song with {url: ${this.song.url}}. {stack:${error.stack}}`);
 				setTimeout(() => { this._queueChunk(chunkNum, attempts); }, 1000);
 			}
 		}
@@ -362,12 +407,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	/**
 	 * _writeChunkIn()
 	 * 
-	 * Recursive function ONLY CALL THIS EXTERNALLY ONCE
 	 * Calculates delay until nextChunkTime to ensure chunks are writeen as close to the required time as possible
 	 * @param milliseconds - delay until time to write chunk
 	 * @param live - read from disk to add to buffer or not
 	 */
-	private _writeChunkIn(milliseconds: number, live: boolean) {
+	private _writeChunkIn(milliseconds: number, live: boolean): void {
 		this._audioWriter = setTimeout(() => {
 			// if paused play nothing
 			if (!this._paused) {
@@ -407,15 +451,15 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	/**
 	 * getStream()
 	 * 
-	 * ONLY CALL THIS ONCE
+	 * Get opus stream for playback for discord
 	 * @returns Passthrough stream with opus data for discord
 	 */
-	async getStream() {
+	async getStream(): Promise<PassThrough> {
 		if (this._outputStreamStarted) return this._audioProcessorOutput;
 
 		// notify user that this might take a bit
-		if (this.song.live) {  this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient.'); }
-		
+		if (this.song.live) { this.ui.sendNotification('Livestreams take around 30 seconds to buffer to ensure smooth playback. Please be patient.'); }
+
 		this._outputStreamStarted = true;
 		try {
 			this.bufferStream();
@@ -427,11 +471,13 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this._writeChunkIn(0, this.song.live);
 			this.buffering = false;
 		}
-		catch { /* nothing needs to happen */ }
-
+		catch (error) {
+			this.error(`{error:${error.message}} when trying to get stream for song with {url:${this.song.url}}. {stack:${error.stack}}`);
+		}
 
 		this._audioProcessor = new AudioProcessor(this.guildHandler);
-		this._audioProcessor.events.on('error', (msg) => {
+		this._audioProcessor.events.on('fatalError', (msg) => {
+			this.error(`Error event with {message:${msg}} on audioProcessor`);
 			this._errorMsg += msg;
 			this.events.emit('fatalError', this._errorMsg);
 		});
@@ -445,22 +491,41 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * 
 	 * Pauses source
 	 */
-	pause() { this._paused = true; }
+	pause(): void { 
+		this.debug('Setting paused to true');
+		this._paused = true;
+	}
 
 	/**
 	 * resumse()
 	 * 
 	 * Resumes source
 	 */
-	resume() { this._paused = false; }
+	resume(): void {
+		this.debug('Setting paused to false');
+		this._paused = false;
+	}
 
 	/**
 	 * getPlayedDuration()
 	 * 
 	 * @returns number of seconds played
 	 */
-	getPlayedDuration() {
-		return Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
+	getPlayedDuration(): void {
+		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
+		this.debug(`Determined that song has payed for ${duration}`);
+		return duration;
+	}
+
+	/**
+	 * setChunkTiming()
+	 * 
+	 * Sets the chunk timing for stream
+	 * @param timing - chunk timing, should be 100 for normal playback
+	 */
+	 setChunkTiming(timing: number): void {
+		this.debug(`Setting chunk timing to {timing:${timing}}`);
+		this._chunkTiming = timing;
 	}
 
 	/**
@@ -468,8 +533,12 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * 
 	 * Ends streams, kills ffmpeg processes, and removes temp directory
 	 */
-	async destroy() {
-		if (this.destroyed) return;
+	async destroy(): Promise<void> {
+		this.debug('Destroying audio source');
+		if (this.destroyed) {
+			this.debug('Already destroyed');
+			return
+		};
 		this.destroyed = true;
 		this._chunkBuffer = [];
 
@@ -477,13 +546,37 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		clearTimeout(this._liveTimeout);
 		clearInterval(this._audioWriter);
 
-		if (this._youtubeDLPSource) { this._youtubeDLPSource.kill(); }
-		if (this._ytPCMConverter) { this._ytPCMConverter.kill('SIGINT'); }
-		if (this._ytPCMConverterInput) { this._ytPCMConverterInput.end(); }
-		if (this._audioProcessorInput) { this._audioProcessorInput.end(); }
-		if (this._audioProcessor) { this._audioProcessor.destroy(); }
-		if (this._audioProcessorOutput) { this._audioProcessorOutput.end(); }
+		if (this._youtubeDLPSource) {
+			this.debug('youtubeDLPSource exists, killing it');
+			this._youtubeDLPSource.kill();
+		}
+		if (this._ytPCMConverter) {
+			this.debug('ytPCMConverter exists, killing it');
+			this._ytPCMConverter.kill('SIGINT');
+		}
+		if (this._ytPCMConverterInput) {
+			this.debug('ytPCMConverterInput exists, killing it');
+			this._ytPCMConverterInput.end();
+		}
+		if (this._audioProcessorInput) {
+			this.debug('audioProcessorInput exists, killing it');
+			this._audioProcessorInput.end();
+		}
+		if (this._audioProcessor) {
+			this.debug('audioProcessor exists, killing it');
+			this._audioProcessor.destroy();
+		}
+		if (this._audioProcessorOutput) {
+			this.debug('_audioProcessorOutput exists, killing it');
+			this._audioProcessorOutput.end();
+		}
 
-		try { await fs.promises.rm(this._tempLocation, { recursive: true }); } catch { /* */ }
+		try {
+			await fs.promises.rm(this._tempLocation, { recursive: true });
+			this.debug('Successfully deleted temp files');
+		}
+		catch (error) {
+			this.error(`{error:${error.message}} while trying to delete temp files at {directory:${this._tempLocation}}. {stack:${stack}}`);
+		}
 	}
 }
