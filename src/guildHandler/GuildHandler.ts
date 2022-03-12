@@ -114,7 +114,7 @@ export default class GuildHandler {
 			else {
 				// Send UI otherwise
 				this.debug(`Bot has been configured, sending UI to {channel:${this.data.guildSettings.channelId}}`);
-				this.ui.sendUI();
+				this.ui.sendUI(true);
 			}
 		});
 
