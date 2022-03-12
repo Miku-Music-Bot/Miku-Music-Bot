@@ -51,7 +51,7 @@ export default class GDSong extends GuildComponent implements Song {
 		}
 		Object.assign(this._songInfo, info);
 
-		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
+		if (save) { this.events.emit('newSettings', this); }
 	}
 
 	/**
@@ -61,21 +61,24 @@ export default class GDSong extends GuildComponent implements Song {
 	 * @param url - google drive url
 	 * @returns google drive file/folder id
 	 */
-	getIdFromUrl(url: string) { return url.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]; }
+	getIdFromUrl(url: string): string { return url.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]; }
 
 	/**
 	 * fetchData()
 	 * 
 	 * Grabs updated info for song
+	 * @param save - don't delete the temp file or not
+	 * @returm promise that resolves to location of temp file
 	 */
 	async fetchData(save?: boolean): Promise<string> {
+		this.debug(`Fetching data for song with {url:${this._songInfo.url}}`);
 		return new Promise((resolve) => {
+			const tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
+			this.debug(`Downloading song from google drive to {location:${tempLocation}}`);
 			try {
-				const tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
-
 				const id = this.getIdFromUrl(this._songInfo.url);
 				if (!id) {
-					this.warn(`Google drive song with {url: ${this._songInfo.url}} does not have a valid file id`);
+					this.error(`Google drive song with {url: ${this._songInfo.url}} does not have a valid file id`);
 					resolve(tempLocation);
 					return;
 				}
@@ -127,7 +130,7 @@ export default class GDSong extends GuildComponent implements Song {
 			}
 			catch (error) {
 				this.error(`{error: ${error.message}} while updating info for song with {url: ${this._songInfo.url}}. {stack:${error.stack}}`);
-				resolve('');
+				resolve(tempLocation);
 			}
 		});
 	}

@@ -35,7 +35,7 @@ export default class PermissionSettings {
 	 * Inititallizes permissions if no permissions have been set yet
 	 * @param guild - Discord guild to get role ids from
 	 */
-	initPermissions(guild: Guild) {
+	initPermissions(guild: Guild): void {
 		// set defaults if no permissions set up yet
 		if (!this._permissionSettings) {
 			this._permissionSettings = {};
@@ -62,7 +62,7 @@ export default class PermissionSettings {
 	 * @param command - command to change permissions for
 	 * @param roleId - discord role id for permissions you would like to add
 	 */
-	addPermission(command: string, roleId: string) {
+	addPermission(command: string, roleId: string): void {
 		// remove the permission in case it already existed
 		this.removePermission(command, roleId);
 		this._permissionSettings[command].push(roleId);

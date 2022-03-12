@@ -50,6 +50,7 @@ export default class YTSong extends GuildComponent implements Song {
 	 */
 	async fetchData(): Promise<void> {
 		try {
+			this.debug(`Fetching data for song with {url:${this._songInfo.url}}`);
 			const info = await ytdl.getBasicInfo(this._songInfo.url);
 			if (!info) {
 				this.info(`No song info found for song with {url: ${this._songInfo.url}}`);

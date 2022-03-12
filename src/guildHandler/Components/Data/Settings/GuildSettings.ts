@@ -39,7 +39,7 @@ export default class GuildSettings {
 	 * Exports the settings in the format to be saved in database
 	 * @returns object to be saved in database
 	 */
-	export() { return this._guildSettings; }
+	export(): GuildConfig { return this._guildSettings; }
 
 	// getters and setters
 	get configured() { return this._guildSettings.configured; }

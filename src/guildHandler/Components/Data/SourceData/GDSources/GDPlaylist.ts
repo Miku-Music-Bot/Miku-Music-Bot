@@ -59,24 +59,24 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 		// Create songs
 		for (let i = 0; i < info.songs.length; i++) {
 			const song = new GDSong(this.guildHandler, info.songs[i]);
-			this._addSong(song);
+			this.addSong(song);
 		}
 
 		if (save) { this.events.emit('newSettings'); }
 	}
 
 	/**
-	 * _addSong()
+	 * addSong()
 	 * 
 	 * Checks if song already exists in playlist anda dds a song to the playlist
 	 * @param song - song to add to playlist
 	 */
-	private _addSong(song: GDSong) {
+	addSong(song: GDSong): void {
 		// remove the song just in case it already exists
 		this._removeSong(song.id);
 		this._index.add(song);
 		song.events.on('newSettings', (s) => {
-			this._addSong(s);
+			this.addSong(s);
 			this.events.emit('newSettings');
 		});
 		this.events.emit('newSettings');
@@ -88,7 +88,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * Removes specified song from individual songs
 	 * @param id - song id to remove from individual songs
 	 */
-	private _removeSong(id: number) {
+	private _removeSong(id: number): void {
 		// find item that exactly matches id property
 		const results = this._index.search({
 			$and: [{ id: '=' + id }]
@@ -105,7 +105,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * @param url - google drive url
 	 * @returns google drive file/folder id
 	 */
-	private _getIdFromUrl(url: string) { return url.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]; }
+	private _getIdFromUrl(url: string): string { return url.match(/[-\w]{25,}(?!.*[-\w]{25,})/)[0]; }
 
 	/**
 	 * fetchData()
@@ -113,9 +113,10 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * Grabs updated info for playlist
 	 */
 	async fetchData(): Promise<void> {
+		if (!this._url) { return; }
 		return new Promise((resolve) => {
-			if (!this._url) { resolve(); return; }
 			try {
+				this.debug(`Fetching data for playlist with {url:${this._url}}`);
 				const id = this._getIdFromUrl(this._url);
 				if (!id) {
 					this.warn(`Google drive song with {url: ${this._url}} does not have a valid file id`);
@@ -174,15 +175,17 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 						const removed = this._songs.filter(({ url: urlInSongs }) => !list.some(({ id: urlInInfo }) => this._getIdFromUrl(urlInInfo) === urlInSongs));
 
 						// add new non existing songs to songs
+						this.debug(`Found ${notExisting.length} songs that aren't in the playlist yet`);
 						for (let i = 0; i < notExisting.length; i++) {
 							// add new song after creating it
 							const song = new GDSong(this.guildHandler, { title: notExisting[i].name, url: `https://drive.google.com/file/d/${notExisting[i].id}` });
 							const fileNameSplit = notExisting[i].name.split('.');
 							song.ext = fileNameSplit[fileNameSplit.length - 1];
-							this._addSong(song);
+							this.addSong(song);
 						}
 
 						// remove removed songs from songs
+						this.debug(`Found ${removed.length} songs that aren't in the playlist anymore`);
 						for (let i = 0; i < removed.length; i++) {
 							this._removeSong(removed[i].id);
 						}
@@ -204,13 +207,17 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * @param id - id of song to get
 	 * @returns Song if found, undefined if not
 	 */
-	getSong(id: number) {
+	getSong(id: number): GDSong {
+		this.debug(`Getting song with {id:${id}}`);
 		// search for song that exactly matches id property
 		const results = this._index.search({
 			$and: [{ id: `=${id}` }]
 		});
 
-		if (results.length === 0) return undefined;
+		if (results.length === 0) {
+			this.debug(`Song with {id:${id}} not found, returning nothing`);
+			return undefined;
+		}
 		return results[0].item;
 	}
 
@@ -220,7 +227,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * Gets all the songs in this playlist
 	 * @returns Array containing all songs in the playlist
 	 */
-	getAllSongs() { return this._songs; }
+	getAllSongs(): Array<GDSong> { return this._songs; }
 
 
 	/**
@@ -239,7 +246,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	 * Exports the settings in the format to be saved in database		
 	 * @returns object to be saved in database
 	 */
-	export() {
+	export(): PlaylistConfig {
 		const songs = [];
 		for (let i = 0; i < this._songs.length; i++) { songs.push(this._songs[i].export()); }
 		return {
