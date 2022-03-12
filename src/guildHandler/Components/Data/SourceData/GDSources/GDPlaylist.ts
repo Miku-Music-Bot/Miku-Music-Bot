@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import * as path from 'path';
+import path from 'path';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
 

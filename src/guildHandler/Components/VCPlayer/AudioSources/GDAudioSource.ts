@@ -18,7 +18,8 @@ type EventTypes = {
 	bufferReady: () => void
 }
 
-const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
+const TEMP_DIR = process.env.TEMP_DIR;
+const MAX_READ_RETRY = parseInt(process.env.MAX_READ_RETRY);
 
 // audio constants
 const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
@@ -243,7 +244,6 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			// save the chunk as <chunkNumber>.pcm
 			try {
 				const loc = path.join(this._tempLocation, chunkName.toString() + '.pcm');
-				this.debug(`Writing chunk to {location:${loc}}`);
 				await fs.promises.writeFile(loc, data);
 			}
 			catch (e) {
@@ -325,7 +325,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < 21) {
+		if (attempts < MAX_READ_RETRY + 1) {
 			const loc = path.join(this._tempLocation, chunkNum.toString() + '.pcm');
 			try {
 				const chunk = await fs.promises.readFile(loc);
@@ -455,7 +455,6 @@ export default class GDSource extends GuildComponent implements AudioSource {
 	 */
 	getPlayedDuration(): number {
 		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
-		this.debug(`Determined that song has payed for ${duration}`);
 		return duration;
 	}
 

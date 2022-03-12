@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 import mm from 'music-metadata';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';

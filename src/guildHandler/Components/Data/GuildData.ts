@@ -1,5 +1,5 @@
-import * as mongoDb from 'mongodb';
-import * as path from 'path';
+import mongoDb from 'mongodb';
+import path from 'path';
 
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../../GuildHandler';
@@ -54,7 +54,7 @@ export default class GuildData extends GuildComponent {
 		this._saveCount = 0;
 		this._guildId = id;
 
-		this._initData(1000, cb);
+		this._initData(1_000, cb);
 	}
 
 	/**

@@ -1,5 +1,5 @@
 import * as Voice from '@discordjs/voice';
-import * as path from 'path';
+import path from 'path';
 import { PassThrough } from 'stream';
 
 import GuildComponent from '../GuildComponent';
@@ -40,7 +40,7 @@ export default class VCPlayer extends GuildComponent {
 	 * Joins a voice channel
 	 * @param channelId - channel id of voice channel to join
 	 */
-	private async _joinChannelId(channelId: string): Promise<unknown> {
+	private async _joinChannelId(channelId: string): Promise<boolean> {
 		try {
 			this.debug(`Attempting to join voice channel with {channelId:${channelId}}`);
 			this._voiceConnection = Voice.joinVoiceChannel({
@@ -55,10 +55,14 @@ export default class VCPlayer extends GuildComponent {
 				this.error(`{error: ${error.message}} on voice connection to {channelId: ${channelId}}, leaving. {stack:${error.stack}}`);
 				this.leave();
 			});
-		}
-		catch (error) { this.error(`{error:${error.message}} while joining voice channel with {channelId: ${channelId}}. {stack:${error.stack}}`); }
 
-		return Voice.entersState(this._voiceConnection, Voice.VoiceConnectionStatus.Ready, 5_000);
+			await Voice.entersState(this._voiceConnection, Voice.VoiceConnectionStatus.Ready, 5_000);
+			return true;
+		}
+		catch (error) {
+			this.error(`{error:${error.message}} while joining voice channel with {channelId: ${channelId}}. {stack:${error.stack}}`);
+			return false;
+		}
 	}
 
 	/**
@@ -140,7 +144,7 @@ export default class VCPlayer extends GuildComponent {
 		this._currentSource.pause();
 		const success = this._audioPlayer.pause(true);
 		if (success) { this.info('Paused song'); }
-		else { this.warn('Failed to pause audio player'); }
+		else { this.debug('Failed to pause audio player'); }
 	}
 
 	/**
@@ -160,7 +164,7 @@ export default class VCPlayer extends GuildComponent {
 		this._currentSource.resume();
 		const success = this._audioPlayer.unpause();
 		if (success) { this.info('Resumed song'); }
-		else { this.warn('Failed to resume audio player'); }
+		else { this.debug('Failed to resume audio player'); }
 	}
 
 	/**
@@ -193,6 +197,7 @@ export default class VCPlayer extends GuildComponent {
 		if (this.connected) {							// if still connected (finishedSong() was not called by leave()), play next song
 			this.debug('Currently connected to voice channel, ask queue to play next song');
 			this.queue.nextSong();
+			return;
 		}
 		this.debug('Currently not connected to voice channel, doing nothing');
 	}

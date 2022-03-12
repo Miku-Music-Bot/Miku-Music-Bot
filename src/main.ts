@@ -1,16 +1,16 @@
+import path from 'path';
+import Discord from 'discord.js';
 
-import * as path from 'path';
-import * as Discord from 'discord.js';
-
-import * as dotenv from 'dotenv';	// grab env variables
+import dotenv from 'dotenv';	// grab env variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import BotMaster from './GuildMaster';
 import startWebServer from './webPanel/webPanel';
 import newLogger from './Logger';
 
-const GUILD_REFRESH_INTERVAL = parseInt(process.env.GUILD_REFRESH_INTERVAL);
+const GUILD_CREATE_RATE = parseInt(process.env.GUILD_CREATE_RATE);
 const LOG_DIR = process.env.LOG_DIR;
+
 /**
  * main.js
  *
@@ -19,19 +19,8 @@ const LOG_DIR = process.env.LOG_DIR;
  * Starts handlers for each guild
  * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
-
 const log = newLogger(path.join(LOG_DIR, 'main'));
 const botMaster = new BotMaster(log);
-
-/**
- * checks guilds bot is in and adds handlers for all of them just in case
- */
-function refreshGuilds() {
-	const guildList = bot.guilds.cache.map((guild) => guild.id);
-	for (let i = 0; i < guildList.length; i++) {
-		botMaster.newGuild(guildList[i]);
-	}
-}
 
 // Set up discord events
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;		// discord bot token
@@ -62,8 +51,8 @@ bot.on('messageCreate', async (message) => {
 	if (!message.guildId) return;						// ignore if is a dm
 
 	const guild = botMaster.getGuild(message.guildId);
-	if (guild) { 
-		const success = await guild.messageHandler(message); 
+	if (guild) {
+		const success = await guild.messageHandler(message);
 		if (success) { try { await message.delete(); } catch { /* */ } }
 	}
 });
@@ -72,7 +61,7 @@ bot.on('messageCreate', async (message) => {
 bot.on('interactionCreate', async (interaction) => {
 	if (!interaction.isButton()) return;				// ignore if not a button press
 	if (!interaction.guildId) return;
-	
+
 	// Send to correct guild handler and update to respond to discord to indicate that reaction has been recieved
 	const guild = botMaster.getGuild(interaction.guildId);
 	if (guild) {
@@ -91,9 +80,14 @@ bot.on('messageReactionAdd', async (reaction) => {
 bot.once('ready', () => {
 	log.info(`Logged in to discord as ${bot.user.tag}`);
 
-	// refresh guilds every minute
-	setTimeout(refreshGuilds, 5000);
-	setInterval(refreshGuilds, GUILD_REFRESH_INTERVAL);
+	// create handlers for existing guilds
+	setTimeout(async () => {
+		const guildList = bot.guilds.cache.map((guild) => guild.id);
+		for (let i = 0; i < guildList.length; i++) {
+			botMaster.newGuild(guildList[i]);
+			await new Promise(resolve => setTimeout(resolve, GUILD_CREATE_RATE));
+		}
+	}, GUILD_CREATE_RATE);
 });
 
 // start web panel

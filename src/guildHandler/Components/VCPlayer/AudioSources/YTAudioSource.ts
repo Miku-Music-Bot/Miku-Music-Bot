@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as crypto from 'crypto';
+import path from 'path';
+import crypto from 'crypto';
 import EventEmitter from 'events';
-import * as fs from 'fs';
+import fs from 'fs';
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
@@ -21,6 +21,7 @@ type EventTypes = {
 
 const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
 const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
+const MAX_READ_RETRY = parseInt(process.env.MAX_READ_RETRY);
 
 // audio constants
 const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
@@ -286,7 +287,6 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			// save the chunk as <chunkNumber>.pcm
 			try {
 				const loc = path.join(this._tempLocation, chunkName.toString() + '.pcm');
-				this.debug(`Writing chunk to {location:${loc}}`);
 				await fs.promises.writeFile(loc, data);
 			}
 			catch (e) {
@@ -379,7 +379,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < 21) {
+		if (attempts < MAX_READ_RETRY + 1) {
 			const loc = path.join(this._tempLocation, chunkNum.toString() + '.pcm');
 			try {
 				const chunk = await fs.promises.readFile(loc);
@@ -513,7 +513,6 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 */
 	getPlayedDuration(): number {
 		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
-		this.debug(`Determined that song has payed for ${duration}`);
 		return duration;
 	}
 

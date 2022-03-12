@@ -1,10 +1,12 @@
-import * as Discord from 'discord.js';
-import * as path from 'path';
+import Discord from 'discord.js';
+import path from 'path';
 
 import GuildComponent from './GuildComponent';
 import type GuildHandler from '../GuildHandler';
 import { InteractionInfo } from '../GHChildInterface';
 
+const SHOW_NUM_ITEMS = parseInt(process.env.SHOW_NUM_ITEMS);
+const NOTIFICATION_LIFE = parseInt(process.env.NOTIFICATION_LIFE);
 const UI_REFRESH_RATE = parseInt(process.env.UI_REFRESH_RATE);
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
 const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
@@ -48,14 +50,12 @@ export default class UI extends GuildComponent {
 	 * @returns escaped string
 	 */
 	escapeString(string: string) {
-		this.debug(`Recieved {string:${string}} to escape`);
 		let escaped = '';
 		const toEscape = ['*', '_', '~', '`', '>', '|'];
 		for (let i = 0; i < string.length; i++) {
 			if (toEscape.indexOf(string[i]) === -1) { escaped += string[i]; }
 			else { escaped += `\\${string[i]}`; }
 		}
-		this.debug(`Escaped string: ${escaped}}`);
 		return escaped;
 	}
 
@@ -77,7 +77,7 @@ export default class UI extends GuildComponent {
 			userInterface
 				.setTitle('Idle - Listening for Commands')
 				.setDescription('Click the "help" button below if you need help')
-				.setThumbnail(`${BOT_DOMAIN}/thumbnails/defaultThumbnail.jps`);
+				.setThumbnail(`${BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`);
 		}
 		else {
 			// Check song status, (paused over buffering over playing)
@@ -164,7 +164,7 @@ export default class UI extends GuildComponent {
 
 			// Queue information
 			let queueTxt = '';
-			for (let i = 0; i < 3; i++) {
+			for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
 				if (i === queueInfo.nextInQueue.length) {
 					if (queueInfo.repeatQueue === 0) { queueTxt += '**>> End Of Queue <<**'; break; }
 					else { queueTxt += '**>> Repeat Queue <<**'; break; }
@@ -188,7 +188,7 @@ export default class UI extends GuildComponent {
 			// Autoplay information
 			let autoplayTxt = '';
 			if (queueInfo.autoplay) {
-				for (let i = 0; i < 3; i++) {
+				for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
 					if (i === queueInfo.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
 					// Index number for item
 					let itemText = `${(queueInfo.nextInAutoplay[i].index + 1).toString()}. `;
@@ -297,21 +297,15 @@ export default class UI extends GuildComponent {
 	 * Updates the UI of the bot
 	 */
 	async updateUI(): Promise<void> {
-		this.debug('Updating UI');
 		clearInterval(this._nextRefreshTimeout);
 		const ui = this._createUI();
 		if (this._lastMessageJSON !== JSON.stringify(ui)) {
+			this.debug('UI is now different, needs to be updated');
 			const success = await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
-			if (success) {
-				this.debug('UI was updated successfully');
-				this._lastMessageJSON = JSON.stringify(ui);
-			}
-			this.warn('UI was not updated successfully');
+			if (success) { this._lastMessageJSON = JSON.stringify(ui); }
+			else { this.error(`UI was not updated successfully. {stack:${new Error().stack}}`); }
 		}
-		this._nextRefreshTimeout = setTimeout(() => {
-			this.debug(`${UI_REFRESH_RATE} ms has passed since UI was last updated, updating UI`);
-			this.updateUI();
-		}, UI_REFRESH_RATE);
+		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, UI_REFRESH_RATE);
 	}
 
 	/**
@@ -396,7 +390,7 @@ export default class UI extends GuildComponent {
 				return true;
 			}
 			catch (error) {
-				this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+				this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}} for UI message`);
 				return false;
 			}
 		};
@@ -412,7 +406,7 @@ export default class UI extends GuildComponent {
 				this._uiMessageId = id;
 				this._lastMessageJSON = JSON.stringify(ui);
 			}
-			this.error('UI was not sent successfully');
+			else { this.error(`UI was not sent successfully. {stack:${new Error().stack}}`); }
 		}
 
 		// Update message once done
@@ -481,7 +475,7 @@ export default class UI extends GuildComponent {
 			const message = await channel.messages.fetch(messageId);
 
 			if (this._interactionListeners[messageId].life) {
-				this.debug(`Message with {messageId:${messageId}} has a finite life, reseting timeout`);
+				this.debug(`Message with {messageId:${messageId}} has a finite life, resetting timeout`);
 
 				clearInterval(this._interactionListeners[messageId].timeout);
 				this._interactionListeners[messageId].timeout = setTimeout(() => {
@@ -576,7 +570,7 @@ export default class UI extends GuildComponent {
 
 					switch (customId.type) {
 						case ('close'): {
-							this.debug('Received "close" interaction, deleting message');
+							this.info('Received "close" interaction, deleting message');
 							this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 							break;
 						}
@@ -588,12 +582,12 @@ export default class UI extends GuildComponent {
 					return true;
 				}
 				catch (error) {
-					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+					this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}} for notification`);
 					return false;
 				}
 			};
 
-			this.sendEmbed({ embeds: [notification], components: [row] }, 15_000, interactionHandler);
+			this.sendEmbed({ embeds: [notification], components: [row] }, NOTIFICATION_LIFE, interactionHandler);
 		}
 		catch (error) { this.warn(`{error: ${error}} while creating/sending notification message with {message: ${message}}`); }
 	}
@@ -645,7 +639,7 @@ export default class UI extends GuildComponent {
 
 						switch (customId.type) {
 							case ('close'): {
-								this.debug('Received "close" interaction, deleting message');
+								this.info('Received "close" interaction, deleting message');
 								this.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 								break;
 							}
@@ -657,7 +651,7 @@ export default class UI extends GuildComponent {
 						return true;
 					}
 					catch (error) {
-						this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}}`);
+						this.warn(`{error: ${error}} while handling {interaction: ${JSON.stringify(interaction)}} for error message`);
 						return false;
 					}
 				};
@@ -677,7 +671,7 @@ export default class UI extends GuildComponent {
 	 */
 	async buttonPressed(interaction: InteractionInfo): Promise<boolean> {
 		// grabs the right interaction handler and calls it
-		try { 
+		try {
 			this.debug(`Recieved interaction with {customId:${interaction.customId}}`);
 			return await this._interactionListeners[interaction.parentMessageId].interactionHandler(interaction);
 		}

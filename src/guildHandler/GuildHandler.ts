@@ -1,7 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as Discord from 'discord.js';
-import * as winston from 'winston';
+import fs from 'fs';
+import path from 'path';
+import Discord from 'discord.js';
+import winston from 'winston';
 import { drive, drive_v3 } from '@googleapis/drive';
 import { AuthPlus } from 'googleapis-common';
 
@@ -50,7 +50,6 @@ export default class GuildHandler {
 	 * @param id - discord guild id for GuildHander to be responsible for
 	 */
 	constructor(id: string) {
-
 		// set up logger
 		const filename = path.basename(__filename);
 		const logger = newLogger(path.join(LOG_DIR, id));
@@ -67,11 +66,11 @@ export default class GuildHandler {
 		try {
 			const authPlus = new AuthPlus();
 			const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
-			this.info(`Attempting to read google drive token from: "${GOOGLE_TOKEN_LOC}"`);
+			this.debug(`Attempting to read google drive token from: "${GOOGLE_TOKEN_LOC}"`);
 			const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
 			auth.setCredentials(JSON.parse(token));
 			this.drive = drive({ version: 'v3', auth });
-			this.info('Successfully authenticated with Google Drive Api');
+			this.info('Successfully authenticated with Google Drive API');
 		}
 		catch (error) {
 			this.error(`{error:${error.message}} while trying to read google drive token. {stack:${error.stack}}`);

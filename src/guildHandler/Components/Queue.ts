@@ -84,6 +84,14 @@ export default class Queue extends GuildComponent {
 	 */
 	private _resolveIndex(i: number): ResolvedIndex {
 		this.debug(`Resolving {index:${i}}`);
+		if (i <= 0) {
+			this.error('Index out of bounds');
+			return {
+				from: 'notFound',
+				index: i,
+				song: undefined
+			};
+		}
 		if (this._queue.length > i) {
 			this.debug(`Index is less than {queueLength:${this._queue.length}}, found song with {url:${this._queue[i].url}}`);
 			return {
@@ -166,7 +174,7 @@ export default class Queue extends GuildComponent {
 	 * Advances a song to the top of the queue
 	 * @param index - index of the song to advance
 	 */
-	advance(index: number) {
+	advance(index: number): void {
 		this.debug(`Attempting to advance song at {index:${index}}`);
 		const removed = this.removeSong(index);
 		if (removed) {
@@ -181,7 +189,7 @@ export default class Queue extends GuildComponent {
 	 * 
 	 * Clears the current queue
 	 */
-	clearQueue() {
+	clearQueue(): void {
 		this.debug('Clearing queue');
 		for (let i = 0; i < this._queue.length; i++) { this._queue[i].reqBy = ''; }
 		this._queue = [];
@@ -195,7 +203,7 @@ export default class Queue extends GuildComponent {
 	 * 
 	 * Tells the queue that we have stopped playing
 	 */
-	stop() {
+	stop(): void {
 		this.debug('Stopping queue');
 		this._nowPlaying = false;
 		this.clearQueue();
@@ -284,11 +292,13 @@ export default class Queue extends GuildComponent {
 	 * 
 	 * Queues up the next song if queue is not finished, otherwise does nothing
 	 */
-	nextSong() {
+	nextSong(): void {
 		this.debug('Moving onto next song');
 		this._nowPlaying = true;
-		this._lastPlayed = this._nowPlayingSong;
-		this.debug(`Just played song with {url:${this._lastPlayed.title}}`);
+		if (this._nowPlayingSong) {
+			this._lastPlayed = this._nowPlayingSong;
+			this.debug(`Just played song with {url:${this._lastPlayed.title}}`);
+		}
 
 		// if repeatSong, play the same song again
 		if ((this._repeatSong > 0 || this._repeatSong === -1) && this._lastPlayed) {
@@ -432,7 +442,7 @@ export default class Queue extends GuildComponent {
 	 * Displays the queue
 	 * @param page - page of the queue to show
 	 */
-	async showPage(page: number) {
+	async showPage(page: number): Promise<void> {
 		this.debug(`Attempting to show {page:${page}} of queue`);
 		if (this._msgId) {
 			this.debug('Show queue message already exists, attempting to update it');
@@ -452,12 +462,12 @@ export default class Queue extends GuildComponent {
 
 				switch (customId.type) {
 					case ('page'): {
-						this.debug(`Recieved "page" interaction, showing {page:${customId.pageNum}} of queue`);
+						this.info(`Recieved "page" interaction, showing {page:${customId.pageNum}} of queue`);
 						this.showPage(customId.pageNum);
 						break;
 					}
 					case ('close'): {
-						this.debug('Recieved "close" interaction, deleting show queue message');
+						this.info('Recieved "close" interaction, deleting show queue message');
 						await this.ui.deleteMsg(interaction.parentChannelId, interaction.parentMessageId);
 						break;
 					}
@@ -496,7 +506,6 @@ export default class Queue extends GuildComponent {
 		};
 
 		if (!this._nowPlaying) return info;
-
 
 		info.lastPlayed = this._lastPlayed;
 		info.nowPlayingSong = this._nowPlayingSong;
@@ -550,7 +559,7 @@ export default class Queue extends GuildComponent {
 	 * Sets the number of times to repeat song
 	 * @param repeats - number of times to repeat
 	 */
-	setRepeatSong(repeats: number) {
+	setRepeatSong(repeats: number): void {
 		this.debug(`Attempting to set repeat song to {repeats:${repeats}}`);
 		if (repeats >= -1) {
 			this.debug(`{repeats:${repeats}} was a valid setting, setting repeat song to it`);
@@ -564,7 +573,7 @@ export default class Queue extends GuildComponent {
 	 * Sets the number of times to repeat song
 	 * @param repeats - number of times to repeat
 	 */
-	setRepeatQueue(repeats: number) {
+	setRepeatQueue(repeats: number): void {
 		this.debug(`Attempting to set repeat queue to {repeats:${repeats}}`);
 		if (repeats >= -1) {
 			this.debug(`{repeats:${repeats}} was a valid setting, setting repeat queue to it`);
@@ -578,7 +587,7 @@ export default class Queue extends GuildComponent {
 	 * Toggles the shuffle on or off if no argument given, sets state to given state otherwise
 	 * @param state - state to set shuffle to
 	 */
-	toggleShuffle(state?: boolean) {
+	toggleShuffle(state?: boolean): void {
 		this.debug(`Toggling shuffle to {state:${state}}`);
 		if (typeof state === 'undefined') {
 			state = !this.data.guildSettings.shuffle;

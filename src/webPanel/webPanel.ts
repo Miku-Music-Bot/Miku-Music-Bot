@@ -1,8 +1,8 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import express from 'express';
-import * as winston from 'winston';
+import winston from 'winston';
 import { AuthPlus } from 'googleapis-common';
-import * as path from 'path';
+import path from 'path';
 
 import type BotMaster from '../GuildMaster';
 
@@ -89,21 +89,21 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 
 				try {
 					fs.accessSync(GOOGLE_TOKEN_LOC);
-					log.info(`Found Google Drive token data at {location:${GOOGLE_TOKEN_LOC}}`);
+					log.debug(`Found Google Drive token data at {location:${GOOGLE_TOKEN_LOC}}`);
 					resolve();
 				}
 				catch {
-					log.info(`Google Drive token data not found at {location:${GOOGLE_TOKEN_LOC}}, head to "${GOOGLE_REDIRECT_URI}", to authenticate Google Drive API`);
+					log.info(`Google Drive token data not found at "${GOOGLE_TOKEN_LOC}", head to "${GOOGLE_REDIRECT_URI}", to authenticate Google Drive API`);
 
 					// Keep checking for file
-					const reCheck = setInterval(() => {
+					const recheck = setInterval(() => {
 						try {
 							fs.accessSync(GOOGLE_TOKEN_LOC);
 							log.info(`Found Google Drive token data at {location:${GOOGLE_TOKEN_LOC}}`);
-							clearInterval(reCheck);
+							clearInterval(recheck);
 							resolve();
 						} catch { /* */ }
-					}, 1000);
+					}, 5_000);
 				}
 			});
 		} catch (error) {

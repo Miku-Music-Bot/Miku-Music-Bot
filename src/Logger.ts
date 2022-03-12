@@ -1,6 +1,7 @@
-import * as winston from 'winston';
+import winston from 'winston';
 import 'winston-daily-rotate-file';
 
+const NODE_ENV = process.env.NODE_ENV;
 const LOG_FILE_NAME = process.env.LOG_FILE_NAME;
 const LOG_DATE_PATTERN = process.env.LOG_DATE_PATTERN;
 const ZIP_LOGS = process.env.ZIP_LOGS == 'true';
@@ -28,7 +29,20 @@ export default function newLogger(logDir: string): winston.Logger {
 			new winston.transports.DailyRotateFile({
 				level: 'debug',
 				dirname: logDir,
-				filename: LOG_FILE_NAME,
+				filename: `Debug${LOG_FILE_NAME}`,
+				datePattern: LOG_DATE_PATTERN,
+				zippedArchive: ZIP_LOGS,
+				maxSize: LOG_MAX_SIZE,
+				maxFiles: LOG_MAX_FILES,
+				format: winston.format.combine(
+					winston.format.timestamp(),
+					winston.format.json(),
+				),
+			}),
+			new winston.transports.DailyRotateFile({
+				level: 'info',
+				dirname: logDir,
+				filename: `Main${LOG_FILE_NAME}`,
 				datePattern: LOG_DATE_PATTERN,
 				zippedArchive: ZIP_LOGS,
 				maxSize: LOG_MAX_SIZE,
@@ -42,20 +56,31 @@ export default function newLogger(logDir: string): winston.Logger {
 		exitOnError: false,
 	});
 
+	// colors because fun
+	winston.addColors({
+		debug: 'blue',
+		info: 'green',
+		warn: 'yellow',
+		error: 'red',
+	});
+
 	// if not in production, also output to console
-	if (process.env.NODE_ENV !== 'production') {
+	if (NODE_ENV !== 'PRODUCTION') {
 		logger.add(new winston.transports.Console({
 			format: winston.format.combine(
 				winston.format.colorize(),
 				winston.format.simple(),
 			),
 		}));
-		winston.addColors({
-			debug: 'blue',
-			info: 'green',
-			warn: 'yellow',
-			error: 'red',
-		});
+	}
+	else {
+		logger.add(new winston.transports.Console({
+			format: winston.format.combine(
+				winston.format.colorize(),
+				winston.format.simple(),
+			),
+			level: 'info'
+		}));
 	}
 
 	return logger;
