@@ -1,4 +1,4 @@
-# Miku-DiscordMusicBot
+# Miku-DiscordMusicBot v1.0.2 [DEPRECATED] please use v2.0.0
 A discord bot that plays music from Youtube and local files and can apply audio filters with ffmpeg.
 
 1. Install NodeJS from https://nodejs.org/en/download/
