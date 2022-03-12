@@ -1,7 +1,12 @@
 import { Guild } from 'discord.js';
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 
 import { PermissionsConfig, PERMISSIONS_DEFAULT } from './config/permissionConfig';
+
+type EventTypes = {
+	newSettings: () => void,
+}
 
 /**
  * PermissionSettings
@@ -9,14 +14,15 @@ import { PermissionsConfig, PERMISSIONS_DEFAULT } from './config/permissionConfi
  * Contains bot's guild settings
  * Emits 'newSettings' event when settings are changed
  */
-export default class PermissionSettings extends EventEmitter {
+export default class PermissionSettings {
+	events: TypedEmitter<EventTypes>;
 	private _permissionSettings: PermissionsConfig;
 
 	/**
 	 * @param settings - object containing audio settings
 	 */
 	constructor(settings?: PermissionsConfig) {
-		super();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 
 		// apply settings
 		if (!settings) return;
@@ -46,7 +52,7 @@ export default class PermissionSettings extends EventEmitter {
 			for (let i = 0; i < PERMISSIONS_DEFAULT.admin.length; i++) {
 				this._permissionSettings[PERMISSIONS_DEFAULT.admin[i]] = [];
 			}
-			setImmediate(() => { this.emit('newSettings'); });
+			this.events.emit('newSettings');
 		}
 	}
 
@@ -60,7 +66,7 @@ export default class PermissionSettings extends EventEmitter {
 		// remove the permission in case it already existed
 		this.removePermission(command, roleId);
 		this._permissionSettings[command].push(roleId);
-		this.emit('newSettings');
+		this.events.emit('newSettings');
 	}
 
 	/**
@@ -69,14 +75,14 @@ export default class PermissionSettings extends EventEmitter {
 	 * @param command - command to change permissions for
 	 * @param roleId - discord role id for permissions you would like to add
 	 */
-	removePermission(command: string, roleId: string) {
+	removePermission(command: string, roleId: string): void {
 		// find location of the roleId in the permissions list
 		const location = this._permissionSettings[command].indexOf(roleId);
 
 		if (location !== -1) {
 			// if found, remove it and save to database
 			this._permissionSettings[command].splice(location, 1);
-			this.emit('newSettings');
+			this.events.emit('newSettings');
 		}
 	}
 
@@ -87,7 +93,7 @@ export default class PermissionSettings extends EventEmitter {
 	 * @param command - name of command to get permissions for
 	 * @returns list of role ids for allowed roles
 	 */
-	getFor(command: string) { return this._permissionSettings[command]; }
+	getFor(command: string): Array<string> { return this._permissionSettings[command]; }
 
 	/**
 	 * export()
@@ -95,5 +101,5 @@ export default class PermissionSettings extends EventEmitter {
 	 * Exports the settings in the format to be saved in database
 	 * @returns object to be saved in database
 	 */
-	export() { return this._permissionSettings; }
+	export(): PermissionsConfig { return this._permissionSettings; }
 }

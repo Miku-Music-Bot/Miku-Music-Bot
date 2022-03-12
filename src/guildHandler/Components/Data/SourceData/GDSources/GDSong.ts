@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import mm from 'music-metadata';
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
 import crypto from 'crypto';
@@ -10,6 +11,10 @@ import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
 import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
+
+type EventTypes = {
+	newSettings: (song: GDSong) => void,
+}
 
 const TEMP_DIR = process.env.TEMP_DIR;
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
@@ -23,7 +28,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
  * Represents a song from google drive
  */
 export default class GDSong extends GuildComponent implements Song {
-	events: EventEmitter;
+	events: TypedEmitter<EventTypes>;
 	private _songInfo: SongConfig;
 
 	/**
@@ -32,7 +37,7 @@ export default class GDSong extends GuildComponent implements Song {
 	 */
 	constructor(guildHandler: GuildHandler, info: SongConfig) {
 		super(guildHandler, path.basename(__filename));
-		this.events = new EventEmitter();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 
 		// set defaults
 		let save = false;
@@ -106,7 +111,7 @@ export default class GDSong extends GuildComponent implements Song {
 										this.events.emit('newSettings', this);
 										resolve(tempLocation);
 									})
-									.on('error', async (e) => { 
+									.on('error', async (e) => {
 										this.warn(`{error: ${e}} while parsing image for song with {url: ${this._songInfo.url}}`);
 										if (!save) { try { await fs.promises.unlink(tempLocation); } catch { /* */ } }
 										this.events.emit('newSettings', this);
@@ -144,16 +149,16 @@ export default class GDSong extends GuildComponent implements Song {
 	get type() { return this._songInfo.type; }
 	get url() { return this._songInfo.url; }
 	get title() { return this._songInfo.title; }
-	set title(title: string) { this._songInfo.title = title; this.events.emit('newSettings'); }
+	set title(title: string) { this._songInfo.title = title; this.events.emit('newSettings', this); }
 
 	get duration() { return this._songInfo.duration; }
-	set duration(duration: number) { this._songInfo.duration = duration; this.events.emit('newSettings'); }
+	set duration(duration: number) { this._songInfo.duration = duration; this.events.emit('newSettings', this); }
 
 	get thumbnailURL() { return this._songInfo.thumbnailURL; }
-	set thumbnailURL(thumbnailURL: string) { this._songInfo.thumbnailURL = thumbnailURL; this.events.emit('newSettings'); }
+	set thumbnailURL(thumbnailURL: string) { this._songInfo.thumbnailURL = thumbnailURL; this.events.emit('newSettings', this); }
 
 	get artist() { return this._songInfo.artist; }
-	set artist(artist: string) { this._songInfo.artist = artist; this.events.emit('newSettings'); }
+	set artist(artist: string) { this._songInfo.artist = artist; this.events.emit('newSettings', this); }
 
 	get live() { return this._songInfo.live; }
 	get durationString() {

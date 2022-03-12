@@ -1,7 +1,8 @@
 import Fuse from 'fuse.js';
-import * as path from 'path';
+import path from 'path';
 import ytpl = require('ytpl');
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 
 import GuildHandler from '../../../../GuildHandler';
 import GuildComponent from '../../../GuildComponent';
@@ -9,11 +10,16 @@ import Playlist from '../Playlist';
 import { PlaylistConfig, PLAYLIST_DEFAULT } from '../sourceConfig';
 import YTSong from './YTSong';
 
+type EventTypes = {
+	newSettings: () => void,
+}
+
 const SEARCH_THRESHOLD = parseFloat(process.env.SEARCH_THRESHOLD);
 const SEARCH_DISTANCE = parseInt(process.env.SEARCH_DISTANCE);
 
 export default class YTPlaylist extends GuildComponent implements Playlist {
-	events: EventEmitter;
+	events: TypedEmitter<EventTypes>;
+	private _type: 'yt';
 	private _id: number;
 	private _title: string;
 	private _url: string;
@@ -26,7 +32,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 	 */
 	constructor(guildHandler: GuildHandler, plInfo?: PlaylistConfig) {
 		super(guildHandler, path.basename(__filename));
-		this.events = new EventEmitter();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 
 		// set defaults
 		let save = false;
@@ -37,7 +43,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			this.data.guildSettings.playlistIdCount++;
 		}
 		Object.assign(info, plInfo);
-
+		this._type = 'yt';
 		this._id = info.id;
 		this._title = info.title;
 		this._url = info.url;
@@ -57,7 +63,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			this._addSong(song);
 		}
 
-		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
+		if (save) { setImmediate(() => { this.events.emit('newSettings'); }); }
 	}
 
 	/**
@@ -202,6 +208,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 		};
 	}
 
+	get type() { return this._type; }
 	get id() { return this._id; }
 	get title() { return this._title; }
 	get url() { return this._url; }

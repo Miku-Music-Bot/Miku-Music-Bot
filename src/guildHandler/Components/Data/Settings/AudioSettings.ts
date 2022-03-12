@@ -1,6 +1,12 @@
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 
 import { AudioConfig, EQConfig, AUDIO_PRESETS, EQ_PRESETS } from './config/audioConfig';
+
+type EventTypes = {
+	newSettings: (a: AudioSettings) => void,
+	restartProcessor: () => void
+}
 
 /**
  * AudioSettings
@@ -8,7 +14,8 @@ import { AudioConfig, EQConfig, AUDIO_PRESETS, EQ_PRESETS } from './config/audio
  * Contains bot's audio settings for playback
  * Emits 'newSettings' event when settings are changed
  */
-export default class AudioSettings extends EventEmitter {
+export default class AudioSettings {
+	events: TypedEmitter<EventTypes>;
 	private _audioSettings: AudioConfig;
 	private _eqSettings: EQConfig;
 
@@ -16,18 +23,15 @@ export default class AudioSettings extends EventEmitter {
 	 * @param settings - object containing audio settings
 	 */
 	constructor(settings?: { audio: AudioConfig, eq: EQConfig }) {
-		super();
-
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 		// set defaults first
 		this._audioSettings = Object.assign({}, AUDIO_PRESETS.default);
 		this._eqSettings = Object.assign({}, EQ_PRESETS.default);
 
 		// apply settings
 		if (!settings) {
-			setImmediate(() => {
-				this.emit('newSettings', this);
-				this.emit('restartProcessor');
-			});
+			this.events.emit('newSettings', this);
+			this.events.emit('restartProcessor');
 			return;
 		}
 		Object.assign(this._audioSettings, settings.audio);
@@ -40,11 +44,11 @@ export default class AudioSettings extends EventEmitter {
 	 * Replaces settings with given settings and emits 'newSettings' event
 	 * @param settings - object containing audio settings
 	 */
-	newSettings(settings: AudioConfig) {
+	newSettings(settings: AudioConfig): void {
 		// should validate audio settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._audioSettings, settings);
-		this.emit('newSettings');
-		this.emit('restartProcessor');
+		this.events.emit('newSettings', this);
+		this.events.emit('restartProcessor');
 	}
 
 	/**
@@ -53,11 +57,11 @@ export default class AudioSettings extends EventEmitter {
 	 * Replaces settings with given settings and emits 'newSettings' event
 	 * @param eq - object containing eq settings
 	 */
-	newEQ(eq: EQConfig) {
+	newEQ(eq: EQConfig): void {
 		// should validate eq settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._eqSettings, eq);
-		this.emit('newSettings');
-		this.emit('restartProcessor');
+		this.events.emit('newSettings', this);
+		this.events.emit('restartProcessor');
 	}
 
 	/**
@@ -66,7 +70,9 @@ export default class AudioSettings extends EventEmitter {
 	 * Exports the settings in the format to be saved in database
 	 * @returns object to be saved in database
 	 */
-	export() { return { audio: this._audioSettings, eq: this._eqSettings }; }
+	export(): { audio: AudioConfig, eq: EQConfig } {
+		return { audio: this._audioSettings, eq: this._eqSettings };
+	}
 
 	// getters
 	get volume() { return this._audioSettings.volume; }

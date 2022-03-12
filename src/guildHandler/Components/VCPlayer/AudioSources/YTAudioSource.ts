@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
 import * as fs from 'fs';
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
@@ -41,7 +41,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
  */
 export default class YTSource extends GuildComponent implements AudioSource {
 	song: Song;
-	events: EventEmitter;
+	events: TypedEmitter<EventTypes>;
 	buffering: boolean;
 	destroyed: boolean;
 
@@ -102,7 +102,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				this.debug(`Buffer ready for song with {url: ${this.song.url}}`);
 				resolve();
 			});
-			this.events.once('error', () => {
+			this.events.once('fatalError', () => {
 				this.error(`Song with {url:${this.song.url}} encountered error before buffer was ready`);
 				reject();
 			});

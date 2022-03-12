@@ -6,10 +6,11 @@ import type GuildHandler from '../GuildHandler';
 import { InteractionInfo } from '../GHChildInterface';
 
 const UI_REFRESH_RATE = parseInt(process.env.UI_REFRESH_RATE);
-
 const BOT_DOMAIN = process.env.BOT_DOMAIN;
+const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
+const PROGRESS_BAR_LENGTH = parseInt(process.env.PROGRESS_BAR_LENGTH);
 
-export const GREY = '#5a676b';			// colors to be used
+export const GREY = '#5a676b';
 export const TEAL = '#86cecb';
 export const PINK = '#e12885';
 
@@ -65,9 +66,6 @@ export default class UI extends GuildComponent {
 	 * @return Discord message embed
 	 */
 	private _createUI(): Discord.MessageOptions {
-		// Max length of string to show song info
-		const songInfoMaxLength = 50;
-
 		// Get info about the queue
 		const queueInfo = this.queue.getUIInfo();
 
@@ -91,8 +89,8 @@ export default class UI extends GuildComponent {
 
 			// Song title
 			let title = queueInfo.nowPlayingSong.title;
-			if (queueInfo.nowPlayingSong.title.length > songInfoMaxLength) {
-				title = queueInfo.nowPlayingSong.title.substring(0, songInfoMaxLength - 3) + '...';
+			if (queueInfo.nowPlayingSong.title.length > MAX_SONG_INFO_LENGTH) {
+				title = queueInfo.nowPlayingSong.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 			}
 			userInterface.setTitle(this.ui.escapeString(title));
 
@@ -100,7 +98,6 @@ export default class UI extends GuildComponent {
 			userInterface.setThumbnail(queueInfo.nowPlayingSong.thumbnailURL);
 
 			// Create progress bar
-			const progressBarLength = 70;
 			let progressBar = '';
 			// Convert duration in sec to string and add to progress bar
 			let progress = this.vcPlayer.currentSource.getPlayedDuration();
@@ -116,7 +113,7 @@ export default class UI extends GuildComponent {
 
 			// Figure out where to put the indicator
 			progress = this.vcPlayer.currentSource.getPlayedDuration();
-			const lineLength = progressBarLength - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
+			const lineLength = PROGRESS_BAR_LENGTH - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
 			const indicatorLoc = Math.round(progress / this.vcPlayer.currentSource.song.duration * lineLength);
 			// Create bar
 			for (let i = 0; i < lineLength; i++) {
@@ -154,8 +151,8 @@ export default class UI extends GuildComponent {
 			// Last played information
 			if (queueInfo.lastPlayed) {
 				let lastPlayedText = '';
-				if (queueInfo.lastPlayed.title.length > songInfoMaxLength) {
-					lastPlayedText += queueInfo.lastPlayed.title.substring(0, songInfoMaxLength - 3) + '...';
+				if (queueInfo.lastPlayed.title.length > MAX_SONG_INFO_LENGTH) {
+					lastPlayedText += queueInfo.lastPlayed.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				else { lastPlayedText += queueInfo.lastPlayed.title; }
 				userInterface.addFields({
@@ -176,8 +173,8 @@ export default class UI extends GuildComponent {
 				// Index number for item
 				let itemText = `${(queueInfo.nextInQueue[i].index + 1).toString()}. `;
 				// Add title of song cut off to be the right length
-				if (queueInfo.nextInQueue[i].song.title.length > songInfoMaxLength) {
-					itemText += this.escapeString(queueInfo.nextInQueue[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...');
+				if (queueInfo.nextInQueue[i].song.title.length > MAX_SONG_INFO_LENGTH) {
+					itemText += this.escapeString(queueInfo.nextInQueue[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 				}
 				else { itemText += queueInfo.nextInQueue[i].song.title; }
 				queueTxt += `${itemText} - [${(queueInfo.nextInQueue[i].song.reqBy) ? `<@${queueInfo.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
@@ -196,8 +193,8 @@ export default class UI extends GuildComponent {
 					// Index number for item
 					let itemText = `${(queueInfo.nextInAutoplay[i].index + 1).toString()}. `;
 					// Add title of song cut off to be the right length
-					if (queueInfo.nextInAutoplay[i].song.title.length > songInfoMaxLength) {
-						itemText += this.escapeString(queueInfo.nextInAutoplay[i].song.title.substring(0, songInfoMaxLength - 3 - itemText.length) + '...');
+					if (queueInfo.nextInAutoplay[i].song.title.length > MAX_SONG_INFO_LENGTH) {
+						itemText += this.escapeString(queueInfo.nextInAutoplay[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 					}
 					else { itemText += queueInfo.nextInAutoplay[i].song.title; }
 					autoplayTxt += `${itemText}\n`;

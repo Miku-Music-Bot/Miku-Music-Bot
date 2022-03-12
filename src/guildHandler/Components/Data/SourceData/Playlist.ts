@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
 
 import GuildComponent from '../../GuildComponent';
 import { PlaylistConfig } from './sourceConfig';
@@ -6,6 +6,7 @@ import Song from './Song';
 
 export default abstract class Playlist extends GuildComponent {
 	abstract events: EventEmitter;										// should emit 'newSettings' event when new data should be saved
+	abstract get type(): 'yt' | 'gd'									// shoudl have type
 	abstract get id(): number;											// should have unique id
 	abstract get title(): string;										// should be able to get title
 	abstract get url(): string;											// should be able to get url

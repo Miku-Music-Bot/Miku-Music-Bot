@@ -39,6 +39,7 @@ type ResolvedIndex = {
 }
 
 const SHOW_QUEUE_ITEMS = parseInt(process.env.SHOW_QUEUE_ITEMS);
+const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
 
 /**
  * Queue
@@ -364,8 +365,6 @@ export default class Queue extends GuildComponent {
 	 * @param page - page of queue to show
 	 */
 	private _createShowQueueMsg(page: number): Discord.MessageOptions {
-		const maxTitleLength = 50;
-
 		if (!page) { page = 1; }
 		const maxPage = Math.ceil((this._queue.length + this._autoplayQueue.length) / SHOW_QUEUE_ITEMS);
 		if (page > maxPage) { page = maxPage; }
@@ -388,8 +387,8 @@ export default class Queue extends GuildComponent {
 					if (this._autoplayQueue.length === 0) { displayText += 'Nothing in autoplay!\n\n'; }
 				}
 				let songTitle = ref.song.title;
-				if (ref.song.title.length > maxTitleLength) {
-					songTitle = ref.song.title.slice(0, maxTitleLength - 3) + '...';
+				if (ref.song.title.length > MAX_SONG_INFO_LENGTH) {
+					songTitle = ref.song.title.slice(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				displayText += `${indexStart + i + 1}. ${this.ui.escapeString(songTitle)}\n`;
 			}

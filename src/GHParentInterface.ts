@@ -1,23 +1,29 @@
-import * as path from 'path';
-import * as Discord from 'discord.js';
-import * as winston from 'winston';
+import path from 'path';
+import Discord from 'discord.js';
+import winston from 'winston';
 import { ChildProcess, fork } from 'child_process';
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 
 import { InteractionInfo, MessageInfo, RemoveGuildInfo, ChildResponse } from './guildHandler/GHChildInterface';
+
+type EventTypes = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	[key: string]: (msg: any) => void;
+}
 
 const MAX_RESPONSE_WAIT = parseInt(process.env.MAX_RESPONSE_WAIT);
 
 export default class GuildHandlerInterface {
-	private log: winston.Logger;		// logger
-	private _events: EventEmitter;		// for message events
-	private _guildId: string;			// discord guild id
-	private _nextId: number;			// next response id to use
-	private _process: ChildProcess;		// child process doing the work
+	private log: winston.Logger;					// logger
+	private _events: TypedEmitter<EventTypes>;		// for message events
+	private _guildId: string;						// discord guild id
+	private _nextId: number;						// next response id to use
+	private _process: ChildProcess;				// child process doing the work
 
 	constructor(guildId: string, log: winston.Logger) {
 		this.log = log;
-		this._events = new EventEmitter();
+		this._events = new EventEmitter() as TypedEmitter<EventTypes>;
 		this._guildId = guildId;
 		this._nextId = 0;
 		this._startChild();

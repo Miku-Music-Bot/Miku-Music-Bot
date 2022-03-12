@@ -1,4 +1,4 @@
-import * as path from 'path';
+import path from 'path';
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
@@ -173,7 +173,7 @@ export default class AudioProcessor extends GuildComponent {
 			.on('error', (error) => { this.error(`{error:${error.message}} on _audioConverter for song with {url:${this._source.song.url}}. {stack:${error.stack}}`); });
 
 		// if new audioSettings are applied restart ffmpeg
-		this.data.audioSettings.on('restartProcessor', () => {
+		this.data.audioSettings.events.on('restartProcessor', () => {
 			this.debug('New audio settings, restarting ffmpeg');
 			this.newFFmpeg();
 		});
@@ -200,6 +200,6 @@ export default class AudioProcessor extends GuildComponent {
 		this._audioConverterInput.end();
 		this._opusPassthrough.end();
 		this.events.removeAllListeners();
-		this.data.audioSettings.removeAllListeners('restartProcessor');
+		this.data.audioSettings.events.removeAllListeners('restartProcessor');
 	}
 }

@@ -1,11 +1,16 @@
-import * as ytdl from 'ytdl-core';
-import * as path from 'path';
-import { EventEmitter } from 'events';
+import ytdl from 'ytdl-core';
+import path from 'path';
+import EventEmitter from 'events';
+import TypedEmitter from 'typed-emitter';
 
 import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
 import type GuildHandler from '../../../../GuildHandler';
 import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
+
+type EventTypes = {
+	newSettings: (song: YTSong) => void,
+}
 
 /**
  * YTSong
@@ -13,7 +18,7 @@ import { SongConfig, SONG_DEFAULT } from '../sourceConfig';
  * Represents a song from youtube
  */
 export default class YTSong extends GuildComponent implements Song {
-	events: EventEmitter;
+	events: TypedEmitter<EventTypes>;
 	private _songInfo: SongConfig;
 
 	/**
@@ -22,7 +27,7 @@ export default class YTSong extends GuildComponent implements Song {
 	 */
 	constructor(guildHandler: GuildHandler, info: SongConfig) {
 		super(guildHandler, path.basename(__filename));
-		this.events = new EventEmitter();
+		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 
 		// set defaults
 		let save = false;
@@ -35,7 +40,7 @@ export default class YTSong extends GuildComponent implements Song {
 		}
 		Object.assign(this._songInfo, info);
 
-		if (save) { setImmediate(() => { this.events.emit('newSettings', this); }); }
+		if (save) { this.events.emit('newSettings', this); }
 	}
 
 	/**

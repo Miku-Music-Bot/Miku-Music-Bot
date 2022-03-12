@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { EventEmitter } from 'events';
-import * as fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import EventEmitter from 'events';
+import fs from 'fs';
 import { PassThrough } from 'stream';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
@@ -39,7 +39,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
  */
 export default class GDSource extends GuildComponent implements AudioSource {
 	song: GDSong;
-	events: EventEmitter;
+	events: TypedEmitter<EventTypes>;
 	buffering: boolean;
 	destroyed: boolean;
 
@@ -101,7 +101,7 @@ export default class GDSource extends GuildComponent implements AudioSource {
 				this.debug(`Buffer ready for song with {url: ${this.song.url}}`);
 				resolve();
 			});
-			this.events.once('error', () => {
+			this.events.once('fatalError', () => {
 				this.error(`Song with {url:${this.song.url}} encountered error before buffer was ready`);
 				reject();
 			});

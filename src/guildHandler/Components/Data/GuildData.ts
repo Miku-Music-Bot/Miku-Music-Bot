@@ -113,9 +113,9 @@ export default class GuildData extends GuildComponent {
 				await this._collection.insertOne(newData);
 			}
 
-			this.guildSettings.on('newSettings', () => { this.debug('New settings on guild settings, saving'); this._save(); });
-			this.audioSettings.on('newSettings', () => { this.debug('New settings on audio settings, saving'); this._save(); });
-			this.permissionSettings.on('newSettings', () => { this.debug('New settings on permission settings, saving'); this._save(); });
+			this.guildSettings.events.on('newSettings', () => { this.debug('New settings on guild settings, saving'); this._save(); });
+			this.audioSettings.events.on('newSettings', () => { this.debug('New settings on audio settings, saving'); this._save(); });
+			this.permissionSettings.events.on('newSettings', () => { this.debug('New settings on permission settings, saving'); this._save(); });
 			this.sourceManager.events.on('newSettings', () => { this.debug('New settings on sourceManager, saving'); this._save(); });
 
 			cb();				// call callback once done

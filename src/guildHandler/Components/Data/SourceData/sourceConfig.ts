@@ -31,6 +31,7 @@ export const SONG_DEFAULT: SongConfig = {
 // Individual Source Configuration data and defaults
 export type PlaylistConfig = {
 	id?: number,
+	type?: 'yt' | 'gd',
 	title?: string,
 	url: string,
 	songs?: Array<SongConfig>
@@ -50,6 +51,7 @@ export type SourceDataConfig = {
 export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
 	gdPlaylists: [
 		{
+			type: 'gd',
 			id: undefined,
 			title: 'Individual Songs - Google Drive',
 			url: undefined,
@@ -58,6 +60,7 @@ export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
 	],
 	ytPlaylists: [
 		{
+			type: 'yt',
 			id: undefined,
 			title: 'Individual Songs - Youtube',
 			url: undefined,

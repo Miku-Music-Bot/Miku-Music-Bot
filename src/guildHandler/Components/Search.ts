@@ -34,6 +34,7 @@ type SearchResults = {
 
 const ITEMS_PER_PAGE = parseInt(process.env.ITEMS_PER_PAGE);
 const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
+const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
 
 /**
  * Search
@@ -180,7 +181,6 @@ export default class Search extends GuildComponent {
 	 * @returns discord message options for embed to send
 	 */
 	private _createSearchUI(searchResults: SearchResults, page?: number): Discord.MessageOptions {
-		const maxTitleLength = 70;
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
@@ -219,8 +219,8 @@ export default class Search extends GuildComponent {
 
 				// set title of song in bold
 				let songTitle = song.title;
-				if (song.title.length > maxTitleLength) {
-					songTitle = song.title.slice(0, maxTitleLength - 3) + '...';
+				if (song.title.length > MAX_SONG_INFO_LENGTH) {
+					songTitle = song.title.slice(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				displayText += `**${this.ui.escapeString(songTitle)}**\n`;
 
@@ -233,8 +233,8 @@ export default class Search extends GuildComponent {
 					}
 					case ('gd'): {
 						let artist = song.artist;
-						if (song.artist.length > maxTitleLength) {
-							artist = song.artist.slice(0, maxTitleLength - 3) + '...';
+						if (song.artist.length > MAX_SONG_INFO_LENGTH) {
+							artist = song.artist.slice(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 						}
 						displayText += `Url: **${song.url}**\n`;
 						displayText += `Artist: **${this.ui.escapeString(artist)}**\n`;
