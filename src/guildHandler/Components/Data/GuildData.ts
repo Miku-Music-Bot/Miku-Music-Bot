@@ -1,4 +1,4 @@
-import mongoDb from 'mongodb';
+import * as mongoDb from 'mongodb';
 import path from 'path';
 
 import GuildComponent from '../GuildComponent';
