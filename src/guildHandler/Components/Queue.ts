@@ -84,7 +84,7 @@ export default class Queue extends GuildComponent {
 	 */
 	private _resolveIndex(i: number): ResolvedIndex {
 		this.debug(`Resolving {index:${i}}`);
-		if (i <= 0) {
+		if (i < 0) {
 			this.error('Index out of bounds');
 			return {
 				from: 'notFound',
