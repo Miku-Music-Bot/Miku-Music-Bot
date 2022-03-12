@@ -322,7 +322,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			this.debug(`Stream for song with {url: ${this.song.url}}, fully converted to pcm`);
 			this.events.emit('bufferReady');
 			this._finishedBuffering = true;
-			this._endOfSong = true;
+			if (this.song.live) { this._endOfSong = true; }
 
 			if (Buffer.byteLength(currentBuffer) === 0) return;
 
