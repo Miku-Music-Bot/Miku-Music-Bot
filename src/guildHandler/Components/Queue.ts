@@ -1,5 +1,5 @@
 import Discord from 'discord.js';
-import * as path from 'path';
+import path from 'path';
 
 import { TEAL } from './UI';
 import GuildComponent from '../Components/GuildComponent';

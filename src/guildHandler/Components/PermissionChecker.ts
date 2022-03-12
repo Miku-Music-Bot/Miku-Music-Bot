@@ -1,4 +1,4 @@
-import * as path from 'path';
+import path from 'path';
 
 import GuildComponent from './GuildComponent.js';
 import type GuildHandler from '../GuildHandler.js';

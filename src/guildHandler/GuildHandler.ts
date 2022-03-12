@@ -169,7 +169,7 @@ export default class GuildHandler {
 						this.info(`Guild handler channel id set to "${message.channelId}"`);
 						this.data.guildSettings.channelId = message.channelId;
 
-						this.ui.sendUI();
+						this.ui.sendUI(true);
 
 						if (!this.data.guildSettings.configured) {
 							this.debug('First time guild has been configured, sending introduction message');
