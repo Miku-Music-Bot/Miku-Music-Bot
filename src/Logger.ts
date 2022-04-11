@@ -29,31 +29,54 @@ export default function newLogger(logDir: string): winston.Logger {
 			new winston.transports.DailyRotateFile({
 				level: 'debug',
 				dirname: logDir,
-				filename: `Debug${LOG_FILE_NAME}`,
+				json: true,
+				filename: `Debug_${LOG_FILE_NAME}`,
 				datePattern: LOG_DATE_PATTERN,
 				zippedArchive: ZIP_LOGS,
 				maxSize: LOG_MAX_SIZE,
 				maxFiles: LOG_MAX_FILES,
 				format: winston.format.combine(
+					winston.format.errors({ stack: true }),
 					winston.format.timestamp(),
 					winston.format.json(),
+					winston.format.prettyPrint()
 				),
 			}),
 			new winston.transports.DailyRotateFile({
 				level: 'info',
 				dirname: logDir,
-				filename: `Main${LOG_FILE_NAME}`,
+				json: true,
+				filename: `Main_${LOG_FILE_NAME}`,
 				datePattern: LOG_DATE_PATTERN,
 				zippedArchive: ZIP_LOGS,
 				maxSize: LOG_MAX_SIZE,
 				maxFiles: LOG_MAX_FILES,
 				format: winston.format.combine(
+					winston.format.errors({ stack: true }),
 					winston.format.timestamp(),
 					winston.format.json(),
+					winston.format.prettyPrint()
 				),
 			}),
 		],
-		exitOnError: false,
+		exceptionHandlers: [
+			new winston.transports.DailyRotateFile({
+				dirname: logDir,
+				json: true,
+				filename: `Exceptions_${LOG_FILE_NAME}`,
+				datePattern: LOG_DATE_PATTERN,
+				maxSize: LOG_MAX_SIZE,
+				maxFiles: LOG_MAX_FILES,
+				format: winston.format.combine(
+					winston.format.errors({ stack: true }),
+					winston.format.timestamp(),
+					winston.format.json(),
+					winston.format.prettyPrint()
+				)
+			}),
+			new winston.transports.Console()
+		],
+		exitOnError: true,
 	});
 
 	// colors because fun
@@ -65,19 +88,26 @@ export default function newLogger(logDir: string): winston.Logger {
 	});
 
 	// if not in production, also output to console
+	const consoleFormatter = winston.format.printf(({ level, stack, message, durationMs }) => {
+		return `${level}: ${message} ${durationMs ? `{durationMs:${durationMs}}` : ''} ${stack ? `\n${stack}` : ''}`;
+	});
 	if (NODE_ENV !== 'PRODUCTION') {
 		logger.add(new winston.transports.Console({
 			format: winston.format.combine(
+				winston.format.errors({ stack: true }),
 				winston.format.colorize(),
 				winston.format.simple(),
+				consoleFormatter
 			),
 		}));
 	}
 	else {
 		logger.add(new winston.transports.Console({
 			format: winston.format.combine(
+				winston.format.errors({ stack: true }),
 				winston.format.colorize(),
 				winston.format.simple(),
+				consoleFormatter
 			),
 			level: 'info'
 		}));

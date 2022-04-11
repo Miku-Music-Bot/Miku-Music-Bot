@@ -8,7 +8,6 @@ import TypedEmitter from 'typed-emitter';
 import { InteractionInfo, MessageInfo, RemoveGuildInfo, ChildResponse } from './guildHandler/GHChildInterface';
 
 type EventTypes = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: (msg: any) => void;
 }
 
@@ -19,7 +18,7 @@ export default class GuildHandlerInterface {
 	private _events: TypedEmitter<EventTypes>;		// for message events
 	private _guildId: string;						// discord guild id
 	private _nextId: number;						// next response id to use
-	private _process: ChildProcess;				// child process doing the work
+	private _process: ChildProcess;					// child process doing the work
 
 	constructor(guildId: string, log: winston.Logger) {
 		this.log = log;

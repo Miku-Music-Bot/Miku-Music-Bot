@@ -1,4 +1,20 @@
+import fs from 'fs';
+import Discord from 'discord.js';
+import * as mongodb from 'mongodb';
+import { drive_v3 } from '@googleapis/drive';
+import { AuthPlus } from 'googleapis-common';
+import path from 'path';
+import newLogger from '../Logger';
+
 import GuildHandler from './GuildHandler';
+
+const LOG_DIR = process.env.LOG_DIR;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const MONGODB_URI = process.env.MONGODB_URI;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
 
 // Possible commands from parent
 export type StartMsg = {			// Start message containing information needed to start guild hanlder
@@ -70,7 +86,71 @@ let guildHandler: GuildHandler;
 process.on('message', async (message: ParentCommand) => {
 	switch (message.type) {
 		case ('start'): {
-			guildHandler = new GuildHandler(message.content);
+			const id = message.content;
+
+			// set up logger
+			const filename = path.basename(__filename);
+			const logger = newLogger(path.join(LOG_DIR, id));
+			//const debug = (msg: string) => { logger.debug(`{filename: ${filename}} ${msg}`); };			unneeded right now
+			const info = (msg: string) => { logger.info(msg); };
+			//const warn = (msg: string) => { logger.warn(`{filename: ${filename}} ${msg}`); };
+			const error = (msg: string, e: Error) => { logger.error(`{filename: ${filename}} ${msg}`, e); };
+
+			// Create discord client
+			const discordClient = new Discord.Client({			// set intent flags for bot
+				intents: [
+					Discord.Intents.FLAGS.GUILDS,						// for accessing guild roles
+					Discord.Intents.FLAGS.GUILD_VOICE_STATES,			// for checking who is in vc and connecting to vc
+				],
+			});
+			discordClient.login(DISCORD_TOKEN);
+
+			// Authenticate with mongodb
+			let mongoClient: mongodb.MongoClient;
+			try {
+				logger.profile('Autenticate Mongodb');
+				info('Connecting to mongodb database');
+	
+				// connect to mongodb database
+				mongoClient = new mongodb.MongoClient(MONGODB_URI);
+				await mongoClient.connect();
+				logger.profile('Autenticate Mongodb');
+			}
+			catch (e) {
+				error(`{error:${e.message}} while authenticating with mongodb`, e);
+				process.exit();
+			}
+			
+
+
+			// Authenticate with google drive api
+			let drive: drive_v3.Drive;
+			try {
+				logger.profile('Authenticate Google Drive');
+				info('Authenticating with Google Drive API');
+
+				const authPlus = new AuthPlus();
+				const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+				const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
+				auth.setCredentials(JSON.parse(token));
+				drive = new drive_v3.Drive({ auth });
+
+				logger.profile('Authenticate Google Drive');
+				info('Successfully authenticated with Google Drive API');
+			}
+			catch (e) {	
+				error(`{error:${e.message}} while authenticating with google drive`, e);
+				process.exit();
+			}
+
+			guildHandler = new GuildHandler(
+				id,
+				logger,
+				discordClient,
+				mongoClient,
+				drive,
+			);
+			guildHandler.initHandler();
 			break;
 		}
 		case ('message'): {

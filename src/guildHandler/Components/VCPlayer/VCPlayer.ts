@@ -5,6 +5,10 @@ import { PassThrough } from 'stream';
 import GuildComponent from '../GuildComponent';
 import type GuildHandler from '../../GuildHandler';
 import type AudioSource from './AudioSources/AudioSource';
+import Song from '../Data/SourceData/Song';
+import YTSource from './AudioSources/YTAudioSource';
+import GDSource from './AudioSources/GDAudioSource';
+import GDSong from '../Data/SourceData/GDSources/GDSong';
 
 /**
  * VCPlayer
@@ -45,7 +49,7 @@ export default class VCPlayer extends GuildComponent {
 			this.debug(`Attempting to join voice channel with {channelId:${channelId}}`);
 			this._voiceConnection = Voice.joinVoiceChannel({
 				channelId: channelId,
-				guildId: this.guild.id,
+				guildId: this.guildHandler.id,
 				selfMute: false,
 				selfDeaf: true,
 				adapterCreator: this.guild.voiceAdapterCreator as unknown as Voice.DiscordGatewayAdapterCreator, 			// <-- 1/20/22 bug, workaround: "as unknown as Voice.DiscordGatewayAdapterCreator". reference: https://github.com/discordjs/discord.js/issues/7273. 
@@ -116,7 +120,7 @@ export default class VCPlayer extends GuildComponent {
 			this.paused = false;
 			this.finishedSong();						// finish current song
 			this._voiceConnection.destroy();			// close voice connection
-			this.queue.stop();							// stop queue
+			this.queue.clearQueue();					// clear queue
 			this.info('Left voice channel');
 		}
 		catch (error) { this.error(`{error: ${error.message}} while leaving voice channel. {stack:${error.stack}}`); }
@@ -225,9 +229,31 @@ export default class VCPlayer extends GuildComponent {
 	 * Plays from given stream to voice channel if connected
 	 * If not connected, nothing happens
 	 * If already playing something, stops previous stream and plays new stream
-	 * @param source - source to play from
+	 * @param song - source to play from
 	 */
-	play(source: AudioSource): void {
+	play(song: Song): void {
+		function createSource(song: Song): AudioSource | undefined {
+			this.debug(`Creating audio source for song with {url:${song.url}} and {type:${song.type}}`);
+			let source: AudioSource;
+			switch (song.type) {
+				case ('yt'): {
+					this.debug('Created youtube source');
+					source = new YTSource(this.guildHandler, song);
+					break;
+				}
+				case ('gd'): {
+					this.debug('Created google drive source');
+					source = new GDSource(this.guildHandler, song as GDSong);
+					break;
+				}
+				default: {
+					this.error(`Failed to create audio source for song with {type:${song.type}}, type is not valid.`);
+					break;
+				}
+			}
+			return source;
+		}
+		const source = createSource(song);
 		this.debug(`Attempting to play audio source with song {url:${source.song.url}}`);
 		if (!this.connected) {				// ignore if not in a voice channel
 			this.debug('Currently not connected, nothing played');

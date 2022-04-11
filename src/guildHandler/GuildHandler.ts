@@ -1,25 +1,16 @@
-import fs from 'fs';
 import path from 'path';
 import Discord from 'discord.js';
-import winston from 'winston';
-import { drive, drive_v3 } from '@googleapis/drive';
-import { AuthPlus } from 'googleapis-common';
+import type winston from 'winston';
+import type { drive_v3 } from '@googleapis/drive';
+import * as mongodb from 'mongodb';
 
 import UI from './Components/UI';
-import GuildConfig from './Components/Data/GuildData';
-import CommandPermissions from './Components/PermissionChecker';
+import GuildData from './Components/Data/GuildData';
+import PermissionChecker from './Components/PermissionChecker';
 import VCPlayer from './Components/VCPlayer/VCPlayer';
 import Queue from './Components/Queue';
-import newLogger from '../Logger';
 import Search from './Components/Search';
-import { InteractionInfo, MessageInfo } from './GHChildInterface';
-
-const LOG_DIR = process.env.LOG_DIR;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+import type { InteractionInfo, MessageInfo } from './GHChildInterface';
 
 /**
  * GuildHander
@@ -33,96 +24,91 @@ export default class GuildHandler {
 	warn: (msg: string) => void;
 	error: (msg: string) => void;
 
-	private _ready: boolean;				// bot ready or not
+	id: string;								// guild id of guild handler
+	ready = false;							// bot ready or not
 	bot: Discord.Client;					// bot client
+	dbClient: mongodb.MongoClient;			// mongodb client
 	guild: Discord.Guild;					// bot guild
 
 	drive: drive_v3.Drive;					// google drive api object
 	ui: UI;									// ui component
-	data: GuildConfig;						// guildData component
+	data: GuildData;						// guildData component
 	vcPlayer: VCPlayer;						// vcPlayer component
 	queue: Queue;							// queue component
-	permissions: CommandPermissions;		// permissions component
+	permissions: PermissionChecker;			// permissions component
 	search: Search;							// search component
 
 	/**
 	 * Creates data object and once data is ready, calls startbot
 	 * @param id - discord guild id for GuildHander to be responsible for
 	 */
-	constructor(id: string) {
+	constructor(
+		id: string,
+		logger: winston.Logger,
+		botClient: Discord.Client,
+		mongoClient: mongodb.MongoClient,
+		gdClient: drive_v3.Drive,
+	) {
 		// set up logger
 		const filename = path.basename(__filename);
-		const logger = newLogger(path.join(LOG_DIR, id));
 		this.logger = logger;
 		this.debug = (msg) => { logger.debug(`{filename: ${filename}} ${msg}`); };
 		this.info = (msg) => { logger.info(msg); };
 		this.warn = (msg) => { logger.warn(`{filename: ${filename}} ${msg}`); };
 		this.error = (msg) => { logger.error(`{filename: ${filename}} ${msg}`); };
 
-		this.debug(`Created logger for guild handler with {guildId: ${id}}, logging to {dir:${path.join(LOG_DIR, id)}}`);
-		this.info(`Creating guild handler for guild id: ${id}`);
+		this.id = id;
+		this.bot = botClient;
+		this.dbClient = mongoClient;
+		this.drive = gdClient;
 
-		// Authenticate with google drive api
-		try {
-			const authPlus = new AuthPlus();
-			const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
-			this.debug(`Attempting to read google drive token from: "${GOOGLE_TOKEN_LOC}"`);
-			const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
-			auth.setCredentials(JSON.parse(token));
-			this.drive = drive({ version: 'v3', auth });
-			this.info('Successfully authenticated with Google Drive API');
-		}
-		catch (error) {
-			this.error(`{error:${error.message}} while trying to read google drive token. {stack:${error.stack}}`);
-			process.exit();
-		}
+		// set up guild components
+		this.data = new GuildData(this);
+		this.ui = new UI(this);
+		this.vcPlayer = new VCPlayer(this);
+		this.queue = new Queue(this);
+		this.permissions = new PermissionChecker(this);
+		this.search = new Search(this);
 
-		// Create discord client
-		this.bot = new Discord.Client({								// set intent flags for bot
-			intents: [
-				Discord.Intents.FLAGS.GUILDS,						// for accessing guild roles
-				Discord.Intents.FLAGS.GUILD_VOICE_STATES,			// for checking who is in vc and connecting to vc
-			],
-		});
+		// get the guild object
+		this.guild = this.bot.guilds.cache.get(this.id);
+	}
 
-		this._ready = false;										// bot is not ready yet
-		this.bot.once('ready', () => {
-			// get the guild object
-			this.guild = this.bot.guilds.cache.get(this.data.guildId);
+	/**
+	 * @name initHandler()
+	 * Initializes data and starts bot functions
+	 */
+	async initHandler() {
+		this.info(`Initializing guild handler for guild id: ${this.id}`);
 
-			// set up guild components
-			this.ui = new UI(this);
-			this.vcPlayer = new VCPlayer(this);
-			this.queue = new Queue(this);
-			this.permissions = new CommandPermissions(this);
-			this.search = new Search(this);
-
-			// bot is now ready
-			this._ready = true;
-			this.info('Logged into discord, guild handler is ready!');
-
-			// if not configured, log for helping debugging
-			if (!this.data.guildSettings.configured) {
-				this.info(`This guild has not been configured, waiting "${this.data.guildSettings.prefix}set-channel" command`);
-
-				// Get first text channel and send setup message
-				const defaultChannel = this.guild.channels.cache.filter(channel => channel.type === 'GUILD_TEXT').first();
-				this.debug(`Found default channel with {id:${defaultChannel.id}} to send setup message to`);
-				this.ui.sendNotification(`Thanks for inviting me! Type "${this.data.guildSettings.prefix}set-channel" to choose the channel I'll reside in.`);
-			}
-			else {
-				// Send UI otherwise
-				this.debug(`Bot has been configured, sending UI to {channel:${this.data.guildSettings.channelId}}`);
-				this.ui.sendUI(true);
-			}
-		});
-
-		// get guild data, once data is ready, log into discord
+		// Fetch data for guild
+		this.logger.profile('Fetch Guild Data');
 		this.debug('Fetching guild data from database.');
-		this.data = new GuildConfig(this, id, () => {
-			this.info('Guild data ready, logging in to discord.');
-			this.bot.login(DISCORD_TOKEN);
-		});
+		await this.data.initData();
+		this.logger.profile('Fetch Guild Data');
+		this.info('Guild data fetched, guild handler initialized');
+
+		// init components
+		this.queue.refreshAutoplay();
+		this.data.permissionSettings.initPermissions(this.guild);
+
+		// bot is now ready
+		this.ready = true;
+
+		// if not configured, send setup message
+		if (!this.data.guildSettings.configured) {
+			this.info(`This guild has not been configured, waiting for "${this.data.guildSettings.prefix}set-channel" command`);
+
+			// Get first text channel and send setup message
+			const defaultChannel = this.guild.channels.cache.filter((channel) => channel.type === 'GUILD_TEXT').first();
+			this.debug(`Found default channel with {id:${defaultChannel.id}} to send setup message to`);
+			this.ui.sendNotification(`Thanks for inviting me! Type "${this.data.guildSettings.prefix}set-channel" to choose the channel I'll reside in.`);
+		}
+		else {
+			// Send UI otherwise
+			this.debug(`Bot has been configured, sending UI to {channel:${this.data.guildSettings.channelId}}`);
+			this.ui.sendUI(true);
+		}
 	}
 
 	/**
@@ -134,7 +120,7 @@ export default class GuildHandler {
 	 */
 	async messageHandler(message: MessageInfo): Promise<boolean> {
 		// ignore if bot isn't ready yet
-		if (!this._ready) {
+		if (!this.ready) {
 			this.debug('Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.authorId}} in {channelId: ${message.channelId}} before bot was ready, ignoring');
 			return false;
 		}
@@ -333,7 +319,7 @@ export default class GuildHandler {
 					else { this.debug('Failed to parse integer from argument, seting page to 1'); }
 
 					this.info(`Showing page: ${page} of queue`);
-					this.queue.showPage(page);
+					//this.queue.showPage(page);
 					break;
 				}
 				case ('clear-queue'): case ('cq'): {
@@ -448,7 +434,7 @@ export default class GuildHandler {
 	 */
 	async interactionHandler(interaction: InteractionInfo): Promise<boolean> {
 		this.debug(`Recieved interaction from {authorId:${interaction.authorId}} with {customId:${interaction.customId}}, {parentMessageId:${interaction.parentMessageId}}, and {parentChannelId:${interaction.parentChannelId}}`);
-		if (!this._ready) {
+		if (!this.ready) {
 			this.debug('Recieved interaction before bot was ready, ignoring');
 			return false;
 		}

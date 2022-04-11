@@ -15,7 +15,6 @@ export default class PermissionChecker extends GuildComponent {
 	 */
 	constructor(guildHandler: GuildHandler) { 
 		super(guildHandler, path.basename(__filename));
-		this.data.permissionSettings.initPermissions(this.guild);
 	}
 
 	/**

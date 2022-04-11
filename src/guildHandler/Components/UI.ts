@@ -271,21 +271,21 @@ export default class UI extends GuildComponent {
 					// Web panel link
 					new Discord.MessageButton()
 						.setLabel('Web Panel')
-						.setURL(`${BOT_DOMAIN}/${this.data.guildId}`)
+						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}`)
 						.setStyle('LINK')
 				)
 				.addComponents(
 					// Report issue link
 					new Discord.MessageButton()
 						.setLabel('Report Issue')
-						.setURL(`${BOT_DOMAIN}/${this.data.guildId}/report`)
+						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}/report`)
 						.setStyle('LINK')
 				)
 				.addComponents(
 					// Help link
 					new Discord.MessageButton()
 						.setLabel('Help')
-						.setURL(`${BOT_DOMAIN}/${this.data.guildId}/help`)
+						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}/help`)
 						.setStyle('LINK')
 				);
 

@@ -3,6 +3,8 @@
 /logs
 /temp
 /assets/thumbnails/*
+/.nyc_output
+/coverage
 
 !/assets/thumbnails/defaultThumbnail.jpg
 .env
