@@ -9,10 +9,9 @@ type EventTypes = {
 }
 
 /**
- * AudioSettings
- * 
+ * @name AudioSettings
  * Contains bot's audio settings for playback
- * Emits 'newSettings' event when settings are changed
+ * Emits 'newSettings' and 'restartProcessor' event when settings are changed
  */
 export default class AudioSettings {
 	events: TypedEmitter<EventTypes>;
@@ -39,10 +38,8 @@ export default class AudioSettings {
 	}
 
 	/**
-	 * newSettings()
-	 * 
-	 * Replaces settings with given settings and emits 'newSettings' event
-	 * @param settings - object containing audio settings
+	 * @name newSettings()
+	 * Replaces settings with given settings and emits 'newSettings' and 'restartProcessor' event
 	 */
 	newSettings(settings: AudioConfig): void {
 		// should validate audio settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -52,10 +49,8 @@ export default class AudioSettings {
 	}
 
 	/**
-	 * newEQ()
-	 * 
-	 * Replaces settings with given settings and emits 'newSettings' event
-	 * @param eq - object containing eq settings
+	 * @name newEQ()
+	 * Replaces settings with given settings and emits 'newSettings' and 'restartProcessor' event
 	 */
 	newEQ(eq: EQConfig): void {
 		// should validate eq settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -65,18 +60,18 @@ export default class AudioSettings {
 	}
 
 	/**
-	 * export()
-	 * 
+	 * @name export()
 	 * Exports the settings in the format to be saved in database
-	 * @returns object to be saved in database
 	 */
 	export(): { audio: AudioConfig, eq: EQConfig } {
 		return { audio: this._audioSettings, eq: this._eqSettings };
 	}
 
 	// getters
+	get name() { return this._audioSettings.name; }
 	get volume() { return this._audioSettings.volume; }
 	get normalize() { return this._audioSettings.normalize; }
 	get nightcore() { return this._audioSettings.nightcore; }
-	get eq() { return this._eqSettings; }
+	get eqName() { return this._eqSettings.name; }
+	get eq() { return this._eqSettings.eq; }
 }

@@ -7,6 +7,10 @@ import { type InteractionInfo } from '../GHChildInterface';
 import type GuildHandler from '../GuildHandler';
 import Song from './Data/SourceData/Song';
 
+/**
+ * @name Queue
+ * Handles the what order to play songs in
+ */
 export default class Queue extends GuildComponent {
 	private _played: Array<{ song: Song, save: boolean }> = [];
 	private _advanced: Song[] = [];
@@ -96,10 +100,6 @@ export default class Queue extends GuildComponent {
 		}
 		this._played = [];
 		this._advanced = [];
-		if (this._nowPlayingSong.song && this._nowPlayingSong.save) {
-			this._nowPlayingSong.save = false;
-			saveSongs.push(this._nowPlayingSong.song);
-		}
 		this._queue = this._shuffle(saveSongs);
 	}
 
@@ -203,20 +203,18 @@ export default class Queue extends GuildComponent {
 		}
 
 		this._played.push(this._nowPlayingSong);
+
+		// refresh queue if nothing left in queue
+		if (this._queue.length + this._advanced.length === 0 && this._repeatQueue !== 0) {
+			if (this._repeatQueue > 0) { this._repeatQueue--; }
+			this._refreshQueue();
+		}
+		// refresh autoplay if nearing end
+		if (this._autoplay.length < this.config.SHOW_NUM_ITEMS * 3) { this.refreshAutoplay(); }
+
 		const nextSong = this.resolveIndex(this._played.length);
-		this._nowPlayingSong = {
-			song: nextSong.song,
-			save: nextSong.from === 'queue' || nextSong.from === 'advanced'
-		};
 		if (nextSong.from !== 'notFound') {
 			this.removeSong(this._played.length);
-			// refresh queue if nothing left in queue
-			if (this._queue.length + this._advanced.length === 0 && this._repeatQueue !== 0) {
-				if (this._repeatQueue > 0) { this._repeatQueue--; }
-				this._refreshQueue();
-			}
-			// refresh autoplay if nearing end
-			if (this._autoplay.length < this.config.SHOW_NUM_ITEMS * 3) { this.refreshAutoplay(); }
 
 			// if song is from autoplay and autoplay is off, stop
 			if (!this.data.guildSettings.autoplay && nextSong.from === 'autoplay') {
@@ -225,6 +223,10 @@ export default class Queue extends GuildComponent {
 			}
 
 			// play song
+			this._nowPlayingSong = {
+				song: nextSong.song,
+				save: nextSong.from === 'queue' || nextSong.from === 'advanced'
+			};
 			this.vcPlayer.play(this._nowPlayingSong.song);
 			return true;
 		}

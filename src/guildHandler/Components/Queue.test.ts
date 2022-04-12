@@ -9,7 +9,7 @@ import Queue from './Queue';
 import type Song from './Data/SourceData/Song';
 import type { InteractionInfo } from './../GHChildInterface';
 
-describe('Resolve Index', () => {
+describe('Queue Resolve Index', () => {
 	const guildHandlerStub = newStub();
 	const queue = new Queue(guildHandlerStub);
 
@@ -369,7 +369,7 @@ describe('Resolve Index', () => {
 	});
 });
 
-describe('Autoplay initialization', () => {
+describe('Queue Autoplay initialization', () => {
 	let queue: Queue;
 	before((done) => {
 		(async () => {
@@ -432,7 +432,7 @@ describe('Autoplay initialization', () => {
 	});
 });
 
-describe('Adding, removing, and advancing songs', () => {
+describe('Adding, removing, and advancing songs in queue', () => {
 	const guildHandlerStub = newStub();
 	const queue = new Queue(guildHandlerStub);
 
@@ -955,7 +955,7 @@ describe('Queue songs', () => {
 			played.title.should.equal('advanced1');
 		}
 		queue.repeatQueue = 2;
-		const order = ['advanced1', 'advanced1', 'advanced1'];
+		const order = ['advanced1', 'advanced1'];
 		for (let i = 0; i < order.length; i++) {
 			queue.nextSong().should.be.true;
 			played.title.should.equal(order[i]);

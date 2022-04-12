@@ -167,7 +167,7 @@ export function newStub(settings?: typeof guildSettings) {
 		files: DriveFilesStub
 	};
 
-	const config = getEnv(path.join(__dirname, '../../../', 'test.env'));
+	const config = getEnv(path.join(__dirname, '../../', 'test.env'));
 
 	const stub = new GuildHandler(
 		'1234567890',
