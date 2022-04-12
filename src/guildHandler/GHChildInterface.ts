@@ -7,14 +7,7 @@ import path from 'path';
 import newLogger from '../Logger';
 
 import GuildHandler from './GuildHandler';
-
-const LOG_DIR = process.env.LOG_DIR;
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const MONGODB_URI = process.env.MONGODB_URI;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
+import getEnv from './config';
 
 // Possible commands from parent
 export type StartMsg = {			// Start message containing information needed to start guild hanlder
@@ -88,9 +81,11 @@ process.on('message', async (message: ParentCommand) => {
 		case ('start'): {
 			const id = message.content;
 
+			const config = getEnv(path.join(__dirname, '../../', '.env'));
+
 			// set up logger
 			const filename = path.basename(__filename);
-			const logger = newLogger(path.join(LOG_DIR, id));
+			const logger = newLogger(path.join(config.LOG_DIR, id));
 			//const debug = (msg: string) => { logger.debug(`{filename: ${filename}} ${msg}`); };			unneeded right now
 			const info = (msg: string) => { logger.info(msg); };
 			//const warn = (msg: string) => { logger.warn(`{filename: ${filename}} ${msg}`); };
@@ -103,16 +98,16 @@ process.on('message', async (message: ParentCommand) => {
 					Discord.Intents.FLAGS.GUILD_VOICE_STATES,			// for checking who is in vc and connecting to vc
 				],
 			});
-			discordClient.login(DISCORD_TOKEN);
+			discordClient.login(config.DISCORD_TOKEN);
 
 			// Authenticate with mongodb
 			let mongoClient: mongodb.MongoClient;
 			try {
 				logger.profile('Autenticate Mongodb');
 				info('Connecting to mongodb database');
-	
+
 				// connect to mongodb database
-				mongoClient = new mongodb.MongoClient(MONGODB_URI);
+				mongoClient = new mongodb.MongoClient(config.MONGODB_URI);
 				await mongoClient.connect();
 				logger.profile('Autenticate Mongodb');
 			}
@@ -120,7 +115,7 @@ process.on('message', async (message: ParentCommand) => {
 				error(`{error:${e.message}} while authenticating with mongodb`, e);
 				process.exit();
 			}
-			
+
 
 
 			// Authenticate with google drive api
@@ -130,15 +125,15 @@ process.on('message', async (message: ParentCommand) => {
 				info('Authenticating with Google Drive API');
 
 				const authPlus = new AuthPlus();
-				const auth = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
-				const token = fs.readFileSync(GOOGLE_TOKEN_LOC).toString();
+				const auth = new authPlus.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
+				const token = fs.readFileSync(config.GOOGLE_TOKEN_LOC).toString();
 				auth.setCredentials(JSON.parse(token));
 				drive = new drive_v3.Drive({ auth });
 
 				logger.profile('Authenticate Google Drive');
 				info('Successfully authenticated with Google Drive API');
 			}
-			catch (e) {	
+			catch (e) {
 				error(`{error:${e.message}} while authenticating with google drive`, e);
 				process.exit();
 			}
@@ -149,6 +144,7 @@ process.on('message', async (message: ParentCommand) => {
 				discordClient,
 				mongoClient,
 				drive,
+				config
 			);
 			guildHandler.initHandler();
 			break;

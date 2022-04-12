@@ -1,9 +1,10 @@
 {
 	"compilerOptions": {
+		"incremental": true,
 		"outDir": "./built",
 		"module": "CommonJS",
 		"allowJs": true,
-		"target": "es6",
+		"target": "es5",
 		"sourceMap": true,
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitReturns": true,

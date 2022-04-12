@@ -4,10 +4,10 @@
 	"description": "A fully featured discord music bot.",
 	"main": "main.js",
 	"scripts": {
-		"lint": "eslint . --ext .ts",
 		"build": "tsc -b",
 		"pretest": "npm run build",
-		"test": "nyc mocha ./built/**/*.test.js",
+		"test": "mocha ./built/**/*.test.js",
+		"coverage": "nyc npm test",
 		"prestart": "npm run build",
 		"start": "node ./built/main.js"
 	},

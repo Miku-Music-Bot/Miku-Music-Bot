@@ -67,13 +67,10 @@ export default class UI extends GuildComponent {
 	 */
 	private _createUI(): Discord.MessageOptions {
 		try {
-			// Get info about the queue
-			const queueInfo = this.queue.getUIInfo();
-
 			// Create embed
 			const userInterface = new Discord.MessageEmbed().setColor(TEAL);
 
-			if (!queueInfo.nowPlaying) {
+			if (!this.vcPlayer.playing) {
 				// If not playing right now, show idle UI
 				userInterface
 					.setTitle('Idle - Listening for Commands')
@@ -89,14 +86,14 @@ export default class UI extends GuildComponent {
 				userInterface.setAuthor({ name: status });
 
 				// Song title
-				let title = queueInfo.nowPlayingSong.title;
-				if (queueInfo.nowPlayingSong.title.length > MAX_SONG_INFO_LENGTH) {
-					title = queueInfo.nowPlayingSong.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+				let title = this.queue.nowPlayingSong.title;
+				if (this.queue.nowPlayingSong.title.length > MAX_SONG_INFO_LENGTH) {
+					title = this.queue.nowPlayingSong.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				userInterface.setTitle(this.ui.escapeString(title));
 
 				// Set thumbnail
-				userInterface.setThumbnail(queueInfo.nowPlayingSong.thumbnailURL);
+				userInterface.setThumbnail(this.queue.nowPlayingSong.thumbnailURL);
 
 				// Create progress bar
 				let progressBar = '';
@@ -122,43 +119,43 @@ export default class UI extends GuildComponent {
 					else { progressBar += '-'; }
 				}
 				// Add overall duration to the end
-				progressBar += (this.vcPlayer.currentSource.song.live) ? '] Live' : `] ${queueInfo.nowPlayingSong.durationString}`;
+				progressBar += (this.vcPlayer.currentSource.song.live) ? '] Live' : `] ${this.queue.nowPlayingSong.durationString}`;
 				userInterface.setDescription(progressBar);
 
 				// Song information
 				let sourceName = '';
-				switch (queueInfo.nowPlayingSong.type) {
+				switch (this.queue.nowPlayingSong.type) {
 					case ('yt'): { sourceName = 'Youtube'; break; }
 					case ('gd'): { sourceName = 'Google Drive'; break; }
 				}
 				userInterface.addFields([
 					{
 						name: 'Requested By',
-						value: (queueInfo.nowPlayingSong.reqBy === '') ? 'Autoplay' : `<@${queueInfo.nowPlayingSong.reqBy}>`,
+						value: (this.queue.nowPlayingSong.reqBy === '') ? 'Autoplay' : `<@${this.queue.nowPlayingSong.reqBy}>`,
 						inline: true
 					},
 					{
-						name: (queueInfo.nowPlayingSong.type === 'yt') ? 'Channel' : 'Artist',
-						value: (queueInfo.nowPlayingSong.artist) ? this.escapeString(queueInfo.nowPlayingSong.artist) : 'unknown',
+						name: (this.queue.nowPlayingSong.type === 'yt') ? 'Channel' : 'Artist',
+						value: (this.queue.nowPlayingSong.artist) ? this.escapeString(this.queue.nowPlayingSong.artist) : 'unknown',
 						inline: true
 					},
 					{
 						name: 'Link',
-						value: `[${this.escapeString(sourceName)}](${queueInfo.nowPlayingSong.url})`,
+						value: `[${this.escapeString(sourceName)}](${this.queue.nowPlayingSong.url})`,
 						inline: true
 					}
 				]);
 
 				// Last played information
-				if (queueInfo.lastPlayed) {
+				if (this.queue.lastPlayed) {
 					let lastPlayedText = '';
-					if (queueInfo.lastPlayed.title.length > MAX_SONG_INFO_LENGTH) {
-						lastPlayedText += queueInfo.lastPlayed.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+					if (this.queue.lastPlayed.title.length > MAX_SONG_INFO_LENGTH) {
+						lastPlayedText += this.queue.lastPlayed.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
 					}
-					else { lastPlayedText += queueInfo.lastPlayed.title; }
+					else { lastPlayedText += this.queue.lastPlayed.title; }
 					userInterface.addFields({
 						name: 'Last Played',
-						value: `${this.escapeString(lastPlayedText)} - [${(queueInfo.lastPlayed.reqBy) ? `<@${queueInfo.lastPlayed.reqBy}>` : 'Autoplay'}]`,
+						value: `${this.escapeString(lastPlayedText)} - [${(this.queue.lastPlayed.reqBy) ? `<@${this.queue.lastPlayed.reqBy}>` : 'Autoplay'}]`,
 						inline: false
 					});
 				}
@@ -166,19 +163,19 @@ export default class UI extends GuildComponent {
 				// Queue information
 				let queueTxt = '';
 				for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
-					if (i === queueInfo.nextInQueue.length) {
-						if (queueInfo.repeatQueue === 0) { queueTxt += '**>> End Of Queue <<**'; break; }
+					if (i === this.queue.nextInQueue.length) {
+						if (this.queue.repeatQueue === 0) { queueTxt += '**>> End Of Queue <<**'; break; }
 						else { queueTxt += '**>> Repeat Queue <<**'; break; }
 					}
 
 					// Index number for item
-					let itemText = `${(queueInfo.nextInQueue[i].index + 1).toString()}. `;
+					let itemText = `${(this.queue.nextInQueue[i].index + 1).toString()}. `;
 					// Add title of song cut off to be the right length
-					if (queueInfo.nextInQueue[i].song.title.length > MAX_SONG_INFO_LENGTH) {
-						itemText += this.escapeString(queueInfo.nextInQueue[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
+					if (this.queue.nextInQueue[i].song.title.length > MAX_SONG_INFO_LENGTH) {
+						itemText += this.escapeString(this.queue.nextInQueue[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 					}
-					else { itemText += queueInfo.nextInQueue[i].song.title; }
-					queueTxt += `${itemText} - [${(queueInfo.nextInQueue[i].song.reqBy) ? `<@${queueInfo.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
+					else { itemText += this.queue.nextInQueue[i].song.title; }
+					queueTxt += `${itemText} - [${(this.queue.nextInQueue[i].song.reqBy) ? `<@${this.queue.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
 				}
 				userInterface.addFields({
 					name: 'Queue',
@@ -188,16 +185,16 @@ export default class UI extends GuildComponent {
 
 				// Autoplay information
 				let autoplayTxt = '';
-				if (queueInfo.autoplay) {
+				if (this.data.guildSettings.autoplay) {
 					for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
-						if (i === queueInfo.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
+						if (i === this.queue.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
 						// Index number for item
-						let itemText = `${(queueInfo.nextInAutoplay[i].index + 1).toString()}. `;
+						let itemText = `${(this.queue.nextInAutoplay[i].index + 1).toString()}. `;
 						// Add title of song cut off to be the right length
-						if (queueInfo.nextInAutoplay[i].song.title.length > MAX_SONG_INFO_LENGTH) {
-							itemText += this.escapeString(queueInfo.nextInAutoplay[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
+						if (this.queue.nextInAutoplay[i].song.title.length > MAX_SONG_INFO_LENGTH) {
+							itemText += this.escapeString(this.queue.nextInAutoplay[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 						}
-						else { itemText += queueInfo.nextInAutoplay[i].song.title; }
+						else { itemText += this.queue.nextInAutoplay[i].song.title; }
 						autoplayTxt += `${itemText}\n`;
 					}
 				}
@@ -213,12 +210,12 @@ export default class UI extends GuildComponent {
 				.addFields([
 					{
 						name: 'Autoplay',
-						value: queueInfo.autoplay ? 'on' : 'off',
+						value: this.data.guildSettings.autoplay ? 'on' : 'off',
 						inline: true
 					},
 					{
 						name: 'Repeat Queue',
-						value: `${queueInfo.repeatQueue === -1 ? 'infinite' : queueInfo.repeatQueue} time${(queueInfo.repeatQueue !== 1) ? 's' : ''}`,
+						value: `${this.queue.repeatQueue === -1 ? 'infinite' : this.queue.repeatQueue} time${(this.queue.repeatQueue !== 1) ? 's' : ''}`,
 						inline: true
 					}
 				]);
@@ -251,7 +248,7 @@ export default class UI extends GuildComponent {
 				.addComponents(
 					// Shuffle button
 					new Discord.MessageButton()
-						.setLabel(`Shuffle: ${(queueInfo.shuffle) ? 'on' : 'off'}`)
+						.setLabel(`Shuffle: ${(this.data.guildSettings.shuffle) ? 'on' : 'off'}`)
 						.setCustomId(JSON.stringify({ type: 'shuffle', special: 3 }))
 						.setStyle('SECONDARY')
 						.setDisabled(!this.vcPlayer.playing)
@@ -259,8 +256,8 @@ export default class UI extends GuildComponent {
 				.addComponents(
 					// Repeat button
 					new Discord.MessageButton()
-						.setLabel(`Repeat Song: ${queueInfo.repeatSong === -1 ? 'infinite' : queueInfo.repeatSong} time${(queueInfo.repeatSong !== 1) ? 's' : ''}`)
-						.setCustomId(JSON.stringify({ type: 'repeat', repeat: queueInfo.repeatSong, special: 4 }))
+						.setLabel(`Repeat Song: ${this.queue.repeatSong === -1 ? 'infinite' : this.queue.repeatSong} time${(this.queue.repeatSong !== 1) ? 's' : ''}`)
+						.setCustomId(JSON.stringify({ type: 'repeat', repeat: this.queue.repeatSong, special: 4 }))
 						.setStyle('SECONDARY')
 						.setDisabled(!this.vcPlayer.playing)
 				);
@@ -376,12 +373,12 @@ export default class UI extends GuildComponent {
 					}
 					case ('repeat'): {
 						this.info(`Recieved "repeat" interaction, setting repeat song to: ${customId.repeat + 1}`);
-						this.queue.setRepeatSong(customId.repeat + 1);
+						this.queue.repeatSong = customId.repeat + 1;
 						break;
 					}
 					case ('shuffle'): {
 						this.info('Recieved "shuffle" interaction, toggling shuffle');
-						this.queue.toggleShuffle();
+						this.data.guildSettings.shuffle = !this.data.guildSettings.shuffle;
 						break;
 					}
 					default: {

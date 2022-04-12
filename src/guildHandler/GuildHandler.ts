@@ -4,6 +4,7 @@ import type winston from 'winston';
 import type { drive_v3 } from '@googleapis/drive';
 import * as mongodb from 'mongodb';
 
+import getEnv from './config';
 import UI from './Components/UI';
 import GuildData from './Components/Data/GuildData';
 import PermissionChecker from './Components/PermissionChecker';
@@ -22,13 +23,14 @@ export default class GuildHandler {
 	debug: (msg: string) => void;
 	info: (msg: string) => void;
 	warn: (msg: string) => void;
-	error: (msg: string) => void;
+	error: (msg: string, error?: Error) => void;
 
 	id: string;								// guild id of guild handler
 	ready = false;							// bot ready or not
 	bot: Discord.Client;					// bot client
 	dbClient: mongodb.MongoClient;			// mongodb client
 	guild: Discord.Guild;					// bot guild
+	config: ReturnType<typeof getEnv>;		// environment config
 
 	drive: drive_v3.Drive;					// google drive api object
 	ui: UI;									// ui component
@@ -48,6 +50,7 @@ export default class GuildHandler {
 		botClient: Discord.Client,
 		mongoClient: mongodb.MongoClient,
 		gdClient: drive_v3.Drive,
+		envConfig: ReturnType<typeof getEnv>
 	) {
 		// set up logger
 		const filename = path.basename(__filename);
@@ -55,12 +58,13 @@ export default class GuildHandler {
 		this.debug = (msg) => { logger.debug(`{filename: ${filename}} ${msg}`); };
 		this.info = (msg) => { logger.info(msg); };
 		this.warn = (msg) => { logger.warn(`{filename: ${filename}} ${msg}`); };
-		this.error = (msg) => { logger.error(`{filename: ${filename}} ${msg}`); };
+		this.error = (msg, error = new Error()) => { logger.error(`{filename: ${filename}} ${msg}`, error); }; 	// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< remove default in the future
 
 		this.id = id;
 		this.bot = botClient;
 		this.dbClient = mongoClient;
 		this.drive = gdClient;
+		this.config = envConfig;
 
 		// set up guild components
 		this.data = new GuildData(this);
@@ -262,7 +266,7 @@ export default class GuildHandler {
 					}
 
 					this.info(`Setting repeat song count to {count:${count}}`);
-					this.queue.setRepeatSong(count);
+					this.queue.repeatSong = count;
 					break;
 				}
 				case ('repeat-queue'): case ('rq'): {
@@ -287,7 +291,7 @@ export default class GuildHandler {
 					}
 
 					this.info(`Setting repeat queue count to {count:${count}}`);
-					this.queue.setRepeatQueue(count);
+					this.queue.repeatQueue = count;
 					break;
 				}
 				case ('shuffle'): case ('toggle-shuffle'): {
@@ -304,7 +308,7 @@ export default class GuildHandler {
 					}
 
 					this.info(`Setting shuffle to {state:${state}}`);
-					this.queue.toggleShuffle(state);
+					this.data.guildSettings.shuffle = state;
 					break;
 				}
 				case ('show-queue'): case ('sq'): {
@@ -319,7 +323,7 @@ export default class GuildHandler {
 					else { this.debug('Failed to parse integer from argument, seting page to 1'); }
 
 					this.info(`Showing page: ${page} of queue`);
-					//this.queue.showPage(page);
+					this.queue.showPage(page);
 					break;
 				}
 				case ('clear-queue'): case ('cq'): {

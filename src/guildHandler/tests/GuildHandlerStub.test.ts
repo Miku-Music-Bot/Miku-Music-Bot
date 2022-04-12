@@ -1,11 +1,13 @@
 import sinon from 'sinon';
+import path from 'path';
 
 import winston from 'winston';
 import Discord from 'discord.js';
 import * as mongodb from 'mongodb';
 import { drive_v3 } from '@googleapis/drive';
+import getEnv from '../config';
 
-import GuildHandler from '../../GuildHandler';
+import GuildHandler from '../GuildHandler';
 
 const guildSettings: {
 	guildId?: string,
@@ -165,12 +167,15 @@ export function newStub(settings?: typeof guildSettings) {
 		files: DriveFilesStub
 	};
 
+	const config = getEnv(path.join(__dirname, '../../../', 'test.env'));
+
 	const stub = new GuildHandler(
 		'1234567890',
 		logger,
 		DiscordStub as unknown as Discord.Client,
 		MongodbStub as unknown as mongodb.MongoClient,
-		DriveStub as unknown as drive_v3.Drive
+		DriveStub as unknown as drive_v3.Drive,
+		config
 	);
 
 	return stub;

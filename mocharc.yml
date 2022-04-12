@@ -8,6 +8,3 @@ exit: true
 extension:
   - ts
   - test.ts
-ignore:
-  # this is so that mocha doesn'T auto execute app.ts before the tests does load it.
-  - "**/src/app.ts"
