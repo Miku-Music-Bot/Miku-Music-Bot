@@ -43,11 +43,11 @@ const bassBoost: EQConfig = {
 };
 
 // Export presets
-export const AUDIO_PRESETS = {
+export const AUDIO_PRESETS = Object.freeze({
 	default: audioDefault,
 	nightcore: nightcore
-};
-export const EQ_PRESETS = {
+});
+export const EQ_PRESETS = Object.freeze({
 	default: eqDefault,
 	bassBoost: bassBoost
-};
+});

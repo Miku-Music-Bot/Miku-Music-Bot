@@ -1,13 +1,13 @@
 import { should } from 'chai';
 should();
 import sinon from 'sinon';
-import { newStub } from '../../tests/GuildHandlerStub.test';
+import { newStub } from '../GuildHandlerStub.test';
 
 import Discord from 'discord.js';
 
-import Queue from '../Queue';
-import type Song from '../Data/SourceData/Song';
-import type { InteractionInfo } from '../../GHChildInterface';
+import Queue from './Queue';
+import type Song from './Data/SourceData/Song';
+import type { InteractionInfo } from './../GHChildInterface';
 
 describe('Resolve Index', () => {
 	const guildHandlerStub = newStub();

@@ -5,9 +5,9 @@ import winston from 'winston';
 import Discord from 'discord.js';
 import * as mongodb from 'mongodb';
 import { drive_v3 } from '@googleapis/drive';
-import getEnv from '../config';
+import getEnv from './config';
 
-import GuildHandler from '../GuildHandler';
+import GuildHandler from './GuildHandler';
 
 const guildSettings: {
 	guildId?: string,

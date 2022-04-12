@@ -11,7 +11,7 @@ export type GuildConfig = {
 	songIdCount: number,
 	playlistIdCount: number
 }
-export const GUILD_DEFAULT: GuildConfig = {
+export const GUILD_DEFAULT: GuildConfig = Object.freeze({
 	configured: false,
 	channelId: undefined,
 	prefix: '!miku ',
@@ -20,4 +20,4 @@ export const GUILD_DEFAULT: GuildConfig = {
 	autoplayList: [],
 	songIdCount: 0,
 	playlistIdCount: 0
-};
+});

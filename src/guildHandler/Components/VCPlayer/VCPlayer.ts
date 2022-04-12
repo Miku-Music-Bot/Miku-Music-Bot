@@ -232,27 +232,23 @@ export default class VCPlayer extends GuildComponent {
 	 * @param song - source to play from
 	 */
 	play(song: Song): void {
-		function createSource(song: Song): AudioSource | undefined {
-			this.debug(`Creating audio source for song with {url:${song.url}} and {type:${song.type}}`);
+		const createSource = (song: Song): AudioSource | undefined => {
 			let source: AudioSource;
 			switch (song.type) {
 				case ('yt'): {
-					this.debug('Created youtube source');
 					source = new YTSource(this.guildHandler, song);
 					break;
 				}
 				case ('gd'): {
-					this.debug('Created google drive source');
 					source = new GDSource(this.guildHandler, song as GDSong);
 					break;
 				}
 				default: {
-					this.error(`Failed to create audio source for song with {type:${song.type}}, type is not valid.`);
 					break;
 				}
 			}
 			return source;
-		}
+		};
 		const source = createSource(song);
 		this.debug(`Attempting to play audio source with song {url:${source.song.url}}`);
 		if (!this.connected) {				// ignore if not in a voice channel
