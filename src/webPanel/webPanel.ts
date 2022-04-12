@@ -1,4 +1,5 @@
 import fs from 'fs';
+import https from 'https';
 import express from 'express';
 import winston from 'winston';
 import { AuthPlus } from 'googleapis-common';
@@ -84,7 +85,12 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 
 	return new Promise((resolve, reject) => {
 		try {
-			app.listen(PORT, () => {
+			const httpsServer = https.createServer({
+				key: fs.readFileSync('/etc/letsencrypt/live/mikubot.app/privkey.pem'),
+				cert: fs.readFileSync('/etc/letsencrypt/live/mikubot.app/fullchain.pem'),
+			}, app);
+
+			httpsServer.listen(PORT, () => {
 				log.info(`Webserver listening on port ${PORT}`);
 
 				try {
