@@ -4,7 +4,7 @@ import TypedEmitter from 'typed-emitter';
 import { AudioConfig, EQConfig, AUDIO_PRESETS, EQ_PRESETS } from './config/audioConfig';
 
 type EventTypes = {
-	newSettings: (a: AudioSettings) => void,
+	newSettings: () => void,
 	restartProcessor: () => void
 }
 
@@ -29,8 +29,10 @@ export default class AudioSettings {
 
 		// apply settings
 		if (!settings) {
-			this.events.emit('newSettings', this);
-			this.events.emit('restartProcessor');
+			setImmediate(() => {
+				this.events.emit('newSettings');
+				this.events.emit('restartProcessor');
+			});
 			return;
 		}
 		Object.assign(this._audioSettings, settings.audio);
@@ -44,7 +46,7 @@ export default class AudioSettings {
 	newSettings(settings: AudioConfig): void {
 		// should validate audio settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._audioSettings, settings);
-		this.events.emit('newSettings', this);
+		this.events.emit('newSettings');
 		this.events.emit('restartProcessor');
 	}
 
@@ -55,7 +57,7 @@ export default class AudioSettings {
 	newEQ(eq: EQConfig): void {
 		// should validate eq settings <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		Object.assign(this._eqSettings, eq);
-		this.events.emit('newSettings', this);
+		this.events.emit('newSettings');
 		this.events.emit('restartProcessor');
 	}
 

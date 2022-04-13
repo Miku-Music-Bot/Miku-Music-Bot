@@ -1,8 +1,25 @@
+function deepFreeze(object: { [key: string]: any }) {
+	// Retrieve the property names defined on object
+	const propNames = Object.getOwnPropertyNames(object);
+
+	// Freeze properties before freezing self
+
+	for (const name of propNames) {
+		const value = object[name];
+
+		if (value && typeof value === 'object') {
+			deepFreeze(value);
+		}
+	}
+
+	return Object.freeze(object);
+}
+
 // Permissions Configuration data and defaults
 export type PermissionsConfig = {
 	[key: string]: Array<string>;
 };
-export const PERMISSIONS_DEFAULT = Object.freeze({
+export const PERMISSIONS_DEFAULT = deepFreeze({
 	everyone: [
 		'join',
 		'play',

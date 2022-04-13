@@ -22,11 +22,11 @@ const nightcore = {
 // Audio Processor EQ Configuration data and defaults
 export type EQConfig = {
 	name: string,
-	eq: [
+	eq: Array<
 		{
 			//
 		}
-	]
+	>
 };
 const eqDefault: EQConfig = {
 	name: 'Default',

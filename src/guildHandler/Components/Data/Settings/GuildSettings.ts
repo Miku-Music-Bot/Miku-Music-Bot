@@ -8,8 +8,7 @@ type EventTypes = {
 }
 
 /**
- * GuildSettings
- * 
+ * @name GuildSettings
  * Contains bot's guild settings
  * Emits 'newSettings' event when settings are changed
  */
@@ -17,27 +16,34 @@ export default class GuildSettings {
 	events: TypedEmitter<EventTypes>;
 	private _guildSettings: GuildConfig;
 
-	/**
-	 * @param settings - object containing audio settings
-	 */
 	constructor(settings?: GuildConfig) {
 		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 		// set defaults first
 		this._guildSettings = Object.assign({}, GUILD_DEFAULT);
 
 		// apply settings
-		if (!settings) { 
-			this.events.emit('newSettings'); 
+		if (!settings) {
+			setImmediate(() => {
+				this.events.emit('newSettings');
+			});
+			const newAutoplay = [];
+			for (let i = 0; i < GUILD_DEFAULT.autoplayList.length; i++) {
+				newAutoplay.push(GUILD_DEFAULT.autoplayList[i]);
+			}
+			this._guildSettings.autoplayList = newAutoplay;
 			return;
 		}
 		Object.assign(this._guildSettings, settings);
+		const newAutoplay = [];
+		for (let i = 0; i < this._guildSettings.autoplayList.length; i++) {
+			newAutoplay.push(this._guildSettings.autoplayList[i]);
+		}
+		this._guildSettings.autoplayList = newAutoplay;
 	}
 
 	/**
-	 * export()
-	 * 
+	 * @name export()
 	 * Exports the settings in the format to be saved in database
-	 * @returns object to be saved in database
 	 */
 	export(): GuildConfig { return this._guildSettings; }
 
@@ -55,10 +61,9 @@ export default class GuildSettings {
 	set autoplay(autoplay: GuildConfig['autoplay']) { this._guildSettings.autoplay = autoplay; this.events.emit('newSettings'); }
 
 	get shuffle() { return this._guildSettings.shuffle; }
-	set shuffle(shuffle: GuildConfig['shuffle']) { this._guildSettings.shuffle = shuffle; this.events.emit('newSettings'); } 
+	set shuffle(shuffle: GuildConfig['shuffle']) { this._guildSettings.shuffle = shuffle; this.events.emit('newSettings'); }
 
 	get autoplayList() { return this._guildSettings.autoplayList; }
-	set autoplayList(autoplayList: GuildConfig['autoplayList']) { this._guildSettings.autoplayList = autoplayList; this.events.emit('newSettings'); }
 
 	get songIdCount() { return this._guildSettings.songIdCount; }
 	set songIdCount(songIdCount: GuildConfig['songIdCount']) { this._guildSettings.songIdCount = songIdCount; this.events.emit('newSettings'); }

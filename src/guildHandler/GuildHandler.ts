@@ -94,7 +94,7 @@ export default class GuildHandler {
 
 		// init components
 		this.queue.refreshAutoplay();
-		this.data.permissionSettings.initPermissions(this.guild);
+		if (this.data.guildSettings.configured) { this.data.permissionSettings.resetPermissions(this.guild); }
 
 		// bot is now ready
 		this.ready = true;

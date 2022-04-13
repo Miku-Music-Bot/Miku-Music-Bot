@@ -1,5 +1,22 @@
 import { SourceRef } from '../../SourceData/sourceConfig';
 
+function deepFreeze(object: { [key: string]: any }) {
+	// Retrieve the property names defined on object
+	const propNames = Object.getOwnPropertyNames(object);
+
+	// Freeze properties before freezing self
+
+	for (const name of propNames) {
+		const value = object[name];
+
+		if (value && typeof value === 'object') {
+			deepFreeze(value);
+		}
+	}
+
+	return Object.freeze(object);
+}
+
 // Guild Data Configuration data and defaults
 export type GuildConfig = {
 	configured: boolean,
@@ -11,7 +28,7 @@ export type GuildConfig = {
 	songIdCount: number,
 	playlistIdCount: number
 }
-export const GUILD_DEFAULT: GuildConfig = Object.freeze({
+export const GUILD_DEFAULT: GuildConfig = deepFreeze({
 	configured: false,
 	channelId: undefined,
 	prefix: '!miku ',
@@ -20,4 +37,4 @@ export const GUILD_DEFAULT: GuildConfig = Object.freeze({
 	autoplayList: [],
 	songIdCount: 0,
 	playlistIdCount: 0
-});
+}) as GuildConfig;
