@@ -17,8 +17,7 @@ type EventTypes = {
 const REFRESH_PLAYLIST_INTERVAL = parseInt(process.env.REFRESH_PLAYLIST_INTERVAL);
 
 /**
- * SourceManager
- * 
+ * @name SourceManager
  * Manages all the saved sources for a guild
  */
 export default class SourceManager extends GuildComponent {
@@ -26,10 +25,6 @@ export default class SourceManager extends GuildComponent {
 	private _gdPlaylists: Array<Playlist>;			// list of google drive playlists
 	private _ytPlaylists: Array<Playlist>;			// list of youtube playlists
 
-	/**
-	 * @param guildHandler
-	 * @param info - sourceData of source manager you want to create
-	 */
 	constructor(guildHandler: GuildHandler, sourceData?: SourceDataConfig) {
 		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
@@ -53,12 +48,15 @@ export default class SourceManager extends GuildComponent {
 			this._refreshAll();
 		});
 
-		if (save) { this.events.emit('newSettings'); }
+		if (save) {
+			setImmediate(() => {
+				this.events.emit('newSettings');
+			});
+		}
 	}
 
 	/**
-	 * _refreshAll()
-	 * 
+	 * @name _refreshAll()
 	 * Refreshes all playlists every 30 min
 	 */
 	private async _refreshAll(): Promise<void> {
@@ -97,12 +95,9 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * _binaryInsert()
-	 * 
+	 * @name _binaryInsert()
 	 * Uses a binary search to find index location to insert an element at
-	 * @param id - id to search for
-	 * @param array - array to search in
-	 * @returns location to insert at or -1 if already exists
+	 * returns the location to insert at or -1 if already exists
 	 */
 	private _binaryInsert(id: number, array: Array<{ id: number }>): number {
 		let left = 0;
@@ -120,12 +115,9 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * _binarySearch()
-	 * 
+	 * @name _binarySearch()
 	 * Uses a binary search to find index location of an element
-	 * @param id - id to search for
-	 * @param array - array to search in
-	 * @returns location found for -1 is doesnt exist
+	 * returns location found or -1 is doesnt exist
 	 */
 	private _binarySearch(id: number, array: Array<{ id: number }>): number {
 		let left = 0;
@@ -141,23 +133,16 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * addPlaylist()
-	 * 
-	 * Adds a playlist to correct location and keeps it sorts
-	 * @param playlist - playlist to add
-	 * @param type - type of playlist to add
-	 * @returns successful or not
+	 * @name addPlaylist()
+	 * Adds a playlist to correct location and keeps it sorted
 	 */
 	addPlaylist(playlist: Playlist, type: 'yt' | 'gd'): boolean {
-		this.debug(`Adding playlist with {url:${playlist.url}}`);
 		let ref;
 		switch (type) {
 			case ('yt'): {
-				this.debug('Playlist is a youtube playlist');
 				ref = this._ytPlaylists; break;
 			}
 			case ('gd'): {
-				this.debug('Playlist is a google drive playlist');
 				ref = this._gdPlaylists; break;
 			}
 			default: {
@@ -174,28 +159,22 @@ export default class SourceManager extends GuildComponent {
 			ref.splice(i, 0, playlist);
 			playlist.events.on('newSettings', () => { this.events.emit('newSettings'); });
 			this.events.emit('newSettings');
-			this.debug('Added playlist successfully');
 			return true;
 		}
 		else { return false; }
 	}
 
 	/**
-	 * removePlaylist()
-	 * 
+	 * @name removePlaylist()
 	 * Removes specified playlist
-	 * @param id - id of playlist to remove
-	 * @returns successful or not
 	 */
 	removePlaylist(id: number): boolean {
-		this.debug(`Removing playlist with {id:${id}}`);
 		let i;
 		// try yt playlist
 		i = this._binaryInsert(id, this._ytPlaylists);
 		if (i === -1) {
 			this._ytPlaylists.splice(i, 1);
 			this.events.emit('newSettings');
-			this.debug(`Playlist with {id:${id}} exists as a youtube playlists, removed`);
 			return true;
 		}
 
@@ -204,7 +183,6 @@ export default class SourceManager extends GuildComponent {
 		if (i === -1) {
 			this._gdPlaylists.splice(i, 1);
 			this.events.emit('newSettings');
-			this.debug(`Playlist with {id:${id}} exists as a youtube playlists, removed`);
 			return true;
 		}
 
@@ -212,10 +190,8 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * resolveRef()
-	 * 
+	 * @name resolveRef()
 	 * Returns array of songs that match the song reference
-	 * @param song - song to add to playlist
 	 */
 	resolveRef(ref: SourceRef): Array<Song> {
 		this.debug(`Resolving song with {ref:${JSON.stringify(ref)}}`);
@@ -271,30 +247,30 @@ export default class SourceManager extends GuildComponent {
 	}
 
 	/**
-	 * searchSaved()
-	 * 
+	 * @name searchSaved()
 	 * Searchs all saved sources using given string
-	 * @param searchString - String to use to search
-	 * @returns results split by source they come from
 	 */
 	searchSaved(searchString: string): { gd: Array<Song>, yt: Array<Song> } {
-		this.debug(`Searching saved songs using {searchString:${searchString}}`);
-		const results: { gd: Array<Song>, yt: Array<Song> } = {
+		const rawResults: { gd: Array<{ song: Song, score: number }>, yt: Array<{ song: Song, score: number }> } = {
 			gd: [],
 			yt: []
 		};
 
-		for (let i = 0; i < this._gdPlaylists.length; i++) { results.gd.push(...this._gdPlaylists[i].search(searchString)); }
-		for (let i = 0; i < this._ytPlaylists.length; i++) { results.yt.push(...this._ytPlaylists[i].search(searchString)); }
-		this.debug(`Found {results:${results.gd.length + results.yt.length}}`);
+		for (let i = 0; i < this._gdPlaylists.length; i++) { rawResults.gd.push(...this._gdPlaylists[i].search(searchString)); }
+		for (let i = 0; i < this._ytPlaylists.length; i++) { rawResults.yt.push(...this._ytPlaylists[i].search(searchString)); }
+		this.debug(`Found {results:${rawResults.gd.length + rawResults.yt.length}} in saved songs using string {searchString:${searchString}}`);
+		rawResults.gd.sort((a, b) => a.score - b.score);
+		rawResults.yt.sort((a, b) => a.score - b.score);
+		const results = {
+			gd: rawResults.gd.map((a) => a.song),
+			yt: rawResults.yt.map((a) => a.song)
+		};
 		return results;
 	}
 
 	/**
-	 * export()
-	 * 
+	 * @name export()
 	 * Exports the settings in the format to be saved in database		
-	 * @returns object to be saved in database
 	 */
 	export(): SourceDataConfig {
 		const gdPlaylists = [];

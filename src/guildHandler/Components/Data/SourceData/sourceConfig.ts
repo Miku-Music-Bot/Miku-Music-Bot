@@ -3,7 +3,7 @@ const BOT_DOMAIN = process.env.BOT_DOMAIN;
 // Song Configuration data and defaults
 export type SongConfig = {
 	id?: number,
-	type?: 'yt' | 'gd',
+	type?: 'yt' | 'gd' | undefined,
 	title?: string,
 	url: string,
 	duration?: number,
@@ -52,7 +52,7 @@ export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
 	gdPlaylists: [
 		{
 			type: 'gd',
-			id: undefined,
+			id: 0,
 			title: 'Individual Songs - Google Drive',
 			url: undefined,
 			songs: []
@@ -61,7 +61,7 @@ export const SOURCE_DATA_DEFAULT: SourceDataConfig = {
 	ytPlaylists: [
 		{
 			type: 'yt',
-			id: undefined,
+			id: 1,
 			title: 'Individual Songs - Youtube',
 			url: undefined,
 			songs: []

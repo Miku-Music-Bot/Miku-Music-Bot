@@ -148,8 +148,9 @@ export function newStub(settings?: typeof guildSettings) {
 		collection: () => {
 			return {
 				findOne: () => {
-					return dbData;
-				}
+					return new Promise((resolve) => resolve(dbData));
+				},
+				replaceOne: () => { return; }
 			};
 		}
 	} as unknown as mongodb.Db);

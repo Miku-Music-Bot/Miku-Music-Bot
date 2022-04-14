@@ -32,7 +32,6 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 	constructor(guildHandler: GuildHandler, plInfo?: PlaylistConfig) {
 		super(guildHandler, path.basename(__filename));
 		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
-
 		// set defaults
 		let save = false;
 		const info = Object.assign({}, PLAYLIST_DEFAULT);
@@ -53,6 +52,7 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 			distance: SEARCH_DISTANCE,
 			threshold: SEARCH_THRESHOLD,
 			useExtendedSearch: true,
+			includeScore: true,
 			keys: ['id', 'title', 'artist', 'url']
 		});
 
@@ -231,13 +231,11 @@ export default class GDPlaylist extends GuildComponent implements Playlist {
 
 
 	/**
-	 * search()
-	 * 
-	 * @param searchString - string used to search
-	 * @returns array of songs that matched 
+	 * @name search()
+	 * Searches for songs using given string
 	 */
-	search(searchString: string) {
-		return this._index.search(searchString).map((a) => a.item);
+	search(searchString: string): Array<{ song: GDSong, score: number }> {
+		return this._index.search(searchString).map((a) => { return { song: a.item, score: a.score }; });
 	}
 
 	/**

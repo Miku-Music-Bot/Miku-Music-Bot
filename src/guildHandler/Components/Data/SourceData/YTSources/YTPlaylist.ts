@@ -54,6 +54,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 			distance: SEARCH_DISTANCE,
 			threshold: SEARCH_THRESHOLD,
 			useExtendedSearch: true,
+			includeScore: true,
 			keys: ['id', 'title', 'artist', 'url']
 		});
 
@@ -195,13 +196,11 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 
 
 	/**
-	 * search()
-	 * 
-	 * @param searchString - string used to search
-	 * @returns array of songs that matched 
+	 * @name search()
+	 * Searches for songs using given string
 	 */
-	search(searchString: string): Array<YTSong> {
-		return this._index.search(searchString).map((a) => a.item);
+	search(searchString: string): Array<{ song: YTSong, score: number }> {
+		return this._index.search(searchString).map((a) => { return { song: a.item, score: a.score }; });
 	}
 
 	/**

@@ -388,8 +388,8 @@ describe('Queue Autoplay initialization', () => {
 			});
 
 			queue = new Queue(guildHandlerStub);
+			done();
 		})();
-		done();
 	});
 
 	it('Should initialize autoplay songs into autoplay list into autoplay array', () => {

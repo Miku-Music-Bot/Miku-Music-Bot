@@ -70,12 +70,12 @@ describe('GuildSettings Initialization', () => {
 
 describe('Setting new guild settings', () => {
 	it('Should apply new guild settings and emit events', (done) => {
-		const guildSet = new GuildSettings();
+		const guildSet = new GuildSettings(GUILD_DEFAULT);
 
 		let newSetEmitted = 0;
 		guildSet.events.on('newSettings', () => {
 			newSetEmitted++;
-			if (newSetEmitted >= 8) { done(); }
+			if (newSetEmitted >= 10) { done(); }
 		});
 
 		guildSet.configured = true;
@@ -83,7 +83,9 @@ describe('Setting new guild settings', () => {
 		guildSet.prefix = '!test';
 		guildSet.autoplay = true;
 		guildSet.shuffle = false;
-		guildSet.autoplayList.push({ id: 1, playlist: 1, type: 'gd' });
+		guildSet.autoplayListPush({ id: 1, playlist: 1, type: 'gd' });
+		guildSet.autoplayListPush({ id: 2, playlist: 1, type: 'gd' });
+		guildSet.autoplayListSplice(0, 1);
 		guildSet.songIdCount = 10;
 		guildSet.playlistIdCount = 10;
 
@@ -94,9 +96,9 @@ describe('Setting new guild settings', () => {
 		guildSet.shuffle.should.be.false;
 
 		guildSet.autoplayList.length.should.equal(1);
-		guildSet.autoplayList[0].id.should.equal(1);
-		guildSet.autoplayList[0].playlist.should.equal(1);
-		guildSet.autoplayList[0].type.should.equal('gd');
+		guildSet.autoplayList[1].id.should.equal(2);
+		guildSet.autoplayList[1].playlist.should.equal(1);
+		guildSet.autoplayList[1].type.should.equal('gd');
 
 		guildSet.songIdCount.should.equal(10);
 		guildSet.playlistIdCount.should.equal(10);

@@ -36,5 +36,5 @@ export const GUILD_DEFAULT: GuildConfig = deepFreeze({
 	shuffle: true,
 	autoplayList: [],
 	songIdCount: 0,
-	playlistIdCount: 0
+	playlistIdCount: 100
 }) as GuildConfig;

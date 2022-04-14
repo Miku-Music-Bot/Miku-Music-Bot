@@ -18,9 +18,6 @@ export default class AudioSettings {
 	private _audioSettings: AudioConfig;
 	private _eqSettings: EQConfig;
 
-	/**
-	 * @param settings - object containing audio settings
-	 */
 	constructor(settings?: { audio: AudioConfig, eq: EQConfig }) {
 		this.events = new EventEmitter() as TypedEmitter<EventTypes>;
 		// set defaults first

@@ -1,5 +1,6 @@
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
+import { SourceRef } from '../SourceData/sourceConfig';
 
 import { GuildConfig, GUILD_DEFAULT } from './config/guildConfig';
 
@@ -63,7 +64,15 @@ export default class GuildSettings {
 	get shuffle() { return this._guildSettings.shuffle; }
 	set shuffle(shuffle: GuildConfig['shuffle']) { this._guildSettings.shuffle = shuffle; this.events.emit('newSettings'); }
 
-	get autoplayList() { return this._guildSettings.autoplayList; }
+	get autoplayList() { return Object.freeze(Array.from(this._guildSettings.autoplayList)); }
+	autoplayListPush(ref: SourceRef) {
+		this._guildSettings.autoplayList.push(ref);
+		this.events.emit('newSettings');
+	}
+	autoplayListSplice(start: number, count: number) {
+		this._guildSettings.autoplayList.splice(start, count);
+		this.events.emit('newSettings');
+	}
 
 	get songIdCount() { return this._guildSettings.songIdCount; }
 	set songIdCount(songIdCount: GuildConfig['songIdCount']) { this._guildSettings.songIdCount = songIdCount; this.events.emit('newSettings'); }
