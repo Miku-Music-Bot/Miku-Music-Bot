@@ -4,7 +4,7 @@
 		"outDir": "./built",
 		"module": "CommonJS",
 		"allowJs": true,
-		"target": "es5",
+		"target": "es6",
 		"sourceMap": true,
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitReturns": true,

@@ -8,6 +8,7 @@ import { SOURCE_DATA_DEFAULT } from './sourceConfig';
 import { newStub } from '../../../GuildHandlerStub.test';
 import Playlist from './Playlist';
 import GuildSettings from '../Settings/GuildSettings';
+import sinon from 'sinon';
 
 describe('SourceManager Initialization', () => {
 	it('Should initialize using defaults if nothing given and emit events', (done) => {
@@ -90,24 +91,43 @@ describe('Manipulating playlists in source manager', () => {
 		let newSettingsEmitted = 0;
 		srcMng.events.on('newSettings', () => {
 			newSettingsEmitted++;
-			if (newSettingsEmitted >= 3) { done(); }
+			if (newSettingsEmitted >= 3) {
+				srcMng.resolveRef({ type: 'undefined', playlist: -1, id: -1 } as any).length.should.equal(3);
+				srcMng.resolveRef({ type: 'gd', playlist: 3, id: 1 })[0].title.should.equal('song1');
+				srcMng.resolveRef({ type: 'gd', playlist: 3, id: -1 })[0].title.should.equal('song1');
+				srcMng.resolveRef({ type: 'gd', playlist: 3, id: -1 })[1].title.should.equal('song2');
+				srcMng.resolveRef({ type: 'gd', playlist: 3, id: 11 }).length.should.equal(0);
+				srcMng.resolveRef({ type: 'yt', playlist: 2, id: 11 }).length.should.equal(0);
+				srcMng.resolveRef({ type: 'yt', playlist: 20, id: -1 })[0].title.should.equal('song3');
+				done();
+			}
 		});
+
+		srcMng.addPlaylist({} as any, <any>'unknown').should.be.false;
 
 		const settings = {
 			id: 3,
 			title: 'gdPlaylist2',
 			events: new EventEmitter(),
-			getAllSongs: () => { return [{ id: 1, title: 'song1' }, { title: 'song2' }]; },
+			getSong: (i: number) => {
+				if (i === 1) { return { title: 'song1' }; }
+				else return undefined;
+			},
+			getAllSongs: () => { return [{ id: 1, title: 'song1' }, { id: 4, title: 'song2' }]; },
 			export: () => { return { title: 'gdPlaylist2' }; }
 		} as Playlist;
 		srcMng.addPlaylist(settings, 'gd').should.be.true;
 		settings.events.emit('newSettings');
 
 		srcMng.addPlaylist({
-			id: 1000000000,
+			id: 20,
 			title: 'ytPlaylist2',
 			events: new EventEmitter(),
-			getAllSongs: () => { return []; },
+			getSong: (i: number) => {
+				if (i === 3) { return { title: 'song3' }; }
+				else return undefined;
+			},
+			getAllSongs: () => { return [{ title: 'song3' }]; },
 			export: () => { return { title: 'ytPlaylist2' }; }
 		} as Playlist, 'yt').should.be.true;
 
@@ -117,13 +137,6 @@ describe('Manipulating playlists in source manager', () => {
 		exported.gdPlaylists[1].title.should.equal('gdPlaylist1');
 		exported.ytPlaylists[0].title.should.equal('ytPlaylist1');
 		exported.ytPlaylists[1].title.should.equal('ytPlaylist2');
-
-		srcMng.resolveRef({ type: undefined, playlist: -1, id: -1 }).length.should.equal(2);
-		srcMng.resolveRef({ type: 'gd', playlist: 3, id: 1 })[0].title.should.equal('song1');
-		srcMng.resolveRef({ type: 'gd', playlist: 3, id: -1 })[0].title.should.equal('song1');
-		srcMng.resolveRef({ type: 'gd', playlist: 3, id: -1 })[1].title.should.equal('song2');
-		srcMng.resolveRef({ type: 'gd', playlist: 3, id: 10 }).length.should.equal(0);
-		srcMng.resolveRef({ type: 'yt', playlist: 2, id: 10 }).length.should.equal(0);
 	});
 
 	it('Should remove playlist and emit event', (done) => {
@@ -154,10 +167,108 @@ describe('Manipulating playlists in source manager', () => {
 
 		srcMng.removePlaylist(2).should.be.true;
 		srcMng.removePlaylist(1).should.be.true;
+		srcMng.removePlaylist(1).should.be.false;
 
 		const exported = srcMng.export();
 
 		exported.gdPlaylists.length.should.equal(0);
 		exported.ytPlaylists.length.should.equal(0);
+	});
+});
+
+describe('Source Manager Refresh Playlist', () => {
+	const guildHandlerStub = newStub();
+	guildHandlerStub.data.guildSettings = {
+		playlistIdCount: 10
+	} as GuildSettings;
+	const ee = new EventEmitter();
+	sinon.stub(guildHandlerStub, 'bot').value(ee);
+
+	let gdPlaylistRefreshed = 0;
+	let ytPlaylistRefreshed = 0;
+	const srcMng = new SourceManager(guildHandlerStub, {
+		gdPlaylists: [
+
+		],
+		ytPlaylists: [
+
+		]
+	} as any);
+
+	srcMng.addPlaylist({
+		id: 0,
+		events: new EventEmitter(),
+		fetchData: (): Promise<void> => {
+			gdPlaylistRefreshed++;
+			return new Promise((resolve) => { resolve(); });
+		}
+	} as Playlist, 'gd');
+	srcMng.addPlaylist({
+		id: 1,
+		events: new EventEmitter(),
+		fetchData: (): Promise<void> => {
+			ytPlaylistRefreshed++;
+			return new Promise((resolve) => { resolve(); });
+		}
+	} as Playlist, 'yt');
+
+	it('Should refresh all the playlists at the correct frequency ', (done) => {
+		ee.emit('ready');
+		setTimeout(() => {
+			gdPlaylistRefreshed.should.equal(2);
+			ytPlaylistRefreshed.should.equal(2);
+			done();
+		}, guildHandlerStub.config.REFRESH_PLAYLIST_INTERVAL * 1.5);
+	});
+
+	it('Should not refresh if currently playing a song', (done) => {
+		const gdRefreshStart = gdPlaylistRefreshed;
+		const ytRefreshStart = ytPlaylistRefreshed;
+		sinon.stub(guildHandlerStub.vcPlayer, 'playing').value(true);
+
+		setTimeout(() => {
+			gdPlaylistRefreshed.should.equal(gdRefreshStart);
+			ytPlaylistRefreshed.should.equal(ytRefreshStart);
+			sinon.stub(srcMng, <any>'_refreshAll').callsFake(() => { return; });
+			done();
+		}, guildHandlerStub.config.REFRESH_PLAYLIST_INTERVAL * 3);
+	});
+});
+
+describe('Search Source Manager', () => {
+	it('Should return songs sorted by match score', () => {
+		const guildHandlerStub = newStub();
+		const srcMng = new SourceManager(guildHandlerStub);
+
+		srcMng.addPlaylist({
+			id: 0,
+			events: new EventEmitter(),
+			search: () => {
+				return [
+					{ song: { title: 'song1' }, score: 10 },
+					{ song: { title: 'song2' }, score: 2 },
+					{ song: { title: 'song3' }, score: 1 }
+				];
+			}
+		} as any, 'gd');
+		srcMng.addPlaylist({
+			id: 0,
+			events: new EventEmitter(),
+			search: () => {
+				return [
+					{ song: { title: 'song4' }, score: 20 },
+					{ song: { title: 'song5' }, score: 3 },
+					{ song: { title: 'song6' }, score: 12 }
+				];
+			}
+		} as any, 'yt');
+
+		const results = srcMng.searchSaved('testString');
+		results.gd[0].title.should.equal('song1');
+		results.gd[1].title.should.equal('song2');
+		results.gd[2].title.should.equal('song3');
+		results.yt[0].title.should.equal('song4');
+		results.yt[1].title.should.equal('song6');
+		results.yt[2].title.should.equal('song5');
 	});
 });

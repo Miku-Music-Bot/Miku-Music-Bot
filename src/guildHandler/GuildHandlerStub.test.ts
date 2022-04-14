@@ -125,6 +125,7 @@ export function newStub(settings?: typeof guildSettings) {
 		},
 		transports: [
 			new winston.transports.Console({
+				level: 'error',
 				format: winston.format.combine(
 					winston.format.errors({ stack: true }),
 					winston.format.colorize(),

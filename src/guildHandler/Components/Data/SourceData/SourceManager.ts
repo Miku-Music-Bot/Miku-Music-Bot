@@ -14,8 +14,6 @@ type EventTypes = {
 	newSettings: () => void,
 }
 
-const REFRESH_PLAYLIST_INTERVAL = parseInt(process.env.REFRESH_PLAYLIST_INTERVAL);
-
 /**
  * @name SourceManager
  * Manages all the saved sources for a guild
@@ -66,32 +64,20 @@ export default class SourceManager extends GuildComponent {
 			setTimeout(() => {
 				this.debug('Refresh playlist timeout ended, refreshing playlists');
 				this._refreshAll();
-			}, REFRESH_PLAYLIST_INTERVAL);
+			}, this.config.REFRESH_PLAYLIST_INTERVAL);
 			return;
 		}
 		for (let i = 0; i < this._gdPlaylists.length; i++) {
 			await this._gdPlaylists[i].fetchData();
-			if (this.vcPlayer.playing) {
-				this.debug('Currently playing, stopping playlist refresh');
-				setTimeout(() => {
-					this.debug('Refresh playlist timeout ended, refreshing playlists');
-					this._refreshAll();
-				}, REFRESH_PLAYLIST_INTERVAL);
-				return;
-			}
 		}
 		for (let i = 0; i < this._ytPlaylists.length; i++) {
 			await this._ytPlaylists[i].fetchData();
-			if (this.vcPlayer.playing) {
-				this.debug('Currently playing, stopping playlist refresh');
-				setTimeout(() => {
-					this.debug('Refresh playlist timeout ended, refreshing playlists');
-					this._refreshAll();
-				}, REFRESH_PLAYLIST_INTERVAL);
-				return;
-			}
 		}
 		this.debug('Finished refreshing all playlists');
+		setTimeout(() => {
+			this.debug('Refresh playlist timeout ended, refreshing playlists');
+			this._refreshAll();
+		}, this.config.REFRESH_PLAYLIST_INTERVAL);
 	}
 
 	/**
@@ -147,6 +133,7 @@ export default class SourceManager extends GuildComponent {
 			}
 			default: {
 				this.error(`Playlist with {url:${playlist.url}} and {type:${type}} did not have a valid playlist type, add playlist failed`);
+				return false;
 			}
 		}
 
@@ -213,7 +200,6 @@ export default class SourceManager extends GuildComponent {
 				this.debug('Ref references a youtube song or playlist');
 				const i = this._binarySearch(ref.playlist, this._ytPlaylists);
 				if (i === -1) {
-					this.error(`Did not find playlist with {ref:${JSON.stringify(ref)}}`);
 					return [];
 				}
 				playlist = this._ytPlaylists[i];
@@ -222,28 +208,30 @@ export default class SourceManager extends GuildComponent {
 			case ('gd'): {
 				const i = this._binarySearch(ref.playlist, this._gdPlaylists);
 				if (i === -1) {
-					this.error(`Did not find playlist with {ref:${JSON.stringify(ref)}}`);
 					return [];
 				}
 				playlist = this._gdPlaylists[i];
 				break;
 			}
+			default: {
+				return [];
+			}
 		}
 
 		// if a song id is given, return that specific song, otherwise return all songs in playlist
-		if (ref.id) {
-			this.debug('Song id given in ref, searching for song');
+		if (ref.id === -1) {
+			return playlist.getAllSongs();
+		}
+		else if (ref.id) {
 			const s = playlist.getSong(ref.id);
 			if (!s) {
-				this.error(`Did not find playlist with {ref:${JSON.stringify(ref)}}`);
 				return [];
 			}
 			this.debug('Song found, returning song');
 			return [s];
 		}
 
-		this.debug('No song id given, returning all songs in playlist');
-		return playlist.getAllSongs();
+		return [];
 	}
 
 	/**
@@ -259,8 +247,8 @@ export default class SourceManager extends GuildComponent {
 		for (let i = 0; i < this._gdPlaylists.length; i++) { rawResults.gd.push(...this._gdPlaylists[i].search(searchString)); }
 		for (let i = 0; i < this._ytPlaylists.length; i++) { rawResults.yt.push(...this._ytPlaylists[i].search(searchString)); }
 		this.debug(`Found {results:${rawResults.gd.length + rawResults.yt.length}} in saved songs using string {searchString:${searchString}}`);
-		rawResults.gd.sort((a, b) => a.score - b.score);
-		rawResults.yt.sort((a, b) => a.score - b.score);
+		rawResults.gd.sort((a, b) => b.score - a.score);
+		rawResults.yt.sort((a, b) => b.score - a.score);
 		const results = {
 			gd: rawResults.gd.map((a) => a.song),
 			yt: rawResults.yt.map((a) => a.song)
