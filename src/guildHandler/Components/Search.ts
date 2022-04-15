@@ -32,10 +32,6 @@ type SearchResults = {
 	}
 }
 
-const ITEMS_PER_PAGE = parseInt(process.env.ITEMS_PER_PAGE);
-const MAX_YT_RESULTS = parseInt(process.env.MAX_YT_RESULTS);
-const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
-
 /**
  * Search
  * 
@@ -85,7 +81,7 @@ export default class Search extends GuildComponent {
 			this.debug(`Found {results:${savedResults.yt.length}} songs in saved youtube songs`);
 
 			this.debug('Searching on youtube');
-			const ytsrResults = await ytsr(searchString, { limit: MAX_YT_RESULTS });
+			const ytsrResults = await ytsr(searchString, { limit: this.config.MAX_YT_RESULTS });
 			// filter out non video and premiers
 			const filteredYTResults: ytsr.Video[] = ytsrResults.items.filter((result) => result.type === 'video' && !result.isUpcoming) as ytsr.Video[];
 			this.debug(`Found {results:${filteredYTResults.length}} videos from youtube`);
@@ -184,16 +180,16 @@ export default class Search extends GuildComponent {
 		if (!page) { page = 1; }
 
 		// Make sure page is in the right range
-		const maxPage = Math.ceil(searchResults.items.length / ITEMS_PER_PAGE);
+		const maxPage = Math.ceil(searchResults.items.length / this.config.ITEMS_PER_PAGE);
 		if (page > maxPage) { page = maxPage; }
 		if (page < 1) { page = 1; }
 
 		// find where in item list to start at
-		const indexStart = (page - 1) * ITEMS_PER_PAGE;
+		const indexStart = (page - 1) * this.config.ITEMS_PER_PAGE;
 
 		const numbers = new Discord.MessageActionRow();
 		let displayText = '';
-		for (let i = 0; i < ITEMS_PER_PAGE; i++) {
+		for (let i = 0; i < this.config.ITEMS_PER_PAGE; i++) {
 			const loc = indexStart + i;
 
 			// Add headers when appropriate, add 'nothing found' if that group has nothing in it
@@ -219,8 +215,8 @@ export default class Search extends GuildComponent {
 
 				// set title of song in bold
 				let songTitle = song.title;
-				if (song.title.length > MAX_SONG_INFO_LENGTH) {
-					songTitle = song.title.slice(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+				if (song.title.length > this.config.MAX_SONG_INFO_LENGTH) {
+					songTitle = song.title.slice(0, this.config.MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				displayText += `**${this.ui.escapeString(songTitle)}**\n`;
 
@@ -233,8 +229,8 @@ export default class Search extends GuildComponent {
 					}
 					case ('gd'): {
 						let artist = song.artist;
-						if (song.artist.length > MAX_SONG_INFO_LENGTH) {
-							artist = song.artist.slice(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+						if (song.artist.length > this.config.MAX_SONG_INFO_LENGTH) {
+							artist = song.artist.slice(0, this.config.MAX_SONG_INFO_LENGTH - 3) + '...';
 						}
 						displayText += `Url: **${song.url}**\n`;
 						displayText += `Artist: **${this.ui.escapeString(artist)}**\n`;
@@ -299,9 +295,9 @@ export default class Search extends GuildComponent {
 				// Jump to youtube results button
 				new Discord.MessageButton()
 					.setLabel('>> Youtube Results')
-					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1, special: 3 }))
+					.setCustomId(JSON.stringify({ type: 'page', pageNum: Math.floor(searchResults.indexes.ytSearch.loc / this.config.ITEMS_PER_PAGE) + 1, special: 3 }))
 					.setStyle('PRIMARY')
-					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / ITEMS_PER_PAGE) + 1)
+					.setDisabled(page === Math.floor(searchResults.indexes.ytSearch.loc / this.config.ITEMS_PER_PAGE) + 1)
 			);
 
 		return { embeds: [searchUI], components: [numbers, navigation] };

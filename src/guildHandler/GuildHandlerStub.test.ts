@@ -5,11 +5,11 @@ import winston from 'winston';
 import Discord from 'discord.js';
 import * as mongodb from 'mongodb';
 import { drive_v3 } from '@googleapis/drive';
-import getEnv from './config';
+import getEnv from '../config';
 
 import GuildHandler from './GuildHandler';
 
-const guildSettings: {
+export const guildTestSettings: {
 	guildId?: string,
 	guildConfig?: {
 		configured?: boolean,
@@ -78,7 +78,7 @@ const guildSettings: {
 	guildConfig: {
 		configured: true,
 		channelId: 'testChannel',
-		prefix: '!miku ',
+		prefix: '!testPrefix',
 		autoplay: false,
 		shuffle: false,
 		autoplayList: [],
@@ -97,27 +97,54 @@ const guildSettings: {
 			eq: []
 		}
 	},
-	permissionConfig: {},
+	permissionConfig: {
+		'testCommand': ['testRole']
+	},
 	sourceDataConfig: {
-		gdPlaylists: [],
-		ytPlaylists: []
+		gdPlaylists: [
+			{
+				id: 0,
+				type: 'gd',
+				title: 'testPlaylist1',
+				songs: [
+					{ id: 0, title: 'testSong1' }
+				]
+			}
+		],
+		ytPlaylists: [
+			{
+				id: 1,
+				type: 'yt',
+				title: 'testPlaylist2',
+				songs: [
+					{ id: 1, title: 'testSong2' }
+				]
+			}
+		]
 	}
 });
 
-export function newStub(settings?: typeof guildSettings) {
+export function newStub(settings?: typeof guildTestSettings, noData?: boolean, stubs?: {
+	mongodb?: sinon.SinonStubbedInstance<mongodb.MongoClient>,
+	discord?: sinon.SinonStubbedInstance<Discord.Client>,
+	googleDrive?: sinon.SinonStubbedInstance<drive_v3.Drive>
+}) {
 	if (!settings) { settings = {}; }
-	let dbData = Object.assign({}, guildSettings);
+	let dbData = Object.assign({}, guildTestSettings);
 	dbData = Object.assign(dbData, settings);
+	if (noData) { dbData = undefined; }
 
 	winston.addColors({
 		debug: 'blue',
 		info: 'green',
 		warn: 'yellow',
 		error: 'red',
+
 	});
 	const logger = winston.createLogger({
 		level: 'debug',
 		levels: {
+			silent: -1,
 			error: 0,
 			warn: 1,
 			info: 2,
@@ -125,7 +152,7 @@ export function newStub(settings?: typeof guildSettings) {
 		},
 		transports: [
 			new winston.transports.Console({
-				level: 'error',
+				level: 'silent', //'debug',
 				format: winston.format.combine(
 					winston.format.errors({ stack: true }),
 					winston.format.colorize(),
@@ -138,10 +165,10 @@ export function newStub(settings?: typeof guildSettings) {
 		]
 	});
 
-	const DiscordStub = sinon.stub(new Discord.Client({ intents: [] }));
+	let DiscordStub = sinon.stub(new Discord.Client({ intents: [] }));
 	DiscordStub.login.returns(new Promise((resolve) => resolve('')));
 
-	const MongodbStub = sinon.stub(new mongodb.MongoClient('mongodb+srv://user:pwd@localhost'));
+	let MongodbStub = sinon.stub(new mongodb.MongoClient('mongodb+srv://user:pwd@localhost'));
 	MongodbStub.connect.callsFake((): Promise<mongodb.MongoClient> => {
 		return new Promise((resolve) => resolve(MongodbStub));
 	});
@@ -151,6 +178,7 @@ export function newStub(settings?: typeof guildSettings) {
 				findOne: () => {
 					return new Promise((resolve) => resolve(dbData));
 				},
+				insertOne: () => { return; },
 				replaceOne: () => { return; }
 			};
 		}
@@ -165,14 +193,20 @@ export function newStub(settings?: typeof guildSettings) {
 			}
 		}
 	);
-	const DriveStub = {
+	let DriveStub = {
 		files: DriveFilesStub
-	};
+	} as unknown as sinon.SinonStubbedInstance<drive_v3.Drive>;
 
 	const config = getEnv(path.join(__dirname, '../../', 'test.env'));
 
+	if (stubs) {
+		if (stubs.discord) { DiscordStub = stubs.discord; }
+		if (stubs.googleDrive) { DriveStub = stubs.googleDrive; }
+		if (stubs.mongodb) { MongodbStub = stubs.mongodb; }
+	}
+
 	const stub = new GuildHandler(
-		'1234567890',
+		dbData.guildId,
 		logger,
 		DiscordStub as unknown as Discord.Client,
 		MongodbStub as unknown as mongodb.MongoClient,

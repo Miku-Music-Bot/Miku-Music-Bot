@@ -7,7 +7,7 @@ import path from 'path';
 import newLogger from '../Logger';
 
 import GuildHandler from './GuildHandler';
-import getEnv from './config';
+import getEnv from '../config';
 
 // Possible commands from parent
 export type StartMsg = {			// Start message containing information needed to start guild hanlder
@@ -85,7 +85,7 @@ process.on('message', async (message: ParentCommand) => {
 
 			// set up logger
 			const filename = path.basename(__filename);
-			const logger = newLogger(path.join(config.LOG_DIR, id));
+			const logger = newLogger(path.join(config.LOG_DIR, id), config);
 			//const debug = (msg: string) => { logger.debug(`{filename: ${filename}} ${msg}`); };			unneeded right now
 			const info = (msg: string) => { logger.info(msg); };
 			//const warn = (msg: string) => { logger.warn(`{filename: ${filename}} ${msg}`); };

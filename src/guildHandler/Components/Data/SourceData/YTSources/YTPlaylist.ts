@@ -14,9 +14,6 @@ type EventTypes = {
 	newSettings: () => void,
 }
 
-const SEARCH_THRESHOLD = parseFloat(process.env.SEARCH_THRESHOLD);
-const SEARCH_DISTANCE = parseInt(process.env.SEARCH_DISTANCE);
-
 export default class YTPlaylist extends GuildComponent implements Playlist {
 	events: TypedEmitter<EventTypes>;
 	private _type: 'yt';
@@ -51,8 +48,8 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 
 		// Create fuse index
 		this._index = new Fuse(this._songs, {
-			distance: SEARCH_DISTANCE,
-			threshold: SEARCH_THRESHOLD,
+			distance: this.config.SEARCH_DISTANCE,
+			threshold: this.config.SEARCH_THRESHOLD,
 			useExtendedSearch: true,
 			includeScore: true,
 			keys: ['id', 'title', 'artist', 'url']

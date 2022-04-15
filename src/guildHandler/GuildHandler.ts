@@ -4,7 +4,7 @@ import type winston from 'winston';
 import type { drive_v3 } from '@googleapis/drive';
 import * as mongodb from 'mongodb';
 
-import getEnv from './config';
+import getEnv from '../config';
 import UI from './Components/UI';
 import GuildData from './Components/Data/GuildData';
 import PermissionChecker from './Components/PermissionChecker';

@@ -3,7 +3,7 @@ import dotenv from 'dotenv';	// grab env variables
 export default function getEnv(path: string) {
 	dotenv.config({ path, override: true });
 
-	return Object.freeze({
+	const config = {
 		NODE_ENV: process.env.NODE_ENV,
 
 		DISCORD_TOKEN: process.env.DISCORD_TOKEN,
@@ -39,6 +39,9 @@ export default function getEnv(path: string) {
 		PCM_FORMAT: process.env.PCM_FORMAT,
 		AUDIO_CHANNELS: parseInt(process.env.AUDIO_CHANNELS),
 		AUDIO_FREQUENCY: parseInt(process.env.AUDIO_FREQUENCY),
+		SEC_PCM_SIZE: 0,
+		LARGE_CHUNK_SIZE: 0,
+		SMALL_CHUNK_SIZE: 0,
 		CHUNK_TIMING: parseInt(process.env.CHUNK_TIMING),
 		NIGHTCORE_AUDIO_FREQUENCY: parseInt(process.env.NIGHTCORE_AUDIO_FREQUENCY),
 		NIGHTCORE_CHUNK_TIMING: parseInt(process.env.NIGHTCORE_CHUNK_TIMING),
@@ -60,5 +63,11 @@ export default function getEnv(path: string) {
 		GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
 		GOOGLE_SCOPE: process.env.GOOGLE_SCOPE,
 		GOOGLE_TOKEN_LOC: process.env.GOOGLE_TOKEN_LOC
-	});
+	};
+
+	config.SEC_PCM_SIZE = config.AUDIO_CHANNELS * config.AUDIO_FREQUENCY * config.BIT_DEPTH / 8;
+	config.LARGE_CHUNK_SIZE = config.SEC_PCM_SIZE * 10;
+	config.SMALL_CHUNK_SIZE = config.SEC_PCM_SIZE / 10;
+
+	return Object.freeze(config);
 }

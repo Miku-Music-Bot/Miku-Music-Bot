@@ -20,15 +20,8 @@ type DatabaseData = {
 	sourceDataConfig: SourceDataConfig
 }
 
-const MONGODB_DBNAME = process.env.MONGODB_DBNAME;										// name of bot database
-const GUILDDATA_COLLECTION_NAME = process.env.GUILDDATA_COLLECTION_NAME;				// name of collection for guild data
-const MAX_DATABASE_RETRY_WAIT = parseInt(process.env.MAX_DATABASE_RETRY_WAIT);
-const DATABASE_ACCESS_WAIT = parseInt(process.env.DATABASE_ACCESS_WAIT);
-const MAX_UPDATES_BEFORE_SAVE = parseInt(process.env.MAX_UPDATES_BEFORE_SAVE);
-
 /**
- * GuildData
- *
+ * @name GuildData
  * Abstracts away database connection
  * Handles getting and setting guild settings
  */
@@ -55,13 +48,13 @@ export default class GuildData extends GuildComponent {
 	initData(): Promise<void> {
 		return new Promise((resolve) => {
 			const _initData = async (wait: number) => {
-				if (wait > MAX_DATABASE_RETRY_WAIT) { wait = MAX_DATABASE_RETRY_WAIT; }
+				if (wait > this.config.MAX_DATABASE_RETRY_WAIT) { wait = this.config.MAX_DATABASE_RETRY_WAIT; }
 
 				try {
 					this.debug('Connecting to mongodb database');
 
-					const db = this.dbClient.db(MONGODB_DBNAME);
-					this._collection = db.collection(GUILDDATA_COLLECTION_NAME);
+					const db = this.dbClient.db(this.config.MONGODB_DBNAME);
+					this._collection = db.collection(this.config.GUILDDATA_COLLECTION_NAME);
 
 					// grab guild data from the database
 					this.debug('Requesting settings from database');
@@ -100,7 +93,7 @@ export default class GuildData extends GuildComponent {
 					this.permissionSettings.events.on('newSettings', () => { this.debug('New settings on permission settings, saving'); this._save(); });
 					this.sourceManager.events.on('newSettings', () => { this.debug('New settings on sourceManager, saving'); this._save(); });
 
-					resolve();				// call callback once done
+					resolve();				// resolve once done
 				} catch (error) {
 					this.error(`{error: ${error.message}} retrieving/saving data from database. Trying again in ${wait} seconds. {stack:${error.stack}}`);
 					setTimeout(() => { _initData(wait * 10); }, wait);
@@ -111,14 +104,13 @@ export default class GuildData extends GuildComponent {
 	}
 
 	/**
-	 * _save()
-	 * 
+	 * @name _save()
 	 * Queues up save to database to prevent spamming
 	 */
 	private _save(): void {
 		this._saveCount++;
 		this.debug(`Queueing save currently ${this._saveCount} saves in queue`);
-		if (this._saveCount > MAX_UPDATES_BEFORE_SAVE) {
+		if (this._saveCount > this.config.MAX_UPDATES_BEFORE_SAVE) {
 			this.debug('Max number of queued saves reached, saving');
 			this._saveCount = 0;
 			this._saveData();
@@ -127,12 +119,11 @@ export default class GuildData extends GuildComponent {
 		this._saveTimeout = setTimeout(() => {
 			this.debug('Save timeout ended, saving data');
 			this._saveData();
-		}, DATABASE_ACCESS_WAIT);
+		}, this.config.DATABASE_ACCESS_WAIT);
 	}
 
 	/**
-	 * saveData()
-	 *
+	 * @name _saveData()
 	 * Saves guildData to database
 	 */
 	private async _saveData(): Promise<void> {
@@ -148,21 +139,29 @@ export default class GuildData extends GuildComponent {
 			};
 			await this._collection.replaceOne({ guildId: this.guildHandler.id }, newData);
 		} catch (error) {
-			this.error(`{error: ${error.message}} saving data from database. Trying again in ${MAX_DATABASE_RETRY_WAIT} ms. {stack:${error.stack}}`);
-			this._retrySave = setInterval(() => this._saveData(), MAX_DATABASE_RETRY_WAIT);
+			this.error(`{error: ${error.message}} saving data from database. Trying again in ${this.config.MAX_DATABASE_RETRY_WAIT} ms. {stack:${error.stack}}`);
+			this._retrySave = setInterval(() => this._saveData(), this.config.MAX_DATABASE_RETRY_WAIT);
 		}
 	}
 
 	/**
-	 * deleteGuild()
-	 * 
+	 * @name deleteGuild()
 	 * Deletes guild data in the database
 	 */
 	async deleteGuild(): Promise<void> {
-		try {
-			this.debug(`Deleting guild data in database for guild with {guildId:${this.guildHandler.id}}`);
-			await this._collection.deleteOne({ guildId: this.guildHandler.id });
-		}
-		catch (error) { this.error(`{error:${error.message}} while deleting guild data in database. {stack:${error.stack}}`); }
+		return new Promise((resolve) => {
+			const _delete = async (wait: number) => {
+				if (wait > this.config.MAX_DATABASE_RETRY_WAIT) { wait = this.config.MAX_DATABASE_RETRY_WAIT; }
+
+				try {
+					await this._collection.deleteOne({ guildId: this.guildHandler.id });
+					resolve();
+				}
+				catch (error) {
+					setTimeout(() => { _delete(wait * 10); }, wait);
+				}
+			};
+			_delete(1_000);
+		});
 	}
 }

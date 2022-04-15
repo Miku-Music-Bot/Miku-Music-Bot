@@ -5,16 +5,7 @@ import { AuthPlus } from 'googleapis-common';
 import path from 'path';
 
 import type BotMaster from '../GuildMaster';
-
-const ASSETS_LOC = process.env.ASSETS_LOC;
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const PORT = process.env.PORT;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-const GOOGLE_SCOPE = process.env.GOOGLE_SCOPE;
-const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
-
+import getEnv from '../config';
 /**
  * webPanel.js
  *
@@ -22,12 +13,12 @@ const GOOGLE_TOKEN_LOC = process.env.GOOGLE_TOKEN_LOC;
  * @param botMaster - bot master object
  * @return promise that resolves once web server is ready
  */
-export default function startWebServer(botMaster: BotMaster, log: winston.Logger): Promise<void> {
+export default function startWebServer(botMaster: BotMaster, log: winston.Logger, config: ReturnType<typeof getEnv>): Promise<void> {
 	const app = express();
-	app.use(express.static(ASSETS_LOC));
+	app.use(express.static(config.ASSETS_LOC));
 
 	const authPlus = new AuthPlus();
-	const oAuth2Client = new authPlus.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+	const oAuth2Client = new authPlus.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
 
 	app.get('/', (req, res) => {
 		res.send('Hello World!');
@@ -35,11 +26,11 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 
 	app.get('/thumbnails/:id', async (req, res) => {
 		try {
-			await fs.promises.access(path.join(ASSETS_LOC, 'thumbnails', req.params.id));
-			res.send(path.join(ASSETS_LOC, 'thumbnails', req.params.id));
+			await fs.promises.access(path.join(config.ASSETS_LOC, 'thumbnails', req.params.id));
+			res.send(path.join(config.ASSETS_LOC, 'thumbnails', req.params.id));
 		}
 		catch {
-			res.sendFile(path.join(ASSETS_LOC, 'thumbnails', 'defaultThumbnail.jpg'));
+			res.sendFile(path.join(config.ASSETS_LOC, 'thumbnails', 'defaultThumbnail.jpg'));
 		}
 	});
 
@@ -61,12 +52,12 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 				}
 
 				try {
-					await fs.promises.writeFile(GOOGLE_TOKEN_LOC, JSON.stringify(token));
-					log.info(`Saved Google Drive token to {location:${GOOGLE_TOKEN_LOC}}`);
-					res.redirect(`${BOT_DOMAIN}/admin`);
+					await fs.promises.writeFile(config.GOOGLE_TOKEN_LOC, JSON.stringify(token));
+					log.info(`Saved Google Drive token to {location:${config.GOOGLE_TOKEN_LOC}}`);
+					res.redirect(`${config.BOT_DOMAIN}/admin`);
 				}
 				catch (error) {
-					log.error(`{error:${error}} while saving google drive token to {location:${GOOGLE_TOKEN_LOC}}`);
+					log.error(`{error:${error}} while saving google drive token to {location:${config.GOOGLE_TOKEN_LOC}}`);
 					// <<<<<<<<<<<<<<<<<<<<< send an error
 					// res.redirect()
 				}
@@ -75,7 +66,7 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 		}
 		const authUrl = oAuth2Client.generateAuthUrl({
 			access_type: 'offline',
-			scope: GOOGLE_SCOPE,
+			scope: config.GOOGLE_SCOPE,
 		});
 
 		log.info(`Recieved request to authenticate Google Drive API, redirecting user to {url:${authUrl}}`);
@@ -84,22 +75,22 @@ export default function startWebServer(botMaster: BotMaster, log: winston.Logger
 
 	return new Promise((resolve, reject) => {
 		try {
-			app.listen(PORT, () => {
-				log.info(`Webserver listening on port ${PORT}`);
+			app.listen(config.PORT, () => {
+				log.info(`Webserver listening on port ${config.PORT}`);
 
 				try {
-					fs.accessSync(GOOGLE_TOKEN_LOC);
-					log.debug(`Found Google Drive token data at {location:${GOOGLE_TOKEN_LOC}}`);
+					fs.accessSync(config.GOOGLE_TOKEN_LOC);
+					log.debug(`Found Google Drive token data at {location:${config.GOOGLE_TOKEN_LOC}}`);
 					resolve();
 				}
 				catch {
-					log.info(`Google Drive token data not found at "${GOOGLE_TOKEN_LOC}", head to "${GOOGLE_REDIRECT_URI}", to authenticate Google Drive API`);
+					log.info(`Google Drive token data not found at "${config.GOOGLE_TOKEN_LOC}", head to "${config.GOOGLE_REDIRECT_URI}", to authenticate Google Drive API`);
 
 					// Keep checking for file
 					const recheck = setInterval(() => {
 						try {
-							fs.accessSync(GOOGLE_TOKEN_LOC);
-							log.info(`Found Google Drive token data at {location:${GOOGLE_TOKEN_LOC}}`);
+							fs.accessSync(config.GOOGLE_TOKEN_LOC);
+							log.info(`Found Google Drive token data at {location:${config.GOOGLE_TOKEN_LOC}}`);
 							clearInterval(recheck);
 							resolve();
 						} catch { /* */ }

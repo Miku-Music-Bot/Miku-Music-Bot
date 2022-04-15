@@ -35,11 +35,13 @@ describe('SourceManager Initialization', () => {
 		const srcMng = new SourceManager(guildHandlerStub, {
 			gdPlaylists: [
 				{
+					type: 'gd',
 					title: 'gdPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'gdPlaylist1' }; }
 				},
 				{
+					type: 'gd',
 					title: 'gdPlaylist2',
 					events: new EventEmitter(),
 					export: () => { return { title: 'gdPlaylist2' }; }
@@ -47,6 +49,7 @@ describe('SourceManager Initialization', () => {
 			],
 			ytPlaylists: [
 				{
+					type: 'yt',
 					title: 'ytPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'ytPlaylist1' }; }
@@ -73,6 +76,7 @@ describe('Manipulating playlists in source manager', () => {
 			gdPlaylists: [
 				{
 					id: 0,
+					type: 'gd',
 					title: 'gdPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'gdPlaylist1' }; }
@@ -81,6 +85,7 @@ describe('Manipulating playlists in source manager', () => {
 			ytPlaylists: [
 				{
 					id: 1,
+					type: 'yt',
 					title: 'ytPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'ytPlaylist1' }; }
@@ -103,10 +108,11 @@ describe('Manipulating playlists in source manager', () => {
 			}
 		});
 
-		srcMng.addPlaylist({} as any, <any>'unknown').should.be.false;
+		srcMng.addPlaylist({ type: 'unknown' } as any).should.be.false;
 
 		const settings = {
 			id: 3,
+			type: 'gd',
 			title: 'gdPlaylist2',
 			events: new EventEmitter(),
 			getSong: (i: number) => {
@@ -116,11 +122,12 @@ describe('Manipulating playlists in source manager', () => {
 			getAllSongs: () => { return [{ id: 1, title: 'song1' }, { id: 4, title: 'song2' }]; },
 			export: () => { return { title: 'gdPlaylist2' }; }
 		} as Playlist;
-		srcMng.addPlaylist(settings, 'gd').should.be.true;
+		srcMng.addPlaylist(settings).should.be.true;
 		settings.events.emit('newSettings');
 
 		srcMng.addPlaylist({
 			id: 20,
+			type: 'yt',
 			title: 'ytPlaylist2',
 			events: new EventEmitter(),
 			getSong: (i: number) => {
@@ -129,7 +136,7 @@ describe('Manipulating playlists in source manager', () => {
 			},
 			getAllSongs: () => { return [{ title: 'song3' }]; },
 			export: () => { return { title: 'ytPlaylist2' }; }
-		} as Playlist, 'yt').should.be.true;
+		} as Playlist).should.be.true;
 
 		const exported = srcMng.export();
 
@@ -144,6 +151,7 @@ describe('Manipulating playlists in source manager', () => {
 			gdPlaylists: [
 				{
 					id: 2,
+					type: 'gd',
 					title: 'gdPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'gdPlaylist1' }; }
@@ -152,6 +160,7 @@ describe('Manipulating playlists in source manager', () => {
 			ytPlaylists: [
 				{
 					id: 1,
+					type: 'yt',
 					title: 'ytPlaylist1',
 					events: new EventEmitter(),
 					export: () => { return { title: 'ytPlaylist1' }; }
@@ -187,30 +196,28 @@ describe('Source Manager Refresh Playlist', () => {
 	let gdPlaylistRefreshed = 0;
 	let ytPlaylistRefreshed = 0;
 	const srcMng = new SourceManager(guildHandlerStub, {
-		gdPlaylists: [
-
-		],
-		ytPlaylists: [
-
-		]
+		gdPlaylists: [],
+		ytPlaylists: []
 	} as any);
 
 	srcMng.addPlaylist({
 		id: 0,
+		type: 'gd',
 		events: new EventEmitter(),
 		fetchData: (): Promise<void> => {
 			gdPlaylistRefreshed++;
 			return new Promise((resolve) => { resolve(); });
 		}
-	} as Playlist, 'gd');
+	} as Playlist);
 	srcMng.addPlaylist({
 		id: 1,
+		type: 'yt',
 		events: new EventEmitter(),
 		fetchData: (): Promise<void> => {
 			ytPlaylistRefreshed++;
 			return new Promise((resolve) => { resolve(); });
 		}
-	} as Playlist, 'yt');
+	} as Playlist);
 
 	it('Should refresh all the playlists at the correct frequency ', (done) => {
 		ee.emit('ready');
@@ -242,6 +249,7 @@ describe('Search Source Manager', () => {
 
 		srcMng.addPlaylist({
 			id: 0,
+			type: 'gd',
 			events: new EventEmitter(),
 			search: () => {
 				return [
@@ -250,9 +258,10 @@ describe('Search Source Manager', () => {
 					{ song: { title: 'song3' }, score: 1 }
 				];
 			}
-		} as any, 'gd');
+		} as any);
 		srcMng.addPlaylist({
 			id: 0,
+			type: 'yt',
 			events: new EventEmitter(),
 			search: () => {
 				return [
@@ -261,7 +270,7 @@ describe('Search Source Manager', () => {
 					{ song: { title: 'song6' }, score: 12 }
 				];
 			}
-		} as any, 'yt');
+		} as any);
 
 		const results = srcMng.searchSaved('testString');
 		results.gd[0].title.should.equal('song1');

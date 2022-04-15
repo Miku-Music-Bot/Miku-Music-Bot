@@ -7,9 +7,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 import BotMaster from './GuildMaster';
 import startWebServer from './webPanel/webPanel';
 import newLogger from './Logger';
-
-const GUILD_CREATE_RATE = parseInt(process.env.GUILD_CREATE_RATE);
-const LOG_DIR = process.env.LOG_DIR;
+import getEnv from './config';
 
 /**
  * main.js
@@ -19,12 +17,12 @@ const LOG_DIR = process.env.LOG_DIR;
  * Starts handlers for each guild
  * Handles guildCreate, guildDelete, messageCreate, and messageReactionAdd events
  */
-const log = newLogger(path.join(LOG_DIR, 'main'));
-const botMaster = new BotMaster(log);
+const config = getEnv(path.join(__dirname, '.env'));
+
+const log = newLogger(path.join(config.LOG_DIR, 'main'), config);
+const botMaster = new BotMaster(log, config);
 
 // Set up discord events
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;		// discord bot token
-
 const bot = new Discord.Client({				// set intent flags for bot
 	intents: [
 		Discord.Intents.FLAGS.GUILDS,					// for guildCreate and guildDelete events
@@ -85,16 +83,16 @@ bot.once('ready', () => {
 		const guildList = bot.guilds.cache.map((guild) => guild.id);
 		for (let i = 0; i < guildList.length; i++) {
 			botMaster.newGuild(guildList[i]);
-			await new Promise(resolve => setTimeout(resolve, GUILD_CREATE_RATE));
+			await new Promise(resolve => setTimeout(resolve, config.GUILD_CREATE_RATE));
 		}
-	}, GUILD_CREATE_RATE);
+	}, config.GUILD_CREATE_RATE);
 });
 
 // start web panel
-startWebServer(botMaster, log)
+startWebServer(botMaster, log, config)
 	.then(() => {
 		// login as bot
-		bot.login(DISCORD_TOKEN);
+		bot.login(config.DISCORD_TOKEN);
 	})
 	.catch((error) => {
 		// stop if web server fails to start

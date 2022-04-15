@@ -16,10 +16,6 @@ type EventTypes = {
 	newSettings: (song: GDSong) => void,
 }
 
-const TEMP_DIR = process.env.TEMP_DIR;
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const ASSETS_LOC = process.env.ASSETS_LOC;
-
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
@@ -73,7 +69,7 @@ export default class GDSong extends GuildComponent implements Song {
 	async fetchData(save?: boolean): Promise<string> {
 		this.debug(`Fetching data for song with {url:${this._songInfo.url}}`);
 		return new Promise((resolve) => {
-			const tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
+			const tempLocation = path.join(this.config.TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
 			this.debug(`Downloading song from google drive to {location:${tempLocation}}`);
 			try {
 				const id = this.getIdFromUrl(this._songInfo.url);
@@ -107,9 +103,9 @@ export default class GDSong extends GuildComponent implements Song {
 								ffmpeg(tempLocation)
 									.audioCodec('copy')
 									.videoCodec('copy')
-									.output(path.join(ASSETS_LOC, 'thumbnails', `${id}.jpg`))
+									.output(path.join(this.config.ASSETS_LOC, 'thumbnails', `${id}.jpg`))
 									.on('end', async () => {
-										this._songInfo.thumbnailURL = `${BOT_DOMAIN}/thumbnails/${id}.jpg`;
+										this._songInfo.thumbnailURL = `${this.config.BOT_DOMAIN}/thumbnails/${id}.jpg`;
 										if (!save) { try { await fs.promises.unlink(tempLocation); } catch { /* */ } }
 										this.events.emit('newSettings', this);
 										resolve(tempLocation);

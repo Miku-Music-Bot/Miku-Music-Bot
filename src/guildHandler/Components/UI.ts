@@ -5,13 +5,6 @@ import GuildComponent from './GuildComponent';
 import type GuildHandler from '../GuildHandler';
 import { InteractionInfo } from '../GHChildInterface';
 
-const SHOW_NUM_ITEMS = parseInt(process.env.SHOW_NUM_ITEMS);
-const NOTIFICATION_LIFE = parseInt(process.env.NOTIFICATION_LIFE);
-const UI_REFRESH_RATE = parseInt(process.env.UI_REFRESH_RATE);
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
-const MAX_SONG_INFO_LENGTH = parseInt(process.env.MAX_SONG_INFO_LENGTH);
-const PROGRESS_BAR_LENGTH = parseInt(process.env.PROGRESS_BAR_LENGTH);
-
 export const GREY = '#5a676b';
 export const TEAL = '#86cecb';
 export const PINK = '#e12885';
@@ -75,7 +68,7 @@ export default class UI extends GuildComponent {
 				userInterface
 					.setTitle('Idle - Listening for Commands')
 					.setDescription('Click the "help" button below if you need help')
-					.setThumbnail(`${BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`);
+					.setThumbnail(`${this.config.BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`);
 			}
 			else {
 				// Check song status, (paused over buffering over playing)
@@ -87,8 +80,8 @@ export default class UI extends GuildComponent {
 
 				// Song title
 				let title = this.queue.nowPlayingSong.title;
-				if (this.queue.nowPlayingSong.title.length > MAX_SONG_INFO_LENGTH) {
-					title = this.queue.nowPlayingSong.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+				if (this.queue.nowPlayingSong.title.length > this.config.MAX_SONG_INFO_LENGTH) {
+					title = this.queue.nowPlayingSong.title.substring(0, this.config.MAX_SONG_INFO_LENGTH - 3) + '...';
 				}
 				userInterface.setTitle(this.ui.escapeString(title));
 
@@ -111,7 +104,7 @@ export default class UI extends GuildComponent {
 
 				// Figure out where to put the indicator
 				progress = this.vcPlayer.currentSource.getPlayedDuration();
-				const lineLength = PROGRESS_BAR_LENGTH - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
+				const lineLength = this.config.PROGRESS_BAR_LENGTH - progressBar.length - this.vcPlayer.currentSource.song.durationString.length - 2;
 				const indicatorLoc = Math.round(progress / this.vcPlayer.currentSource.song.duration * lineLength);
 				// Create bar
 				for (let i = 0; i < lineLength; i++) {
@@ -149,8 +142,8 @@ export default class UI extends GuildComponent {
 				// Last played information
 				if (this.queue.lastPlayed) {
 					let lastPlayedText = '';
-					if (this.queue.lastPlayed.title.length > MAX_SONG_INFO_LENGTH) {
-						lastPlayedText += this.queue.lastPlayed.title.substring(0, MAX_SONG_INFO_LENGTH - 3) + '...';
+					if (this.queue.lastPlayed.title.length > this.config.MAX_SONG_INFO_LENGTH) {
+						lastPlayedText += this.queue.lastPlayed.title.substring(0, this.config.MAX_SONG_INFO_LENGTH - 3) + '...';
 					}
 					else { lastPlayedText += this.queue.lastPlayed.title; }
 					userInterface.addFields({
@@ -162,7 +155,7 @@ export default class UI extends GuildComponent {
 
 				// Queue information
 				let queueTxt = '';
-				for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
+				for (let i = 0; i < this.config.SHOW_NUM_ITEMS; i++) {
 					if (i === this.queue.nextInQueue.length) {
 						if (this.queue.repeatQueue === 0) { queueTxt += '**>> End Of Queue <<**'; break; }
 						else { queueTxt += '**>> Repeat Queue <<**'; break; }
@@ -171,8 +164,8 @@ export default class UI extends GuildComponent {
 					// Index number for item
 					let itemText = `${(this.queue.nextInQueue[i].index + 1).toString()}. `;
 					// Add title of song cut off to be the right length
-					if (this.queue.nextInQueue[i].song.title.length > MAX_SONG_INFO_LENGTH) {
-						itemText += this.escapeString(this.queue.nextInQueue[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
+					if (this.queue.nextInQueue[i].song.title.length > this.config.MAX_SONG_INFO_LENGTH) {
+						itemText += this.escapeString(this.queue.nextInQueue[i].song.title.substring(0, this.config.MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 					}
 					else { itemText += this.queue.nextInQueue[i].song.title; }
 					queueTxt += `${itemText} - [${(this.queue.nextInQueue[i].song.reqBy) ? `<@${this.queue.nextInQueue[i].song.reqBy}>` : 'Autoplay'}]\n`;
@@ -186,13 +179,13 @@ export default class UI extends GuildComponent {
 				// Autoplay information
 				let autoplayTxt = '';
 				if (this.data.guildSettings.autoplay) {
-					for (let i = 0; i < SHOW_NUM_ITEMS; i++) {
+					for (let i = 0; i < this.config.SHOW_NUM_ITEMS; i++) {
 						if (i === this.queue.nextInAutoplay.length) { autoplayTxt += '**>> End Of Autoplay Queue <<**'; break; }
 						// Index number for item
 						let itemText = `${(this.queue.nextInAutoplay[i].index + 1).toString()}. `;
 						// Add title of song cut off to be the right length
-						if (this.queue.nextInAutoplay[i].song.title.length > MAX_SONG_INFO_LENGTH) {
-							itemText += this.escapeString(this.queue.nextInAutoplay[i].song.title.substring(0, MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
+						if (this.queue.nextInAutoplay[i].song.title.length > this.config.MAX_SONG_INFO_LENGTH) {
+							itemText += this.escapeString(this.queue.nextInAutoplay[i].song.title.substring(0, this.config.MAX_SONG_INFO_LENGTH - 3 - itemText.length) + '...');
 						}
 						else { itemText += this.queue.nextInAutoplay[i].song.title; }
 						autoplayTxt += `${itemText}\n`;
@@ -268,21 +261,21 @@ export default class UI extends GuildComponent {
 					// Web panel link
 					new Discord.MessageButton()
 						.setLabel('Web Panel')
-						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}`)
+						.setURL(`${this.config.BOT_DOMAIN}/${this.guildHandler.id}`)
 						.setStyle('LINK')
 				)
 				.addComponents(
 					// Report issue link
 					new Discord.MessageButton()
 						.setLabel('Report Issue')
-						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}/report`)
+						.setURL(`${this.config.BOT_DOMAIN}/${this.guildHandler.id}/report`)
 						.setStyle('LINK')
 				)
 				.addComponents(
 					// Help link
 					new Discord.MessageButton()
 						.setLabel('Help')
-						.setURL(`${BOT_DOMAIN}/${this.guildHandler.id}/help`)
+						.setURL(`${this.config.BOT_DOMAIN}/${this.guildHandler.id}/help`)
 						.setStyle('LINK')
 				);
 
@@ -307,7 +300,7 @@ export default class UI extends GuildComponent {
 			if (success) { this._lastMessageJSON = JSON.stringify(ui); }
 			else { this.error(`UI was not updated successfully. {stack:${new Error().stack}}`); }
 		}
-		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, UI_REFRESH_RATE);
+		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, this.config.UI_REFRESH_RATE);
 	}
 
 	/**
@@ -589,7 +582,7 @@ export default class UI extends GuildComponent {
 				}
 			};
 
-			this.sendEmbed({ embeds: [notification], components: [row] }, NOTIFICATION_LIFE, interactionHandler);
+			this.sendEmbed({ embeds: [notification], components: [row] }, this.config.NOTIFICATION_LIFE, interactionHandler);
 		}
 		catch (error) { this.warn(`{error: ${error}} while creating/sending notification message with {message: ${message}}`); }
 	}

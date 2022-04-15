@@ -1,12 +1,6 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
-
-const NODE_ENV = process.env.NODE_ENV;
-const LOG_FILE_NAME = process.env.LOG_FILE_NAME;
-const LOG_DATE_PATTERN = process.env.LOG_DATE_PATTERN;
-const ZIP_LOGS = process.env.ZIP_LOGS == 'true';
-const LOG_MAX_SIZE = process.env.LOG_MAX_SIZE;
-const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
+import getEnv from './config';
 
 /**
  * logger.js
@@ -14,7 +8,7 @@ const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
  * @param logDir - directory to save logs
  * @return winston logger object
  */
-export default function newLogger(logDir: string): winston.Logger {
+export default function newLogger(logDir: string, config: ReturnType<typeof getEnv>): winston.Logger {
 	const logLevels = {
 		error: 0,
 		warn: 1,
@@ -30,11 +24,11 @@ export default function newLogger(logDir: string): winston.Logger {
 				level: 'debug',
 				dirname: logDir,
 				json: true,
-				filename: `Debug_${LOG_FILE_NAME}`,
-				datePattern: LOG_DATE_PATTERN,
-				zippedArchive: ZIP_LOGS,
-				maxSize: LOG_MAX_SIZE,
-				maxFiles: LOG_MAX_FILES,
+				filename: `Debug_${config.LOG_FILE_NAME}`,
+				datePattern: config.LOG_DATE_PATTERN,
+				zippedArchive: config.ZIP_LOGS,
+				maxSize: config.LOG_MAX_SIZE,
+				maxFiles: config.LOG_MAX_FILES,
 				format: winston.format.combine(
 					winston.format.errors({ stack: true }),
 					winston.format.timestamp(),
@@ -46,11 +40,11 @@ export default function newLogger(logDir: string): winston.Logger {
 				level: 'info',
 				dirname: logDir,
 				json: true,
-				filename: `Main_${LOG_FILE_NAME}`,
-				datePattern: LOG_DATE_PATTERN,
-				zippedArchive: ZIP_LOGS,
-				maxSize: LOG_MAX_SIZE,
-				maxFiles: LOG_MAX_FILES,
+				filename: `Main_${config.LOG_FILE_NAME}`,
+				datePattern: config.LOG_DATE_PATTERN,
+				zippedArchive: config.ZIP_LOGS,
+				maxSize: config.LOG_MAX_SIZE,
+				maxFiles: config.LOG_MAX_FILES,
 				format: winston.format.combine(
 					winston.format.errors({ stack: true }),
 					winston.format.timestamp(),
@@ -63,10 +57,10 @@ export default function newLogger(logDir: string): winston.Logger {
 			new winston.transports.DailyRotateFile({
 				dirname: logDir,
 				json: true,
-				filename: `Exceptions_${LOG_FILE_NAME}`,
-				datePattern: LOG_DATE_PATTERN,
-				maxSize: LOG_MAX_SIZE,
-				maxFiles: LOG_MAX_FILES,
+				filename: `Exceptions_${config.LOG_FILE_NAME}`,
+				datePattern: config.LOG_DATE_PATTERN,
+				maxSize: config.LOG_MAX_SIZE,
+				maxFiles: config.LOG_MAX_FILES,
 				format: winston.format.combine(
 					winston.format.errors({ stack: true }),
 					winston.format.timestamp(),
@@ -91,7 +85,7 @@ export default function newLogger(logDir: string): winston.Logger {
 	const consoleFormatter = winston.format.printf(({ level, stack, message, durationMs }) => {
 		return `${level}: ${message} ${durationMs ? `{durationMs:${durationMs}}` : ''} ${stack ? `\n${stack}` : ''}`;
 	});
-	if (NODE_ENV !== 'PRODUCTION') {
+	if (this.config.NODE_ENV !== 'PRODUCTION') {
 		logger.add(new winston.transports.Console({
 			format: winston.format.combine(
 				winston.format.errors({ stack: true }),

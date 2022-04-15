@@ -1,4 +1,7 @@
-const BOT_DOMAIN = process.env.BOT_DOMAIN;
+import path from 'path';
+
+import getEnv from '../../../../config';
+const config = getEnv(path.join(__dirname, '../../../../', '.env'));
 
 // Song Configuration data and defaults
 export type SongConfig = {
@@ -21,7 +24,7 @@ export const SONG_DEFAULT: SongConfig = {
 	type: undefined,
 	url: undefined,
 	duration: undefined,
-	thumbnailURL: `${BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`,
+	thumbnailURL: `${config.BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`,
 	artist: 'unknown',
 	live: true,
 	reqBy: '',

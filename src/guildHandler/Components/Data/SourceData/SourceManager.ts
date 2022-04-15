@@ -37,8 +37,8 @@ export default class SourceManager extends GuildComponent {
 		this._ytPlaylists = [];
 
 		// Create songs and playlists
-		for (let i = 0; i < sourceData.gdPlaylists.length; i++) { this.addPlaylist(new GDPlaylist(this.guildHandler, sourceData.gdPlaylists[i]), 'gd'); }
-		for (let i = 0; i < sourceData.ytPlaylists.length; i++) { this.addPlaylist(new YTPlaylist(this.guildHandler, sourceData.ytPlaylists[i]), 'yt'); }
+		for (let i = 0; i < sourceData.gdPlaylists.length; i++) { this.addPlaylist(new GDPlaylist(this.guildHandler, sourceData.gdPlaylists[i])); }
+		for (let i = 0; i < sourceData.ytPlaylists.length; i++) { this.addPlaylist(new YTPlaylist(this.guildHandler, sourceData.ytPlaylists[i])); }
 
 		// Refresh playlists
 		this.bot.once('ready', () => {
@@ -122,9 +122,9 @@ export default class SourceManager extends GuildComponent {
 	 * @name addPlaylist()
 	 * Adds a playlist to correct location and keeps it sorted
 	 */
-	addPlaylist(playlist: Playlist, type: 'yt' | 'gd'): boolean {
+	addPlaylist(playlist: Playlist): boolean {
 		let ref;
-		switch (type) {
+		switch (playlist.type) {
 			case ('yt'): {
 				ref = this._ytPlaylists; break;
 			}
@@ -132,7 +132,7 @@ export default class SourceManager extends GuildComponent {
 				ref = this._gdPlaylists; break;
 			}
 			default: {
-				this.error(`Playlist with {url:${playlist.url}} and {type:${type}} did not have a valid playlist type, add playlist failed`);
+				this.error(`Playlist with {url:${playlist.url}} and {type:${playlist.type}} did not have a valid playlist type, add playlist failed`);
 				return false;
 			}
 		}

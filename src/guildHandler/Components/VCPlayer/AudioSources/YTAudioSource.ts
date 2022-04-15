@@ -19,20 +19,6 @@ type EventTypes = {
 	bufferReady: () => void
 }
 
-const TEMP_DIR = process.env.TEMP_DIR;				// directory for temp files
-const YT_DLP_PATH = process.env.YT_DLP_PATH;		// path to yt-dlp executable
-const MAX_READ_RETRY = parseInt(process.env.MAX_READ_RETRY);
-
-// audio constants
-const BIT_DEPTH = parseInt(process.env.BIT_DEPTH);
-const PCM_FORMAT = process.env.PCM_FORMAT;
-const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
-const AUDIO_FREQUENCY = parseInt(process.env.AUDIO_FREQUENCY);
-const CHUNK_TIMING = parseInt(process.env.CHUNK_TIMING);
-const SEC_PCM_SIZE = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;
-const LARGE_CHUNK_SIZE = SEC_PCM_SIZE * 10;
-const SMALL_CHUNK_SIZE = SEC_PCM_SIZE / 10;
-
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
@@ -110,14 +96,14 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		});
 
 		this._largeChunkCount = 0;							// how many 10 sec "largeChunks" there are on disk
-		this._tempLocation = path.join(TEMP_DIR, crypto.createHash('md5').update(this.song.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex'));
+		this._tempLocation = path.join(this.config.TEMP_DIR, crypto.createHash('md5').update(this.song.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex'));
 		this._chunkBuffer = [];								// buffer for chunks read from disk (or from live video)
 
 		this._paused = false;								// paused or not
 		this._endOfSong = false;							// chunk buffer contains end of song or not
 
 		this._startReadingFrom = 1;							// default to start reading from chunk 1
-		this._chunkTiming = CHUNK_TIMING;					// default to 100ms for 0.1 sec of audio
+		this._chunkTiming = this.config.CHUNK_TIMING;		// default to 100ms for 0.1 sec of audio
 		this._smallChunkCount = 0;							// number of 0.1 sec "smallChunks" that have been played
 
 		this._audioProcessorInput = new PassThrough;		// pcm data input for audioProcessor
@@ -221,7 +207,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		}
 
 		this.debug('Spawing yt-dlp process');
-		this._youtubeDLPSource = spawn(YT_DLP_PATH, [
+		this._youtubeDLPSource = spawn(this.config.YT_DLP_PATH, [
 			'-o', '-',
 			format,
 			'--no-playlist',
@@ -262,9 +248,9 @@ export default class YTSource extends GuildComponent implements AudioSource {
 		// convert song to pcm using ffmpeg
 		this.debug('Starting ytPCMConverter');
 		this._ytPCMConverter = ffmpeg(this._ytPCMConverterInput)
-			.audioChannels(AUDIO_CHANNELS)
-			.audioFrequency(AUDIO_FREQUENCY)
-			.format(PCM_FORMAT)
+			.audioChannels(this.config.AUDIO_CHANNELS)
+			.audioFrequency(this.config.AUDIO_FREQUENCY)
+			.format(this.config.PCM_FORMAT)
 			.on('start', (command) => { this.debug(`Started ytPCMConverter ffmpeg process with {command:${command}}`); })
 			.on('error', (e) => {
 				// ignore if stopped because of SIGINT
@@ -300,10 +286,10 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			// add to currentBuffer
 			currentBuffer = Buffer.concat([currentBuffer, data]);
 
-			if (Buffer.byteLength(currentBuffer) < LARGE_CHUNK_SIZE) return;
+			if (Buffer.byteLength(currentBuffer) < this.config.LARGE_CHUNK_SIZE) return;
 			// Once currentBuffer is the right size, save to file
-			const save = currentBuffer.slice(0, LARGE_CHUNK_SIZE);
-			currentBuffer = currentBuffer.slice(LARGE_CHUNK_SIZE);
+			const save = currentBuffer.slice(0, this.config.LARGE_CHUNK_SIZE);
+			currentBuffer = currentBuffer.slice(this.config.LARGE_CHUNK_SIZE);
 
 			chunkName++;
 			await writeFile(save, chunkName);
@@ -379,11 +365,11 @@ export default class YTSource extends GuildComponent implements AudioSource {
 			return;
 		}
 
-		if (attempts < MAX_READ_RETRY + 1) {
+		if (attempts < this.config.MAX_READ_RETRY + 1) {
 			const loc = path.join(this._tempLocation, chunkNum.toString() + '.pcm');
 			try {
 				const chunk = await fs.promises.readFile(loc);
-				this._chunkBuffer.push(...this._bufferToChunks(chunk, SMALL_CHUNK_SIZE));
+				this._chunkBuffer.push(...this._bufferToChunks(chunk, this.config.SMALL_CHUNK_SIZE));
 				await fs.promises.unlink(loc);
 			}
 			catch (error) {
@@ -431,7 +417,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 				// if not finished playing but nothing in buffer or if live stream with nothing in buffer, play silence
 				else if (!this._endOfSong) {
 					this.buffering = true;
-					this._audioProcessorInput.write(Buffer.alloc(SMALL_CHUNK_SIZE));
+					this._audioProcessorInput.write(Buffer.alloc(this.config.SMALL_CHUNK_SIZE));
 				}
 				// if finished playing, end stream
 				else {
@@ -512,7 +498,7 @@ export default class YTSource extends GuildComponent implements AudioSource {
 	 * @returns number of seconds played
 	 */
 	getPlayedDuration(): number {
-		const duration = Math.round(this._smallChunkCount / (SEC_PCM_SIZE / SMALL_CHUNK_SIZE));
+		const duration = Math.round(this._smallChunkCount / (this.config.SEC_PCM_SIZE / this.config.SMALL_CHUNK_SIZE));
 		return duration;
 	}
 

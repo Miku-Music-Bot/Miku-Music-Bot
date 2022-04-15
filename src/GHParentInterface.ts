@@ -5,23 +5,24 @@ import { ChildProcess, fork } from 'child_process';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
 
+import getEnv from './config';
 import { InteractionInfo, MessageInfo, RemoveGuildInfo, ChildResponse } from './guildHandler/GHChildInterface';
 
 type EventTypes = {
 	[key: string]: (msg: any) => void;
 }
 
-const MAX_RESPONSE_WAIT = parseInt(process.env.MAX_RESPONSE_WAIT);
-
 export default class GuildHandlerInterface {
 	private log: winston.Logger;					// logger
+	private config: ReturnType<typeof getEnv>;		// env config
 	private _events: TypedEmitter<EventTypes>;		// for message events
 	private _guildId: string;						// discord guild id
 	private _nextId: number;						// next response id to use
 	private _process: ChildProcess;					// child process doing the work
 
-	constructor(guildId: string, log: winston.Logger) {
+	constructor(guildId: string, log: winston.Logger, config: ReturnType<typeof getEnv>) {
 		this.log = log;
+		this.config= config;
 		this._events = new EventEmitter() as TypedEmitter<EventTypes>;
 		this._guildId = guildId;
 		this._nextId = 0;
@@ -68,7 +69,7 @@ export default class GuildHandlerInterface {
 			this._events.once(resId, (message) => { resolve(message.success); });
 
 			this._process.send({ type: 'message', content, responseId: resId.toString() });
-			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, this.config.MAX_RESPONSE_WAIT);
 		});
 	}
 
@@ -92,7 +93,7 @@ export default class GuildHandlerInterface {
 
 			this._process.send({ type: 'interaction', content, responseId: resId.toString() });
 
-			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, this.config.MAX_RESPONSE_WAIT);
 		});
 	}
 
@@ -110,7 +111,7 @@ export default class GuildHandlerInterface {
 
 			this._process.send({ type: 'removeGuild', content, responseId: resId.toString() });
 
-			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, MAX_RESPONSE_WAIT);
+			setTimeout(() => { this._events.emit(resId.toString(), { resId: resId.toString(), content: false }); }, this.config.MAX_RESPONSE_WAIT);
 		});
 	}
 }

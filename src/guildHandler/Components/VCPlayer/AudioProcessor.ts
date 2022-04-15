@@ -15,13 +15,6 @@ type EventTypes = {
 	fatalError: (errorMsg: string) => void,
 }
 
-const PCM_FORMAT = process.env.PCM_FORMAT;
-const AUDIO_CHANNELS = parseInt(process.env.AUDIO_CHANNELS);
-const CHUNK_TIMING = parseInt(process.env.CHUNK_TIMING);
-const AUDIO_FREQUENCY = parseInt(process.env.AUDIO_FREQUENCY);
-const NIGHTCORE_CHUNK_TIMING = parseInt(process.env.NIGHTCORE_CHUNK_TIMING);
-const NIGHTCORE_AUDIO_FREQUENCY = parseInt(process.env.NIGHTCORE_AUDIO_FREQUENCY);
-
 /**
  * AudioProcessor
  * 
@@ -60,12 +53,12 @@ export default class AudioProcessor extends GuildComponent {
 		this.vcPlayer.pauseAudioPlayer();
 
 		// change bitrate in case of nightcore setting
-		let freq = AUDIO_FREQUENCY;
-		this._source.setChunkTiming(CHUNK_TIMING);
+		let freq = this.config.AUDIO_FREQUENCY;
+		this._source.setChunkTiming(this.config.CHUNK_TIMING);
 		if (this.data.audioSettings.nightcore && !this._source.song.live) {
 			this.debug('Nightcore is enabled and song is not live');
-			freq = NIGHTCORE_AUDIO_FREQUENCY;
-			this._source.setChunkTiming(NIGHTCORE_CHUNK_TIMING);
+			freq = this.config.NIGHTCORE_AUDIO_FREQUENCY;
+			this._source.setChunkTiming(this.config.NIGHTCORE_CHUNK_TIMING);
 		}
 
 		// create new ffmpeg process with new settings
@@ -78,17 +71,17 @@ export default class AudioProcessor extends GuildComponent {
 
 		// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< this should be updated to use audio settings
 		const audioFilters = 'loudnorm=I=-16:TP=-1.5:LRA=11';
-		this.debug(`Creating new audioFilter with arguments: {format:${PCM_FORMAT}}, {sampleFrequency:${freq}}, {audioChannels:${AUDIO_CHANNELS}}, and {audioFilters:${audioFilters}}`);
+		this.debug(`Creating new audioFilter with arguments: {format:${this.config.PCM_FORMAT}}, {sampleFrequency:${freq}}, {audioChannels:${this.config.AUDIO_CHANNELS}}, and {audioFilters:${audioFilters}}`);
 		this._audioFilter = ffmpeg(this._audioFilterInput)
 			.inputOptions([
-				`-f ${PCM_FORMAT}`,
+				`-f ${this.config.PCM_FORMAT}`,
 				`-ar ${freq}`,
-				`-ac ${AUDIO_CHANNELS}`
+				`-ac ${this.config.AUDIO_CHANNELS}`
 			])
 			.audioFilters(audioFilters)
-			.audioChannels(AUDIO_CHANNELS)
-			.audioFrequency(AUDIO_FREQUENCY)
-			.outputFormat(PCM_FORMAT)
+			.audioChannels(this.config.AUDIO_CHANNELS)
+			.audioFrequency(this.config.AUDIO_FREQUENCY)
+			.outputFormat(this.config.PCM_FORMAT)
 			.on('start', (command) => { this.debug(`Started audioFilter ffmpeg process with {command:${command}}`); })
 			.on('error', (error) => {
 				if (error.toString().indexOf('SIGINT') !== -1) return;
@@ -146,12 +139,12 @@ export default class AudioProcessor extends GuildComponent {
 		this.newFFmpeg();
 
 		// create audioConverter ffmpeg process
-		this.debug(`Creating new audioConverter with arguments: {format:${PCM_FORMAT}}, {sampleFrequency:${AUDIO_FREQUENCY}}, and {audioChannels:${AUDIO_CHANNELS}}`);
+		this.debug(`Creating new audioConverter with arguments: {format:${this.config.PCM_FORMAT}}, {sampleFrequency:${this.config.AUDIO_FREQUENCY}}, and {audioChannels:${this.config.AUDIO_CHANNELS}}`);
 		this._audioConverter = ffmpeg(this._audioConverterInput)
 			.inputOptions([
-				`-f ${PCM_FORMAT}`,
-				`-ar ${AUDIO_FREQUENCY}`,
-				`-ac ${AUDIO_CHANNELS}`
+				`-f ${this.config.PCM_FORMAT}`,
+				`-ar ${this.config.AUDIO_FREQUENCY}`,
+				`-ac ${this.config.AUDIO_CHANNELS}`
 			])
 			.outputFormat('opus')
 			.on('start', (command) => { this.debug(`Started audioConverter ffmpeg process with {command:${command}}`); })

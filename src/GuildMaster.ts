@@ -1,7 +1,7 @@
 import winston from 'winston';
 
 import GHInterface from './GHParentInterface';
-
+import getEnv from './config';
 /**
  * BotMaster
  *
@@ -9,10 +9,12 @@ import GHInterface from './GHParentInterface';
  */
 export default class BotMaster {
 	private _log: winston.Logger;
+	private config: ReturnType<typeof getEnv>;
 	private _guildList: { [key: string]: GHInterface };		// stores all guilds
 
-	constructor(logger: winston.Logger) {
+	constructor(logger: winston.Logger, config: ReturnType<typeof getEnv>) {
 		this._log = logger;
+		this.config = config;
 		this._guildList = {};
 	}
 
@@ -34,7 +36,7 @@ export default class BotMaster {
 	 */
 	newGuild(id: string) {
 		if (!this.getGuild(id)) {
-			const newGuild = new GHInterface(id, this._log);
+			const newGuild = new GHInterface(id, this._log, this.config);
 			this._guildList[id] = newGuild;
 		}
 	}
