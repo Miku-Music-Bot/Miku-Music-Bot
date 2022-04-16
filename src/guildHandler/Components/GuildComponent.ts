@@ -32,8 +32,9 @@ export default class GuildComponent {
 	warn(msg: string) {
 		this.guildHandler.logger.warn(`{filename: ${this._filename}} ${msg}`);
 	}
-	error(msg: string, error = new Error()) {	// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< remove default in the future
-		this.guildHandler.logger.error(`{filename: ${this._filename}} ${msg}`, error);
+	error(msg: string, error?: Error) {
+		if (error) { this.guildHandler.logger.error(`{filename: ${this._filename}} ${msg}`, error); }
+		else { this.guildHandler.logger.error(`{filename: ${this._filename}} ${msg}`); }
 	}
 
 

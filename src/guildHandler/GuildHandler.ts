@@ -55,11 +55,13 @@ export default class GuildHandler {
 		// set up logger
 		const filename = path.basename(__filename);
 		this.logger = logger;
-		this.debug = (msg) => { logger.debug(`{filename: ${filename}} ${msg}`); };
-		this.info = (msg) => { logger.info(msg); };
-		this.warn = (msg) => { logger.warn(`{filename: ${filename}} ${msg}`); };
-		this.error = (msg, error = new Error()) => { logger.error(`{filename: ${filename}} ${msg}`, error); }; 	// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< remove default in the future
-
+		this.debug = (msg) => { this.logger.debug(`{filename: ${filename}} ${msg}`); };
+		this.info = (msg) => { this.logger.info(msg); };
+		this.warn = (msg) => { this.logger.warn(`{filename: ${filename}} ${msg}`); };
+		this.error = (msg, error?) => {
+			if (error) { this.logger.error(`{filename: ${filename}} ${msg}`, error); }
+			else { this.logger.error(`{filename: ${filename}} ${msg}`); }
+		};
 		this.id = id;
 		this.bot = botClient;
 		this.dbClient = mongoClient;
