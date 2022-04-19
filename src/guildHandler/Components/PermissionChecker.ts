@@ -18,11 +18,8 @@ export default class PermissionChecker extends GuildComponent {
 	}
 
 	/**
-	 * checkMessage()
-	 *
-	 * @param command - command to test
-	 * @param message - message object that requested the command
-	 * @return true if user has permission to use the command, false if not
+	 * @name checkMessage()
+	 * checks if user has permission to use the command, ends message to user if they do not
 	 */
 	async checkMessage(command: string, message: MessageInfo): Promise<boolean> {
 		try {
