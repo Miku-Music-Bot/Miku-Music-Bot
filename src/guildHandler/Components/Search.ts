@@ -1,7 +1,5 @@
 import Discord from 'discord.js';
 import path from 'path';
-import ytdl = require('ytdl-core');
-import ytpl = require('ytpl');
 import ytsr = require('ytsr');
 
 import { TEAL } from './UI';
@@ -12,6 +10,8 @@ import YTPlaylist from './Data/SourceData/YTSources/YTPlaylist';
 import YTSong from './Data/SourceData/YTSources/YTSong';
 import GuildComponent from './GuildComponent';
 import Playlist from './Data/SourceData/Playlist';
+import GDSong from './Data/SourceData/GDSources/GDSong';
+import GDPlaylist from './Data/SourceData/GDSources/GDPlaylist';
 
 type SearchResults = {
 	searchString: string,
@@ -121,51 +121,41 @@ export default class Search extends GuildComponent {
 	}
 
 	/**
-	 * _searchSongURL()
-	 * 
-	 * @param url - url to use to search
-	 * @returns Song object or undefined
+	 * @name _searchSongURL()
+	 * Checks to see if given string is a valid song
 	 */
 	private async _searchSongURL(url: string): Promise<Song | undefined> {
-		try {
-			// check to see if this is a valid youtube link
-			this.debug(`Checking if {url:${url}} is a valid youtube url`);
-			const ytInfo = await ytdl.getBasicInfo(url);
-			if (ytInfo) {
-				this.debug(`{url:${url}} was a youtube video with {title:${ytInfo.videoDetails.title}}`);
-				return new YTSong(this.guildHandler, { url, title: ytInfo.videoDetails.title });
-			}
-			else { this.debug(`{url:${url}} was not a valid youtube video`); }
-			return undefined;
+		if (YTSong.checkUrl(url, this.logger)) {
+			const song = new YTSong(this.guildHandler, { url: url });
+			await song.fetchData();
+			return song;
 		}
-		catch (error) {
-			this.warn(`{error:${error}} while validating song url using {url:${url}}`);
-			return undefined;
+		if (GDSong.checkUrl(url, this.logger)) {
+			const song = new GDSong(this.guildHandler, { url: url });
+			await song.fetchData();
+			return song;
 		}
+
+		return undefined;
 	}
 
 	/**
-	 * _searchPlaylistURL()
-	 * 
-	 * @param url - url to use to search
-	 * @returns Playlist object or undefined
+	 * @name _searchPlaylistURL()
+	 * Checks to see if given string is a valid playlist
 	 */
 	private async _searchPlaylistURL(url: string): Promise<Playlist | undefined> {
-		try {
-			// Check to see if this is a valid youtube playlist link
-			this.debug(`Checking if {url:${url}} is a valid youtube playlist url`);
-			const playlistInfo = await ytpl(url);
-			if (playlistInfo) {
-				this.debug(`{url:${url}} was a youtube playlist with {title:${playlistInfo.title}}`);
-				return new YTPlaylist(this.guildHandler, { url });
-			}
-			else { this.debug(`{url:${url}} was not a valid youtube playlist`); }
-			return undefined;
+		if (YTPlaylist.checkUrl(url, this.logger)) {
+			const playlist = new YTPlaylist(this.guildHandler, { url: url });
+			await playlist.fetchData();
+			return playlist;
 		}
-		catch (error) {
-			this.warn(`{error:${error}} whiel validating playlist url using {url:${url}}`);
-			return undefined;
+		if (GDPlaylist.checkUrl(url, this.logger)) {
+			const playlist = new GDPlaylist(this.guildHandler, { url: url });
+			await playlist.fetchData();
+			return playlist;
 		}
+
+		return undefined;
 	}
 
 	/**

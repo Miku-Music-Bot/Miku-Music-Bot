@@ -2,6 +2,7 @@ import Fuse from 'fuse.js';
 import path from 'path';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
+import winston from 'winston';
 
 import GuildHandler from '../../../../GuildHandler';
 import GuildComponent from '../../../GuildComponent';
@@ -14,6 +15,21 @@ type EventTypes = {
 }
 
 export default class GDPlaylist extends GuildComponent implements Playlist {
+	/**
+	 * @name checkUrl
+	 * Checks to see if given url is a valid google drive folder
+	 */
+	static async checkUrl(url: string, log: winston.Logger) {
+		try {
+			const playlistInfo = '';
+			if (playlistInfo) { return true; }
+		}
+		catch (error) {
+			log.error(`{filename:${path.basename(__filename)}} {error:${error.message}} while checking if {url:${url}} was a google drive folder`, error);
+		}
+		return false;
+	}
+
 	events: TypedEmitter<EventTypes>;
 	private _type: 'gd';
 	private _id: number;

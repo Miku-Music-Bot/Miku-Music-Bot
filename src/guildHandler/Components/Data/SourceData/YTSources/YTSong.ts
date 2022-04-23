@@ -2,6 +2,7 @@ import ytdl from 'ytdl-core';
 import path from 'path';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
+import winston from 'winston';
 
 import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
@@ -18,6 +19,21 @@ type EventTypes = {
  * Represents a song from youtube
  */
 export default class YTSong extends GuildComponent implements Song {
+	/**
+	 * @name checkUrl
+	 * Checks to see if given url is a valid youtube song
+	 */
+	static async checkUrl(url: string, log: winston.Logger) {
+		try {
+			const songInfo = await ytdl.getBasicInfo(url);
+			if (songInfo) { return true; }
+		}
+		catch (error) {
+			log.error(`{filename:${path.basename(__filename)}} {error:${error.message}} while checking if {url:${url}} was a youtube song`, error);
+		}
+		return false;
+	}
+
 	events: TypedEmitter<EventTypes>;
 	private _songInfo: SongConfig;
 

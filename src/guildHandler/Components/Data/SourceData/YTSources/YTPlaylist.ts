@@ -3,6 +3,7 @@ import path from 'path';
 import ytpl = require('ytpl');
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
+import winston from 'winston';
 
 import GuildHandler from '../../../../GuildHandler';
 import GuildComponent from '../../../GuildComponent';
@@ -15,6 +16,21 @@ type EventTypes = {
 }
 
 export default class YTPlaylist extends GuildComponent implements Playlist {
+	/**
+	 * @name checkUrl
+	 * Checks to see if given url is a valid youtube playlist
+	 */
+	static async checkUrl(url: string, log: winston.Logger) {
+		try {
+			const playlistInfo = await ytpl(url);
+			if (playlistInfo) { return true; }
+		}
+		catch (error) {
+			log.error(`{filename:${path.basename(__filename)}} {error:${error.message}} while checking if {url:${url}} was a youtube playlist`, error);
+		}
+		return false;
+	}
+
 	events: TypedEmitter<EventTypes>;
 	private _type: 'yt';
 	private _id: number;

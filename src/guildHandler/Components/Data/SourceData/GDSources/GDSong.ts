@@ -6,6 +6,7 @@ import TypedEmitter from 'typed-emitter';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
 import crypto from 'crypto';
+import winston from 'winston';
 
 import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
@@ -24,6 +25,21 @@ ffmpeg.setFfmpegPath(ffmpegPath);
  * Represents a song from google drive
  */
 export default class GDSong extends GuildComponent implements Song {
+	/**
+	 * @name checkUrl
+	 * Checks to see if given url is a valid google drive song
+	 */
+	static async checkUrl(url: string, log: winston.Logger) {
+		try {
+			const songInfo = '';
+			if (songInfo) { return true; }
+		}
+		catch (error) {
+			log.error(`{filename:${path.basename(__filename)}} {error:${error.message}} while checking if {url:${url}} was a youtube song`, error);
+		}
+		return false;
+	}
+
 	events: TypedEmitter<EventTypes>;
 	private _songInfo: SongConfig;
 
