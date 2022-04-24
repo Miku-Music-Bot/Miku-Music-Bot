@@ -1,0 +1,23 @@
+permissions for interactions
+
+audio filters
+
+search should include value then sort results by value
+
+autoplay should be @miku
+
+stats for amount played by day/week/month/year
+
+server monitoring for admin panel
+
+move song downloads into song object, not audio source object.
+audio source objects should just handle timing
+
+when searching, link should just be the a clickable song title
+
+rework logging again
+
+edit tests for audioSettings eq when eq is actually finished
+
+make each promise have its own try/catch
+try/catch should only cover the promise and that is it
