@@ -47,7 +47,7 @@ export default class YTSong extends GuildComponent implements Song {
 
 		// set defaults
 		let save = false;
-		this._songInfo = Object.assign({}, SONG_DEFAULT);
+		this._songInfo = Object.assign({}, SONG_DEFAULT(this.config.BOT_DOMAIN));
 		this._songInfo.type = 'yt';
 		if (!info.id) {
 			save = true;
@@ -124,4 +124,12 @@ export default class YTSong extends GuildComponent implements Song {
 	}
 	get reqBy() { return this._songInfo.reqBy; }
 	set reqBy(reqBy: string) { this._songInfo.reqBy = reqBy; }
+
+	async readyAudioSource() {
+		await this.fetchData();
+
+		// start download from youtube
+		let format = '-f bestaudio';
+		if (this.live) { format = '93/92/91/94/95/96'; } // use live itags for livestreams and avoid best quality version
+	}
 }

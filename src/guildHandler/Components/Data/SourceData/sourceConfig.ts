@@ -1,8 +1,3 @@
-import path from 'path';
-
-import getEnv from '../../../../config';
-const config = getEnv(path.join(__dirname, '../../../../', '.env'));
-
 // Song Configuration data and defaults
 export type SongConfig = {
 	id?: number,
@@ -14,22 +9,20 @@ export type SongConfig = {
 	artist?: string
 	live?: boolean,
 	reqBy?: string
-	optional?: {
-		ext?: string
-	}
 };
-export const SONG_DEFAULT: SongConfig = {
-	id: undefined,
-	title: 'No Title',
-	type: undefined,
-	url: undefined,
-	duration: undefined,
-	thumbnailURL: `${config.BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`,
-	artist: 'unknown',
-	live: true,
-	reqBy: '',
-	optional: {}
-};
+export function SONG_DEFAULT(BOT_DOMAIN: string): SongConfig {
+	return {
+		id: undefined,
+		title: 'No Title',
+		type: undefined,
+		url: undefined,
+		duration: undefined,
+		thumbnailURL: `${BOT_DOMAIN}/thumbnails/defaultThumbnail.jpg`,
+		artist: 'unknown',
+		live: true,
+		reqBy: '',
+	};
+}
 
 // Individual Source Configuration data and defaults
 export type PlaylistConfig = {

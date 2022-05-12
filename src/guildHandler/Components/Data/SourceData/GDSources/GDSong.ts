@@ -53,7 +53,7 @@ export default class GDSong extends GuildComponent implements Song {
 
 		// set defaults
 		let save = false;
-		this._songInfo = Object.assign({}, SONG_DEFAULT);
+		this._songInfo = Object.assign({}, SONG_DEFAULT(this.config.BOT_DOMAIN));
 		this._songInfo.type = 'gd';
 		this._songInfo.live = false;
 		if (!info.id) {
@@ -85,7 +85,7 @@ export default class GDSong extends GuildComponent implements Song {
 	async fetchData(save?: boolean): Promise<string> {
 		this.debug(`Fetching data for song with {url:${this._songInfo.url}}`);
 		return new Promise((resolve) => {
-			const tempLocation = path.join(this.config.TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex') + `.${this.ext}`);
+			const tempLocation = path.join(this.config.TEMP_DIR, crypto.createHash('md5').update(this._songInfo.url + Math.floor(Math.random() * 1000000000000000).toString()).digest('hex'));
 			this.debug(`Downloading song from google drive to {location:${tempLocation}}`);
 			try {
 				const id = this.getIdFromUrl(this._songInfo.url);
@@ -177,7 +177,8 @@ export default class GDSong extends GuildComponent implements Song {
 
 	get live() { return this._songInfo.live; }
 	get durationString() {
-		if (this.live) { return 'Unknown'; }
+		if (this.live) { return 'Live'; }
+		if (this._songInfo.duration === 0) { return 'Unknown'; }
 		let secs = this._songInfo.duration;
 		let hours: number | string = Math.floor(secs / 3600);
 		if (hours < 10) { hours = '0' + hours.toString(); }
@@ -191,7 +192,4 @@ export default class GDSong extends GuildComponent implements Song {
 	}
 	get reqBy() { return this._songInfo.reqBy; }
 	set reqBy(reqBy: string) { this._songInfo.reqBy = reqBy; }
-
-	get ext() { return this._songInfo.optional.ext; }
-	set ext(ext: string) { this._songInfo.optional.ext = ext; }
 }

@@ -74,26 +74,24 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 		// Create songs
 		for (let i = 0; i < info.songs.length; i++) {
 			const song = new YTSong(this.guildHandler, info.songs[i]);
-			this.addSong(song);
+			this._addSong(song);
 		}
 
 		if (save) { this.events.emit('newSettings'); }
 	}
 
 	/**
-	 * addSong()
-	 * 
-	 * Checks if song already exists in playlist anda dds a song to the playlist
-	 * @param song - song to add to playlist
+	 * @name addSong()
+	 * Checks if song already exists in playlist and adds a song to the playlist
 	 */
-	addSong(song: YTSong): void {
+	private _addSong(song: YTSong): void {
 		this.debug(`Adding song with {url:${song.url}}`);
 		// remove the song just in case it already exists
 		this._removeSong(song.id);
 		this._index.add(song);
 		song.events.on('newSettings', (s) => {
 			this.debug(`Song with {url:${s.url}} has new settings, saving`);
-			this.addSong(s);
+			this._addSong(s);
 			this.events.emit('newSettings');
 		});
 		this.events.emit('newSettings');
@@ -164,7 +162,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 					artist: notExisting[i].author.name,
 					live: notExisting[i].isLive
 				});
-				this.addSong(song);
+				this._addSong(song);
 			}
 
 			// remove removed songs from songs
@@ -227,6 +225,7 @@ export default class YTPlaylist extends GuildComponent implements Playlist {
 		for (let i = 0; i < this._songs.length; i++) { songs.push(this._songs[i].export()); }
 		return {
 			id: this._id,
+			type: this._type,
 			title: this._title,
 			url: this._url,
 			songs
