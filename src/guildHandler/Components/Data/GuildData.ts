@@ -26,12 +26,12 @@ type DatabaseData = {
  * Handles getting and setting guild settings
  */
 export default class GuildData extends GuildComponent {
-	guildSettings: GuildSettings;						// guild settings component
-	audioSettings: AudioSettings;						// audio settings component
-	permissionSettings: PermissionSettings;				// permissions settings component
-	sourceManager: SourceManager;						// sourceManager component
+	guildSettings: GuildSettings;
+	audioSettings: AudioSettings;
+	permissionSettings: PermissionSettings;
+	sourceManager: SourceManager;
 	private _saveCount = 0;								// how many saves are in queue
-	private _collection: mongoDb.Collection;			// mongodb collection
+	private _collection: mongoDb.Collection;
 	private _saveTimeout: NodeJS.Timeout;				// timeout for saving
 	private _retrySave: NodeJS.Timer;					// timeout for retrying save
 
@@ -44,60 +44,69 @@ export default class GuildData extends GuildComponent {
 	 * if no data exits, creates default values and saves it
 	 * if an error occurs, it retries after 10 seconds
 	 * calls callback once done
+	 * @returns promise that resovle once done
 	 */
 	initData(): Promise<void> {
 		return new Promise((resolve) => {
 			const _initData = async (wait: number) => {
 				if (wait > this.config.MAX_DATABASE_RETRY_WAIT) { wait = this.config.MAX_DATABASE_RETRY_WAIT; }
 
+				let foundGuild;
 				try {
-					this.debug('Connecting to mongodb database');
-
+					this.info('Connecting to mongodb database');
 					const db = this.dbClient.db(this.config.MONGODB_DBNAME);
 					this._collection = db.collection(this.config.GUILDDATA_COLLECTION_NAME);
 
 					// grab guild data from the database
-					this.debug('Requesting settings from database');
-					const foundGuild = await this._collection.findOne({ guildId: this.guildHandler.id }) as unknown as DatabaseData;
+					this.info('Fetching settings from database');
+					foundGuild = await this._collection.findOne({ guildId: this.guildHandler.id }) as unknown as DatabaseData;
+				}
+				catch (error) {
+					this.error(`{error: ${error.message}} retrieving data from database. Trying again in ${wait} seconds.`, error);
+					setTimeout(() => { _initData(wait * 10); }, wait);
+					return;
+				}
 
-					if (foundGuild) {
-						// if guild is in database, set things up with correct config
-						this.debug('Found guild data in database, initiallizing components');
-						this.guildSettings = new GuildSettings(foundGuild.guildConfig);
-						this.audioSettings = new AudioSettings(foundGuild.audioConfig);
-						this.permissionSettings = new PermissionSettings(foundGuild.permissionConfig);
-						this.sourceManager = new SourceManager(this.guildHandler, foundGuild.sourceDataConfig);
-					}
-					else {
-						// if guild is not found in database, save defaults to database
-						this.debug('Did not find guild data in database, using defaults');
-						this.guildSettings = new GuildSettings();
-						this.audioSettings = new AudioSettings();
-						this.permissionSettings = new PermissionSettings();
-						this.sourceManager = new SourceManager(this.guildHandler);
+				if (foundGuild) {
+					// if guild is in database, set things up with correct config
+					this.info('Found guild data in database, initiallizing components');
+					this.guildSettings = new GuildSettings(foundGuild.guildConfig);
+					this.audioSettings = new AudioSettings(foundGuild.audioConfig);
+					this.permissionSettings = new PermissionSettings(foundGuild.permissionConfig);
+					this.sourceManager = new SourceManager(this.guildHandler, foundGuild.sourceDataConfig);
+				}
+				else {
+					// if guild is not found in database, save defaults to database
+					this.info('Did not find guild data in database, using defaults');
+					this.guildSettings = new GuildSettings();
+					this.audioSettings = new AudioSettings();
+					this.permissionSettings = new PermissionSettings();
+					this.sourceManager = new SourceManager(this.guildHandler);
 
-						const newData: DatabaseData = {
-							guildId: this.guildHandler.id,
-							guildConfig: this.guildSettings.export(),
-							audioConfig: this.audioSettings.export(),
-							permissionConfig: this.permissionSettings.export(),
-							sourceDataConfig: this.sourceManager.export()
-						};
+					const newData: DatabaseData = {
+						guildId: this.guildHandler.id,
+						guildConfig: this.guildSettings.export(),
+						audioConfig: this.audioSettings.export(),
+						permissionConfig: this.permissionSettings.export(),
+						sourceDataConfig: this.sourceManager.export()
+					};
 
-						this.debug('Creating guild data entry in database');
+					try {
+						this.info('Creating guild data entry in database');
 						await this._collection.insertOne(newData);
 					}
-
-					this.guildSettings.events.on('newSettings', () => { this.debug('New settings on guild settings, saving'); this._save(); });
-					this.audioSettings.events.on('newSettings', () => { this.debug('New settings on audio settings, saving'); this._save(); });
-					this.permissionSettings.events.on('newSettings', () => { this.debug('New settings on permission settings, saving'); this._save(); });
-					this.sourceManager.events.on('newSettings', () => { this.debug('New settings on sourceManager, saving'); this._save(); });
-
-					resolve();				// resolve once done
-				} catch (error) {
-					this.error(`{error: ${error.message}} retrieving/saving data from database. Trying again in ${wait} seconds. {stack:${error.stack}}`);
-					setTimeout(() => { _initData(wait * 10); }, wait);
+					catch (error) {
+						this.error(`{error: ${error.message}} saving data to database. Trying again in ${wait} seconds.`, error);
+						setTimeout(() => { _initData(wait * 10); }, wait);
+					}
 				}
+
+				this.guildSettings.events.on('newSettings', () => { this.debug('New settings on guild settings, saving'); this._save(); });
+				this.audioSettings.events.on('newSettings', () => { this.debug('New settings on audio settings, saving'); this._save(); });
+				this.permissionSettings.events.on('newSettings', () => { this.debug('New settings on permission settings, saving'); this._save(); });
+				this.sourceManager.events.on('newSettings', () => { this.debug('New settings on sourceManager, saving'); this._save(); });
+
+				resolve();				// resolve once done
 			};
 			_initData(1_000);
 		});
@@ -125,6 +134,7 @@ export default class GuildData extends GuildComponent {
 	/**
 	 * @name _saveData()
 	 * Saves guildData to database
+	 * @returns promise that resolves once done
 	 */
 	private async _saveData(): Promise<void> {
 		clearInterval(this._retrySave);

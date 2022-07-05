@@ -10,8 +10,7 @@ export const TEAL = '#86cecb';
 export const PINK = '#e12885';
 
 /**
- * UI
- *
+ * @name UI
  * Handles creating and refreshing the user interface of the bot in discord
  */
 export default class UI extends GuildComponent {
@@ -24,20 +23,16 @@ export default class UI extends GuildComponent {
 			life?: number,
 			interactionHandler: (interaction: InteractionInfo) => Promise<boolean>
 		}
-	};
+	} = {};
 	private _nextRefreshTimeout: NodeJS.Timeout;
 
 	/**
 	 * @param guildHandler - guildHandler of the guild this ui object is to be responsible for
 	 */
-	constructor(guildHandler: GuildHandler) {
-		super(guildHandler, path.basename(__filename));
-		this._interactionListeners = {};
-	}
+	constructor(guildHandler: GuildHandler) { super(guildHandler, path.basename(__filename)); }
 
 	/**
-	 * escapeString()
-	 * 
+	 * @name escapeString()
 	 * Escapes a string to be displayed as is in discord
 	 * @param string - string to escape
 	 * @returns escaped string
@@ -53,8 +48,7 @@ export default class UI extends GuildComponent {
 	}
 
 	/**
-	 * createUI()
-	 *
+	 * @name createUI()
 	 * Creates discord messageEmbed for UI
 	 * @return Discord message embed
 	 */
@@ -281,24 +275,23 @@ export default class UI extends GuildComponent {
 
 			return { embeds: [userInterface], components: [audioControls, links] };
 		}
-		catch {
+		catch (error) {
+			this.error(`{error:${error}} while generating UI embmed`, error);
 			return { embeds: [new Discord.MessageEmbed()] };
 		}
 	}
 
 	/**
-	 * updateUI()
-	 * 
+	 * @name updateUI()
 	 * Updates the UI of the bot
 	 */
 	async updateUI(): Promise<void> {
 		clearInterval(this._nextRefreshTimeout);
 		const ui = this._createUI();
 		if (this._lastMessageJSON !== JSON.stringify(ui)) {
-			this.debug('UI is now different, needs to be updated');
 			const success = await this.updateMsg(this.data.guildSettings.channelId, this._uiMessageId, ui);
 			if (success) { this._lastMessageJSON = JSON.stringify(ui); }
-			else { this.error(`UI was not updated successfully. {stack:${new Error().stack}}`); }
+			else { this.error('UI was not updated successfully', new Error()); }
 		}
 		this._nextRefreshTimeout = setTimeout(() => { this.updateUI(); }, this.config.UI_REFRESH_RATE);
 	}

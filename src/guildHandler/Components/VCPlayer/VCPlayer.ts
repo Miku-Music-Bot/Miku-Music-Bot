@@ -11,38 +11,32 @@ import GDSource from './AudioSources/GDAudioSource';
 import GDSong from '../Data/SourceData/GDSources/GDSong';
 
 /**
- * VCPlayer
- *
+ * @name VCPlayer
  * Handles joining and playing a stream in a voice channel
  */
 export default class VCPlayer extends GuildComponent {
-	private _voiceConnection: Voice.VoiceConnection;		// current voice connection
-	private _audioPlayer: Voice.AudioPlayer;				// current audio player
-	private _subscription: Voice.PlayerSubscription;		// current audio player subscription
-	private _currentOpusStream: PassThrough;				// current audio stream
-	private _currentSource: AudioSource;					// current audio source
-	private _currentResource: Voice.AudioResource;			// current audio resource
-	private _finishedSongCheck: NodeJS.Timer;				// interval to check if song is finished or not
+	private _voiceConnection: Voice.VoiceConnection;
+	private _audioPlayer: Voice.AudioPlayer;
+	private _subscription: Voice.PlayerSubscription;
+	private _currentOpusStream: PassThrough;
+	private _currentSource: AudioSource;
+	private _currentResource: Voice.AudioResource;
+	private _finishedSongCheck: NodeJS.Timer;
 
-	connected: boolean;										// connected to voice channel or not
-	playing: boolean;										// currently playing a song or not
-	paused: boolean;										// currently paused or not
+	private _connected = false;										// connected to voice channel or not
+	private _playing = false;										// currently playing a song or not
+	private _paused = false;										// currently paused or not
 
 	/**
 	 * @param guildHandler - guildHandler for this vcplayer
 	 */
-	constructor(guildHandler: GuildHandler) {
-		super(guildHandler, path.basename(__filename));
-
-		this.playing = false;
-		this.paused = false;
-	}
+	constructor(guildHandler: GuildHandler) { super(guildHandler, path.basename(__filename)); }
 
 	/**
-	 * _joinChannelId()
-	 * 
+	 * @name _joinChannelId()
 	 * Joins a voice channel
 	 * @param channelId - channel id of voice channel to join
+	 * @returns Promise that resolves to true if joined successfully
 	 */
 	private async _joinChannelId(channelId: string): Promise<boolean> {
 		try {
@@ -56,7 +50,8 @@ export default class VCPlayer extends GuildComponent {
 			});
 
 			this._voiceConnection.on('error', (error) => {
-				this.error(`{error: ${error.message}} on voice connection to {channelId: ${channelId}}, leaving. {stack:${error.stack}}`);
+				const errorId = this.ui.sendError('An error occured on the voice connection. Disconnected.', true);
+				this.error(`{error: ${error.message}} on voice connection to {channelId: ${channelId}}, leaving. {errorId:${errorId}}`, error);
 				this.leave();
 			});
 
@@ -64,71 +59,78 @@ export default class VCPlayer extends GuildComponent {
 			return true;
 		}
 		catch (error) {
-			this.error(`{error:${error.message}} while joining voice channel with {channelId: ${channelId}}. {stack:${error.stack}}`);
+			this.error(`{error:${error.message}} while joining voice channel with {channelId: ${channelId}}`, error);
 			return false;
 		}
 	}
 
 	/**
-	 * join()
-	 *
+	 * @name join()
 	 * Joins the voice channel specified
 	 * @param userId - discord user to join in voice channel
-	 * @return promise that resolves if a voice channel is joined or rejects if failed
+	 * @return promise that resolves to true if a voice channel is joined or rejects if failed
 	 */
 	async join(userId: string): Promise<boolean> {
+		let member;
 		try {
 			this.debug(`Joining {userId: ${userId}} in voice channel, fetching user`);
-			const member = await this.guild.members.fetch({ user: userId });
+			member = await this.guild.members.fetch({ user: userId });
 			this.debug(`Successfully fetched user with {userId:${userId}}`);
+		}
+		catch (error) {
+			this.error(`{error:${error.message}} while fetching user with {userId:${userId}}`, error);
+		}
 
-			// check if they are in a voice channel
-			if (!member.voice.channelId) {
-				// if they aren't send and error message
-				this.info(`UserId: ${userId} was not found in a voice channel`);
-				this.ui.sendError(`<@${userId}> Join a voice channel first!`);
-				return false;
-			}
-			// if they are join it and send notification that join was successful
-			this.debug(`Found that {userId: ${userId}} is in {channelId: ${member.voice.channelId}}`);
+		// check if they are in a voice channel
+		if (member && !member.voice.channelId) {
+			// if they aren't send and error message
+			this.info(`UserId: ${userId} was not found in a voice channel`);
+			this.ui.sendError(`<@${userId}> Join a voice channel first!`);
+			return false;
+		}
+		// if they are join it and send notification that join was successful
+		this.debug(`Found that {userId: ${userId}} is in {channelId: ${member.voice.channelId}}`);
 
-			await this._joinChannelId(member.voice.channelId);
+
+		const success = await this._joinChannelId(member.voice.channelId);
+		if (success) {
 			this.info(`Joined userId: ${userId} in {channelId: ${member.voice.channelId}}`);
 			this.ui.sendNotification(`Joined <@${userId}> in ${member.voice.channel.name}`);
 
-			this.connected = true;
+			this._connected = true;
 			return true;
 		}
-		catch (error) {
+		else {
 			const errorId = this.ui.sendError(`<@${userId}> Sorry! There was an error joining the voice channel.`, true);
-			this.error(`{error: ${error.message}} while joining {userId: ${userId}} in voice channel. {stack:${error.stack}} {errorId: ${errorId}}`);
+			this.error(`There was an error while joining user with {userId:${userId}} in {channelId:${member.voice.channelId}}. {errorId:${errorId}}`);
 			return false;
 		}
 	}
 
 	/**
-	 * leave()
-	 * 
+	 * @name leave()
 	 * Leaves the currently connected voice connection
 	 */
 	leave(): void {
 		try {
-			this.debug('Leaving voice channel');
-			clearInterval(this._finishedSongCheck);		// stop checking if song is finished or not
-			this.connected = false;						// no longer connected, playing, or paused
-			this.playing = false;
-			this.paused = false;
-			this.finishedSong();						// finish current song
-			this._voiceConnection.destroy();			// close voice connection
-			this.queue.clearQueue();					// clear queue
+			this.info('Leaving voice channel');
+			clearInterval(this._finishedSongCheck);
+			this._connected = false;
+			this._playing = false;
+			this._paused = false;
+			this.finishedSong();
+			this._voiceConnection.destroy();
+			this.queue.clearQueue();
 			this.info('Left voice channel');
 		}
-		catch (error) { this.error(`{error: ${error.message}} while leaving voice channel. {stack:${error.stack}}`); }
+		catch (error) {
+			const errorId = this.ui.sendError('There was an error while leaving the voice channel.', true);
+			this.error(`{error: ${error.message}} while leaving voice channel. {errorId:${errorId}}`, error);
+		}
 	}
 
 	/**
-	 * pause()
-	 * 
+	 * @name pause()
 	 * Pauses currently playing song
 	 */
 	pause(): void {
@@ -144,7 +146,7 @@ export default class VCPlayer extends GuildComponent {
 			return;
 		}
 
-		this.paused = true;
+		this._paused = true;
 		this._currentSource.pause();
 		const success = this._audioPlayer.pause(true);
 		if (success) { this.info('Paused song'); }
@@ -152,8 +154,7 @@ export default class VCPlayer extends GuildComponent {
 	}
 
 	/**
-	 * resume()
-	 * 
+	 * @name resume()
 	 * Resumes currently playing song
 	 */
 	resume(): void {
@@ -163,8 +164,8 @@ export default class VCPlayer extends GuildComponent {
 			return;
 		}
 
-		this.paused = false;
-		this.paused = false;
+		this._paused = false;
+		this._paused = false;
 		this._currentSource.resume();
 		const success = this._audioPlayer.unpause();
 		if (success) { this.info('Resumed song'); }
@@ -172,15 +173,14 @@ export default class VCPlayer extends GuildComponent {
 	}
 
 	/**
-	 * finishedSong()
-	 * 
+	 * @name finishedSong()
 	 * Call to clean up current song and call nextSong on this.queue
 	 */
 	finishedSong(): void {
 		this.debug('Finishing song');
 		clearInterval(this._finishedSongCheck);			// stop checking for end of song
-		this.playing = false;							// no longer playing or paused
-		this.paused = false;
+		this._playing = false;							// no longer playing or paused
+		this._paused = false;
 		if (this._currentOpusStream) {					// clean up current source
 			this.debug('Removing listners on currentOpusStream');
 			this._currentOpusStream.removeAllListeners();
@@ -198,7 +198,7 @@ export default class VCPlayer extends GuildComponent {
 			this._subscription.unsubscribe();
 		}
 
-		if (this.connected) {							// if still connected (finishedSong() was not called by leave()), play next song
+		if (this._connected) {							// if still connected (finishedSong() was not called by leave()), play next song
 			this.debug('Currently connected to voice channel, ask queue to play next song');
 			this.queue.nextSong();
 			return;
@@ -207,8 +207,7 @@ export default class VCPlayer extends GuildComponent {
 	}
 
 	/**
-	 * pauseAudioPlayer()
-	 * 
+	 * @name pauseAudioPlayer()
 	 * Only pauses audio player, used while changing audio settings and waiting for ffmpeg to start
 	 */
 	pauseAudioPlayer(): void {
@@ -224,8 +223,7 @@ export default class VCPlayer extends GuildComponent {
 	}
 
 	/**
-	 * play()
-	 * 
+	 * @name play()
 	 * Plays from given stream to voice channel if connected
 	 * If not connected, nothing happens
 	 * If already playing something, stops previous stream and plays new stream
@@ -251,7 +249,7 @@ export default class VCPlayer extends GuildComponent {
 		};
 		const source = createSource(song);
 		this.debug(`Attempting to play audio source with song {url:${source.song.url}}`);
-		if (!this.connected) {				// ignore if not in a voice channel
+		if (!this._connected) {				// ignore if not in a voice channel
 			this.debug('Currently not connected, nothing played');
 			return;
 		}
@@ -259,7 +257,7 @@ export default class VCPlayer extends GuildComponent {
 			this.debug('Source has already been destroyed, nothing played');
 			return;
 		}
-		this.playing = true;
+		this._playing = true;
 
 		// clean up previous source and create new source
 		// stop previous stream
@@ -326,5 +324,8 @@ export default class VCPlayer extends GuildComponent {
 	}
 
 	// Getter for current source
+	get connected() { return this._connected; }
+	get playing() { return this._playing; }
+	get paused() { return this._paused; }
 	get currentSource() { return this._currentSource; }
 }

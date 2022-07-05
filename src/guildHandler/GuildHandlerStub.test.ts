@@ -73,7 +73,7 @@ export const guildTestSettings: {
 			}>
 		}>,
 	}
-} = Object.freeze({
+} = Object.freeze({					// some default data
 	guildId: 'testGuild',
 	guildConfig: {
 		configured: true,
@@ -129,6 +129,7 @@ export function newStub(settings?: typeof guildTestSettings, noData?: boolean, s
 	discord?: sinon.SinonStubbedInstance<Discord.Client>,
 	googleDrive?: sinon.SinonStubbedInstance<drive_v3.Drive>
 }) {
+	// merge defaults with given arugments
 	if (!settings) { settings = {}; }
 	let dbData = Object.assign({}, guildTestSettings);
 	dbData = Object.assign(dbData, settings);
@@ -186,7 +187,7 @@ export function newStub(settings?: typeof guildTestSettings, noData?: boolean, s
 
 	const DriveFilesStub = sinon.stub(new drive_v3.Drive({}).files);
 	DriveFilesStub.get.callsFake(
-		// @ts-expect-error Google api typscript definitions are funky
+		// @ts-expect-error - Google api typescript definitions are funky
 		(a, b, cb) => {
 			if (b.responseType === 'stream') {
 				cb();

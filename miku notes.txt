@@ -21,3 +21,5 @@ edit tests for audioSettings eq when eq is actually finished
 
 make each promise have its own try/catch
 try/catch should only cover the promise and that is it
+
+vc player .play should take in audio source rather than song, edit leave, pause, and finishedSong methods as well

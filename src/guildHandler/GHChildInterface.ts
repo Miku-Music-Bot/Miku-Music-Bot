@@ -103,15 +103,16 @@ process.on('message', async (message: ParentCommand) => {
 			// Authenticate with mongodb
 			let mongoClient: mongodb.MongoClient;
 			try {
-				logger.profile('Autenticate Mongodb');
+				logger.profile('(2.0) Authenticate Mongodb');
 				info('Connecting to mongodb database');
 
 				// connect to mongodb database
 				mongoClient = new mongodb.MongoClient(config.MONGODB_URI);
 				await mongoClient.connect();
-				logger.profile('Autenticate Mongodb');
+				logger.profile('(2.0) Authenticate Mongodb');
 			}
 			catch (e) {
+				logger.profile('(2.0) Authenticate Mongodb');
 				error(`{error:${e.message}} while authenticating with mongodb`, e);
 				process.exit();
 			}
@@ -121,7 +122,7 @@ process.on('message', async (message: ParentCommand) => {
 			// Authenticate with google drive api
 			let drive: drive_v3.Drive;
 			try {
-				logger.profile('Authenticate Google Drive');
+				logger.profile('(2.1) Authenticate Google Drive');
 				info('Authenticating with Google Drive API');
 
 				const authPlus = new AuthPlus();
@@ -130,10 +131,11 @@ process.on('message', async (message: ParentCommand) => {
 				auth.setCredentials(JSON.parse(token));
 				drive = new drive_v3.Drive({ auth });
 
-				logger.profile('Authenticate Google Drive');
+				logger.profile('(2.1) Authenticate Google Drive');
 				info('Successfully authenticated with Google Drive API');
 			}
 			catch (e) {
+				logger.profile('(2.1) Authenticate Google Drive');
 				error(`{error:${e.message}} while authenticating with google drive`, e);
 				process.exit();
 			}

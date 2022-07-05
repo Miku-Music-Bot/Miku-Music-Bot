@@ -3,6 +3,9 @@ import path from 'path';
 import EventEmitter from 'events';
 import TypedEmitter from 'typed-emitter';
 import winston from 'winston';
+import ffmpegPath = require('ffmpeg-static');
+import ytdlp from 'node-ytdlp-wrap';
+import fs from 'fs';
 
 import Song from '../Song';
 import GuildComponent from '../../../GuildComponent';
@@ -129,7 +132,26 @@ export default class YTSong extends GuildComponent implements Song {
 		await this.fetchData();
 
 		// start download from youtube
-		let format = '-f bestaudio';
+		let format = 'bestaudio';
 		if (this.live) { format = '93/92/91/94/95/96'; } // use live itags for livestreams and avoid best quality version
+
+		const audioStream = ytdlp.stream(this._songInfo.url, [
+			`-f ${format}`,
+			`--ffmpeg-location ${ffmpegPath}`,
+			`--postprocessor-args "${[
+				`-f ${this.config.PCM_FORMAT}`,
+				`-ac ${this.config.AUDIO_CHANNELS}`,
+				`-ar ${this.config.AUDIO_FREQUENCY}`
+			].join(' ')}"`
+		]);
+
+		console.log(audioStream);
+		audioStream.on('data', () => { 
+			console.log('data!');
+		});
+		audioStream.pipe(fs.createWriteStream('test.pcm'));
+		audioStream.on('error', (error) => {
+			console.log(error);
+		});
 	}
 }

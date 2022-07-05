@@ -114,7 +114,7 @@ describe('Fetch Youtube Song Data', () => {
 			testSong.thumbnailURL.indexOf('ytimg').should.not.equal(-1);
 			testSong.artist.should.equal('Bento Box');
 			testSong.live.should.be.false;
-
+			testSong.readyAudioSource();
 			if (!checked) { checked = true; }
 			else { done(); }
 		});

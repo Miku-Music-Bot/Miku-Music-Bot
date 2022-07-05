@@ -14,12 +14,11 @@ import Search from './Components/Search';
 import type { InteractionInfo, MessageInfo } from './GHChildInterface';
 
 /**
- * GuildHander
- *
+ * @name GuildHander
  * Handles all bot functions for a specific guild
  */
 export default class GuildHandler {
-	logger: winston.Logger;					// logging
+	logger: winston.Logger;
 	debug: (msg: string) => void;
 	info: (msg: string) => void;
 	warn: (msg: string) => void;
@@ -27,22 +26,27 @@ export default class GuildHandler {
 
 	id: string;								// guild id of guild handler
 	ready = false;							// bot ready or not
-	bot: Discord.Client;					// bot client
-	dbClient: mongodb.MongoClient;			// mongodb client
-	guild: Discord.Guild;					// bot guild
-	config: ReturnType<typeof getEnv>;		// environment config
+	bot: Discord.Client;
+	dbClient: mongodb.MongoClient;
+	guild: Discord.Guild;
+	config: ReturnType<typeof getEnv>;
 
-	drive: drive_v3.Drive;					// google drive api object
-	ui: UI;									// ui component
-	data: GuildData;						// guildData component
-	vcPlayer: VCPlayer;						// vcPlayer component
-	queue: Queue;							// queue component
-	permissions: PermissionChecker;			// permissions component
-	search: Search;							// search component
+	drive: drive_v3.Drive;
+	ui: UI;
+	data: GuildData;
+	vcPlayer: VCPlayer;
+	queue: Queue;
+	permissions: PermissionChecker;
+	search: Search;
 
 	/**
 	 * Creates data object and once data is ready, calls startbot
 	 * @param id - discord guild id for GuildHander to be responsible for
+	 * @param logger - logger object
+	 * @param botClient - discord client
+	 * @param mongoClient - mongodb client
+	 * @param gdClient - google drive api client
+	 * @param envConfig - environment config
 	 */
 	constructor(
 		id: string,
@@ -52,7 +56,6 @@ export default class GuildHandler {
 		gdClient: drive_v3.Drive,
 		envConfig: ReturnType<typeof getEnv>
 	) {
-		// set up logger
 		const filename = path.basename(__filename);
 		this.logger = logger;
 		this.debug = (msg) => { this.logger.debug(`{filename: ${filename}} ${msg}`); };
@@ -62,13 +65,13 @@ export default class GuildHandler {
 			if (error) { this.logger.error(`{filename: ${filename}} ${msg}`, error); }
 			else { this.logger.error(`{filename: ${filename}} ${msg}`); }
 		};
+
 		this.id = id;
 		this.bot = botClient;
 		this.dbClient = mongoClient;
 		this.drive = gdClient;
 		this.config = envConfig;
 
-		// set up guild components
 		this.data = new GuildData(this);
 		this.ui = new UI(this);
 		this.vcPlayer = new VCPlayer(this);
@@ -76,7 +79,7 @@ export default class GuildHandler {
 		this.permissions = new PermissionChecker(this);
 		this.search = new Search(this);
 
-		// get the guild object
+		// get the guild object bot is responsible for
 		this.guild = this.bot.guilds.cache.get(this.id);
 	}
 
@@ -88,10 +91,10 @@ export default class GuildHandler {
 		this.info(`Initializing guild handler for guild id: ${this.id}`);
 
 		// Fetch data for guild
-		this.logger.profile('Fetch Guild Data');
+		this.logger.profile('(2.2) Fetch Guild Data');
 		this.debug('Fetching guild data from database.');
 		await this.data.initData();
-		this.logger.profile('Fetch Guild Data');
+		this.logger.profile('2.2) Fetch Guild Data');
 		this.info('Guild data fetched, guild handler initialized');
 
 		// init components
@@ -118,8 +121,7 @@ export default class GuildHandler {
 	}
 
 	/**
-	 * messageHandler()
-	 *
+	 * @name messageHandler()
 	 * Handles all messages the bot recieves
 	 * @param message - object with message info object
 	 * @returms Promise resolves to true if handled message, false if not
@@ -127,12 +129,13 @@ export default class GuildHandler {
 	async messageHandler(message: MessageInfo): Promise<boolean> {
 		// ignore if bot isn't ready yet
 		if (!this.ready) {
-			this.debug('Recieved {messageId: ${message.id}} with {content: ${message.content}} and {prefix: ${prefix}} from {userId: ${message.authorId}} in {channelId: ${message.channelId}} before bot was ready, ignoring');
+			this.debug(`Recieved {messageId: ${message.id}} from {userId: ${message.authorId}} in {channelId: ${message.channelId}} before bot was ready, ignoring`);
 			return false;
 		}
 		// ignore if not in right channel
 		if (message.channelId !== this.data.guildSettings.channelId && message.content.toLowerCase().indexOf('set-channel') === -1) return false;
 
+		this.logger.profile(`(2.3) Handle Message {id:${message.id}}`);
 		// split message into command and argument
 		message.content = message.content.toLowerCase();
 		let prefix = false;
@@ -150,13 +153,14 @@ export default class GuildHandler {
 			switch (command) {
 				case ('set-channel'): {
 					this.info('Recieved "set-channel" command');
-					// Set channel id to channel id of incoming message
+
 					if (message.channelId === this.data.guildSettings.channelId) {
-						// if channel id matches the current channel id
+						// send notification if this changed channel matches the current channel
 						this.debug('New channel id matches current channel id, sending notification');
 						this.ui.sendNotification(`<@${message.authorId}> Miku already lives here!`);
 					}
 					else if (prefix) {
+						// only change the channel if prefix is given
 						// set the channel, send ui, then notify user if this is the first time
 						this.info(`Guild handler channel id set to "${message.channelId}"`);
 						this.data.guildSettings.channelId = message.channelId;
@@ -173,7 +177,6 @@ export default class GuildHandler {
 				}
 				case ('join'): {
 					this.info('Recieved "join" command, joining voice channel');
-					// join the vc
 					this.vcPlayer.join(message.authorId);
 					break;
 				}
@@ -189,7 +192,7 @@ export default class GuildHandler {
 						}
 					}
 
-					// if there is an argument, means to play/add song to queue
+					// if there is an argument, it means to play/add song to queue
 					if (argument) {
 						// search for song
 						this.info('Argument detected, searching for song');
@@ -212,7 +215,8 @@ export default class GuildHandler {
 				}
 				case ('pause'): {
 					this.info('Recieved "pause" command');
-					// Pause the player if currently playing
+
+					// Pause the player if currently playing a song
 					if (this.vcPlayer.playing) {
 						this.info('Currently playing song, pausing');
 						this.vcPlayer.pause();
@@ -226,6 +230,7 @@ export default class GuildHandler {
 				case ('resume'): {
 					this.info('Recieved "resume" command');
 
+					// Resume the player if currently playing a song
 					if (this.vcPlayer.playing) {
 						this.info('Currently playing song, resuming');
 						this.vcPlayer.resume();
@@ -388,17 +393,21 @@ export default class GuildHandler {
 					this.debug(`Found channel {channelId:${message.channelId}}`);
 
 					if (channel instanceof Discord.TextChannel) {
+						let success = false;
 						try {
 							this.debug(`Attempting to delete ${count} messages from channel with channelId: ${message.channelId}`);
 							await channel.bulkDelete(count);
 							this.debug(`Successfully deleted ${count} messages from channel with channelId: ${message.channelId}, resending UI and sending notification`);
-
-							this.ui.sendUI(true);
-							setTimeout(() => { this.ui.sendNotification(`Deleted ${count} messages`); }, 1000);
+							success = true;
 						}
 						catch (error) {
 							this.warn(`{error:${error.message}} while bulk deleting messages. Sending notification`);
 							this.ui.sendNotification(`Failed to delete ${count} messages, maybe they are too old?`);
+						}
+
+						if (success) {
+							await this.ui.sendUI(true);
+							setTimeout(() => { this.ui.sendNotification(`Deleted ${count} messages`); }, 1000);
 						}
 					}
 					break;
@@ -428,29 +437,33 @@ export default class GuildHandler {
 		}
 		this.debug('Updating UI after handling message');
 		await this.ui.updateUI();
+		this.logger.profile(`(2.3) Handle Message {id:${message.id}}`);
 		return true;
 	}
 
 	/**
-	 * interactionHandler()
-	 * 
+	 * @name interactionHandler()
 	 * Handles all interactions the bot recieves
 	 * @param interaction - object with all interaction information
 	 * @return Promise resovles to true if the interaction was handled, false if not
 	 */
 	async interactionHandler(interaction: InteractionInfo): Promise<boolean> {
-		this.debug(`Recieved interaction from {authorId:${interaction.authorId}} with {customId:${interaction.customId}}, {parentMessageId:${interaction.parentMessageId}}, and {parentChannelId:${interaction.parentChannelId}}`);
 		if (!this.ready) {
-			this.debug('Recieved interaction before bot was ready, ignoring');
+			this.debug(`Recieved interaction from {authorId:${interaction.authorId}} with {customId:${interaction.customId}}, {parentMessageId:${interaction.parentMessageId}}, and {parentChannelId:${interaction.parentChannelId}} before bot was ready, ignoring`);
 			return false;
 		}
-		return await this.ui.buttonPressed(interaction);
+		const randInt = Math.floor(Math.random() * 999999999999999);
+		this.logger.profile(`(2.4) Handle Interaction {customId:${interaction.customId}} {random:${randInt}}`);
+
+		const result = await this.ui.buttonPressed(interaction);
+		this.logger.profile(`(2.4) Handle Interaction {customId:${interaction.customId}} {random:${randInt}}`);
+		return result;
 	}
 
 	/**
-	 * removeGuild();
-	 * 
-	 * Call to stop the guild handler and clean up
+	 * @name removeGuild();
+	 * Call to stop the guild handler and remove it from the database if purge is true
+	 * @param purge - remove the bot data from the database or not
 	 */
 	async removeGuild(purge?: boolean): Promise<void> {
 		this.info('Cleaning up and removing guild');

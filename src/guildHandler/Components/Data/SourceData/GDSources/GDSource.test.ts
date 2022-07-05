@@ -12,9 +12,9 @@ describe('Google Drive Song Class', () => {
 	it('should validate google drive video urls', async () => {
 		// not urls
 		(await GDSong.checkUrl('notaurl', { error: () => { return; } } as unknown as winston.Logger)).should.be.false;
-		(await GDSong.checkUrl('https://youtu.be/almostaurl', { error: () => { return; } } as unknown as winston.Logger)).should.be.false;
+		(await GDSong.checkUrl('https://drive.google.com/notarealurl', { error: () => { return; } } as unknown as winston.Logger)).should.be.false;
 		// regular google drive video url
-		(await GDSong.checkUrl('https://youtu.be/NEkk7cwyUQw', { error: () => { return; } } as unknown as winston.Logger)).should.be.true;
+		(await GDSong.checkUrl('https://drive.google.com/makethisarealurl', { error: () => { return; } } as unknown as winston.Logger)).should.be.true;
 	});
 });
 

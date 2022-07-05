@@ -1,5 +1,11 @@
-import dotenv from 'dotenv';	// grab env variables
+import dotenv from 'dotenv';
 
+/**
+ * @name getEnv()
+ * Gets the environment configuration and returns object with all the properties
+ * @param path - path to environment file
+ * @returns config object
+ */
 export default function getEnv(path: string) {
 	dotenv.config({ path, override: true });
 

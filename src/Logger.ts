@@ -3,10 +3,11 @@ import 'winston-daily-rotate-file';
 import getEnv from './config';
 
 /**
- * logger.js
- *
+ * @name newLogger()
+ * Creates a new logger for the given directory and config
  * @param logDir - directory to save logs
- * @return winston logger object
+ * @param config - environment config object
+ * @returns logger object
  */
 export default function newLogger(logDir: string, config: ReturnType<typeof getEnv>): winston.Logger {
 	const logLevels = {
@@ -20,6 +21,7 @@ export default function newLogger(logDir: string, config: ReturnType<typeof getE
 		level: 'debug',
 		levels: logLevels,
 		transports: [
+			// for debug and up
 			new winston.transports.DailyRotateFile({
 				level: 'debug',
 				dirname: logDir,
@@ -36,6 +38,7 @@ export default function newLogger(logDir: string, config: ReturnType<typeof getE
 					winston.format.prettyPrint()
 				),
 			}),
+			// for info and up
 			new winston.transports.DailyRotateFile({
 				level: 'info',
 				dirname: logDir,
@@ -73,7 +76,6 @@ export default function newLogger(logDir: string, config: ReturnType<typeof getE
 		exitOnError: true,
 	});
 
-	// colors because fun
 	winston.addColors({
 		debug: 'blue',
 		info: 'green',
@@ -81,7 +83,7 @@ export default function newLogger(logDir: string, config: ReturnType<typeof getE
 		error: 'red',
 	});
 
-	// if not in production, also output to console
+	// output to console. If not in production, also output debug to console
 	const consoleFormatter = winston.format.printf(({ level, stack, message, durationMs }) => {
 		return `${level}: ${message} ${durationMs ? `{durationMs:${durationMs}}` : ''} ${stack ? `\n${stack}` : ''}`;
 	});

@@ -1,0 +1,20 @@
+Main: 0.{x}
+
+0.0 - start discord bot
+0.1 - start guild handlers
+
+Web Panel: 1.{x}
+
+1.0 - start web server
+
+Guild Handler: 2.{x}
+
+2.0 - Authenticate Mongodb Database
+2.1 - Authenticate Google Drive API
+2.2 - Fetch Guild Data
+2.3 - Handle Message
+2.4 - Handle Interaction
+
+Guild Components: 2.{x}.{y}
+Guild Data: 2.a.{y}
+
