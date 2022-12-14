@@ -1,9 +1,6 @@
 /node_modules
-/built
-/logs
-/temp
-/assets/thumbnails/*
+/.vscode
+/build
 
-!/assets/thumbnails/defaultThumbnail.jpg
+package-lock.json
 .env
-token.json
