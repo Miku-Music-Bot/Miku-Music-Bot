@@ -1,6 +1,8 @@
 /node_modules
 /.vscode
 /build
+/cache
+/logs
 
 package-lock.json
 .env
