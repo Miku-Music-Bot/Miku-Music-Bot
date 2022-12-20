@@ -33,7 +33,6 @@ export default class YoutubeDownloader implements SourceDownloader {
   get type() { return DownloaderTypes.Youtube; }
 
   private downloading_ = false;
-  private end_chunk_num_: number;
 
   private streamable_ = false;
   private downloaded_ = false;
@@ -42,6 +41,8 @@ export default class YoutubeDownloader implements SourceDownloader {
   private cachesize_MB_ = 0;
   get cachesize_MB() { return this.cachesize_MB_; }
   private cache_location_: string;
+
+  private delete_lock_ = 0;
 
   private log_: Logger;
 
@@ -91,7 +92,7 @@ export default class YoutubeDownloader implements SourceDownloader {
     }
 
     // start download from youtube
-    const raw_youtube_download = ytdlp.stream(this.uid_, [
+    const raw_youtube_download = ytdlp.downloader(this.uid_, [
       "-o", "-",
       format,
       "--no-playlist",
@@ -101,7 +102,7 @@ export default class YoutubeDownloader implements SourceDownloader {
 
     // create ffmpeg processor
     const raw_pcm_s16le_output = new PassThrough();
-    ffmpeg(raw_youtube_download)
+    ffmpeg(raw_youtube_download.stream)
       .audioChannels(AUDIO_CHANNELS)
       .audioFrequency(AUDIO_FREQUENCY)
       .format(PCM_FORMAT)
@@ -122,6 +123,8 @@ export default class YoutubeDownloader implements SourceDownloader {
       try {
         const location = path.join(this.cache_location_, chunk_num.toString());
         this.log_.debug(`Writing chunk number {chunk_num: ${chunk_num}} for video with {uid: ${this.uid_}} at {location: ${location}}`);
+
+        this.cachesize_MB_ += Buffer.byteLength(chunk) / (1 << 20);
         await fs.promises.writeFile(location, chunk);
 
         if (chunk_num === STREAMABLE_AFTER_NUM_CHUNKS) {
@@ -161,7 +164,6 @@ export default class YoutubeDownloader implements SourceDownloader {
       this.downloaded_ = true;
 
       data_chunk = undefined;
-      this.end_chunk_num_ = chunk_num;
 
       this.events_.emit("finish", true);
       if (!this.streamable_) {
@@ -181,7 +183,7 @@ export default class YoutubeDownloader implements SourceDownloader {
     this.log_.debug(`Beginning download for video with {uid: ${this.uid_}}`);
 
     if (this.downloading_) {
-      this.log_.debug(`Download for video with {uid: ${this.uid_}} already downloading, ignoreing call to download`);
+      this.log_.debug(`Download for video with {uid: ${this.uid_}} already downloading, ignoring call to download`);
       return;
     }
     if (this.downloaded_) {
@@ -219,7 +221,11 @@ export default class YoutubeDownloader implements SourceDownloader {
   async GetCacheLocation(): Promise<string> {
     return new Promise((resolve, reject) => {
       this.BeginDownload();
-      if (this.streamable_) resolve(this.cache_location_);
+      if (this.streamable_) {
+        this.delete_lock_++;
+        resolve(this.cache_location_);
+        return;
+      }
 
       const wait_for_streamable: Promise<void> = new Promise((resolve, reject) => {
         this.events_.on("streamable", () => { resolve(); });
@@ -228,12 +234,21 @@ export default class YoutubeDownloader implements SourceDownloader {
 
       wait_for_streamable.
         then(() => {
+          this.delete_lock_++;
           resolve(this.cache_location_);
         })
         .catch(() => {
           reject();
         })
     });
+  }
+
+  /**
+ * ReleaseDeleteLock() - Release lock on audio
+ * @returns void
+ */
+  ReleaseDeleteLock(): void {
+    this.delete_lock_--;
   }
 
   /**
@@ -247,9 +262,18 @@ export default class YoutubeDownloader implements SourceDownloader {
         reject();
         return;
       }
+
+      if (this.delete_lock_ !== 0) {
+        this.log_.debug(`Video with {uid: ${this.uid_}} curretly being streamed, refusing to delete cache`);
+        reject();
+        return;
+      }
+
       try {
         this.log_.info(`Deleting cached song with uid: ${this.uid_}`);
         await fs.promises.rm(this.cache_location_, { recursive: true });
+        this.downloaded_ = false;
+        this.streamable_ = false;
         resolve();
       } catch (error) {
         this.log_.warn(`Error while deleting cache for video with {uid: ${this.uid_}}`, error);

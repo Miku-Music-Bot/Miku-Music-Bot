@@ -35,7 +35,13 @@ export default interface SourceDownloader {
   GetCacheLocation(): Promise<string>;
 
   /**
-   * DeleteCache() - Deletes downloaded audio
+   * ReleaseDeleteLock() - Release lock on audio
+   * @returns void
+   */
+  ReleaseDeleteLock(): void;
+
+  /**
+   * DeleteCache() - Deletes downloaded audio if there are no locks
    * @returns Promise that resolves if successful, rejected if failed
    */
   DeleteCache(): Promise<void>;
