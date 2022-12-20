@@ -1,0 +1,28 @@
+
+const APP_NAMESPACE = "Miku-Music-Bot";
+const AUDIO_DOWNLOADER_IPC_ID = "Miku-Audio-Downloader";
+
+const AUDIO_CHANNELS = 2;
+const AUDIO_FREQUENCY = 48000;
+const PCM_FORMAT = "s16le";
+const BIT_DEPTH = 16;
+const SIZE_OF_1_SEC_PCM = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;    // Length of 1 second of pcm audio
+const CHUNK_SIZE = SIZE_OF_1_SEC_PCM * 10;
+
+const STREAMABLE_AFTER_NUM_CHUNKS = 3;
+
+const MIKU_CONSTS = {
+  APP_NAMESPACE,
+  AUDIO_DOWNLOADER_IPC_ID,
+
+  AUDIO_CHANNELS,
+  AUDIO_FREQUENCY,
+  PCM_FORMAT,
+  BIT_DEPTH,
+  SIZE_OF_1_SEC_PCM,
+  CHUNK_SIZE,
+
+  STREAMABLE_AFTER_NUM_CHUNKS,
+}
+
+export default MIKU_CONSTS;

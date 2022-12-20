@@ -9,17 +9,11 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+import MIKU_CONSTS from "../constants";
 import SourceDownloader, { DownloaderEvents, DownloaderTypes } from "./source_downloader";
 import Logger from "../logger";
 
-const AUDIO_CHANNELS = 2;
-const AUDIO_FREQUENCY = 48000;
-const PCM_FORMAT = "s16le";
-const BIT_DEPTH = 16;
-const SIZE_OF_1_SEC_PCM = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;    // Length of 1 second of pcm audio
-const CHUNK_SIZE = SIZE_OF_1_SEC_PCM * 10;
 
-const STREAMABLE_AFTER_NUM_CHUNKS = 3;
 
 /**
  * YoutubeDownloader - Handles downloading audio from youtube
@@ -78,6 +72,25 @@ export default class YoutubeDownloader implements SourceDownloader {
     this.log_ = logger;
 
     this.log_.debug(`Created Youtube downloader for video with {uid:${this.uid_}}`);
+
+    // Catch unsuccessful finish event to clear cached data
+    this.events.on("finish", (success) => {
+      if (success) return;
+
+      this.streamable_ = false;
+      this.downloaded_ = false;
+      this.downloading_ = false;
+
+      this.log_.debug(`Youtube downloader for video with {uid:${this.uid_}} completed unsuccessfully, attempting to delete incomplete cached data`);
+      fs.rm(this.cache_location_, { recursive: true }, (error) => {
+        if (!error) {
+          this.log_.debug(`Incomplete cached data deleted for video with {uid:${this.uid_}}`);
+          this.cachesize_MB_ = 0;
+          return;
+        }
+        this.log_.error(`Error while deleting incompleted cached data for video with {uid:${this.uid_}}`, error);
+      });
+    })
   }
 
   /**
@@ -122,8 +135,8 @@ export default class YoutubeDownloader implements SourceDownloader {
     }
 
     let estimate;
-    if (live) estimate = (STREAMABLE_AFTER_NUM_CHUNKS * 2 * CHUNK_SIZE) / (1 << 20);
-    else estimate = (duration_sec * SIZE_OF_1_SEC_PCM) / (1 << 20);
+    if (live) estimate = (MIKU_CONSTS.STREAMABLE_AFTER_NUM_CHUNKS * 2 * MIKU_CONSTS.CHUNK_SIZE) / (1 << 20);
+    else estimate = (duration_sec * MIKU_CONSTS.SIZE_OF_1_SEC_PCM) / (1 << 20);
     this.log_.debug(`Estimating that cache size for song with {uid:${this.uid_}} will be {estimate:${estimate}}`);
     return estimate;
   }
@@ -165,9 +178,9 @@ export default class YoutubeDownloader implements SourceDownloader {
     // create ffmpeg processor
     const raw_pcm_s16le_output = new PassThrough();
     ffmpeg(raw_youtube_download.stream)
-      .audioChannels(AUDIO_CHANNELS)
-      .audioFrequency(AUDIO_FREQUENCY)
-      .format(PCM_FORMAT)
+      .audioChannels(MIKU_CONSTS.AUDIO_CHANNELS)
+      .audioFrequency(MIKU_CONSTS.AUDIO_FREQUENCY)
+      .format(MIKU_CONSTS.PCM_FORMAT)
       .on("start", (command: string) => {
         this.log_.debug(`Started ffmpeg process to convert youtube download to pcm using {command: ${command}} for video with {uid: ${this.uid_}}`);
       })
@@ -194,25 +207,25 @@ export default class YoutubeDownloader implements SourceDownloader {
         this.events_.emit("finish", false);
       }
 
-      if (chunk_num === STREAMABLE_AFTER_NUM_CHUNKS) {
-        this.log_.debug(`${STREAMABLE_AFTER_NUM_CHUNKS} chunks buffered, video with {uid: ${this.uid_}} is now streamable`);
+      if (chunk_num === MIKU_CONSTS.STREAMABLE_AFTER_NUM_CHUNKS) {
+        this.log_.debug(`${MIKU_CONSTS.STREAMABLE_AFTER_NUM_CHUNKS} chunks buffered, video with {uid: ${this.uid_}} is now streamable`);
         this.streamable_ = true;
         this.events_.emit("streamable");
       }
 
       // Update start chunk number of video is live and is now streamable
-      if (live && this.streamable_) this.start_chunk_number_ = chunk_num - STREAMABLE_AFTER_NUM_CHUNKS;
+      if (live && this.streamable_) this.start_chunk_number_ = chunk_num - MIKU_CONSTS.STREAMABLE_AFTER_NUM_CHUNKS;
       chunk_num++;
 
       // Delete old chunks for livestreams
-      const chunk_num_to_delete = chunk_num - (STREAMABLE_AFTER_NUM_CHUNKS * 2);
+      const chunk_num_to_delete = chunk_num - (MIKU_CONSTS.STREAMABLE_AFTER_NUM_CHUNKS * 2);
       if (!live || chunk_num_to_delete < 0) return;
 
       const delete_location = path.join(this.cache_location_, chunk_num_to_delete.toString());
       this.log_.debug(`Deleting old {chunk_num:${chunk_num_to_delete}} at {location:${delete_location}} for livestream with {uid:${this.uid_}}`);
       try {
         await fs.promises.unlink(delete_location);
-        this.cachesize_MB_ -= CHUNK_SIZE / (1 << 20);
+        this.cachesize_MB_ -= MIKU_CONSTS.CHUNK_SIZE / (1 << 20);
       } catch (error) {
         this.log_.fatal(`Error while deleting {chunk_num:${chunk_num_to_delete}} at {location:${delete_location}} for livestream with {uid:${this.uid_}}`, error);
         this.events_.emit("finish", false);
@@ -225,20 +238,20 @@ export default class YoutubeDownloader implements SourceDownloader {
       data_chunk = Buffer.concat([data_chunk, data]);
 
       // Once data_chunk is the right size, save to file
-      while (Buffer.byteLength(data_chunk) >= CHUNK_SIZE) {
-        const save = data_chunk.subarray(0, CHUNK_SIZE);
-        data_chunk = data_chunk.subarray(CHUNK_SIZE);
+      while (Buffer.byteLength(data_chunk) >= MIKU_CONSTS.CHUNK_SIZE) {
+        const save = data_chunk.subarray(0, MIKU_CONSTS.CHUNK_SIZE);
+        data_chunk = data_chunk.subarray(MIKU_CONSTS.CHUNK_SIZE);
         write_chunk(save);
       }
     }
 
-    raw_pcm_s16le_output.on("data", (data) => { 
+    raw_pcm_s16le_output.on("data", (data) => {
       // Abort download if is a livestream and nobody is listening anymore
-      if (live && this.delete_lock_ === 0) { 
+      if (live && this.delete_lock_ === 0) {
         this.log_.debug(`Livestream with {uid:${this.uid_}} has 0 listeners, aborting download`);
-        raw_youtube_download.Abort(); 
+        raw_youtube_download.Abort();
       }
-      chunk_data(data); 
+      chunk_data(data);
     });
     raw_pcm_s16le_output.on("end", async () => {
       // Reaching this indicates successful download

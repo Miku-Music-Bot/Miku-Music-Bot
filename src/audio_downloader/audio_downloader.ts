@@ -1,9 +1,13 @@
 import fs from "fs";
 import path from "path";
 
+import MIKU_CONSTS from "../constants";
 import Logger from "../logger";
 import SourceDownloader from "./source_downloader";
 import YoutubeDownloader from "./youtube_downloader";
+
+const MAX_CACHESIZE_MB = parseInt(process.env.MAX_CACHESIZE_MB);
+const CACHE_DIRECTORY = process.env.CACHE_DIRECTORY;
 
 export enum SourceType { Youtube, GoogleDrive }
 
@@ -14,7 +18,7 @@ export type SourceId = {
 }
 
 /**
- * Handles downloading and caching audio
+ * AudioDownloader - Handles downloading and caching audio
  */
 export default class AudioDownloader {
   private downloading_ = false;
@@ -38,24 +42,35 @@ export default class AudioDownloader {
 
   private cachesize_MB_ = 0;
 
-  private cache_directory_: string;
-  private max_cachesize_MB_: number;
-
   private log_: Logger;
 
   /**
-   * @param cache_directory - directory to place audio cache
-   * @param max_concurrent_downloads - number of concurrent downloads allowed
-   * @param max_cachesize_MB - maximum size of cache in megabytes
+   * @param logger - logger
    */
-  constructor(cache_directory: string, max_cachesize_MB: number, logger: Logger) {
-    this.cache_directory_ = cache_directory;
-    this.max_cachesize_MB_ = max_cachesize_MB;
+  constructor(logger: Logger) {
     this.log_ = logger;
 
-    this.youtube_cache_location_ = path.join(this.cache_directory_, "youtube");
+    this.log_.debug(`Clearing cache directory at {location:${CACHE_DIRECTORY}}`);
+    try {
+      fs.rmSync(CACHE_DIRECTORY, { recursive: true });
+      this.log_.debug(`Cleared cache directory at {location:${CACHE_DIRECTORY}}`);
+    } catch (error) {
+      this.log_.warn(`Error clearing cache directory at {location:${CACHE_DIRECTORY}}`, error);
+    }
+
+    this.log_.debug(`Making cache directory at {location:${CACHE_DIRECTORY}}`);
+    try {
+      fs.mkdirSync(CACHE_DIRECTORY);
+      this.log_.debug(`Made cache directory at {location:${CACHE_DIRECTORY}}`);
+    } catch (error) {
+      this.log_.warn(`Error making cache directory at {location:${CACHE_DIRECTORY}}`, error);
+    }
+
+    this.youtube_cache_location_ = path.join(CACHE_DIRECTORY, "youtube");
+    this.log_.debug(`Making youtube cache directory at {location:${this.youtube_cache_location_}}`);
     try {
       fs.mkdirSync(this.youtube_cache_location_);
+      this.log_.debug(`Made youtube cache directory at {location:${this.youtube_cache_location_}}`);
     } catch (error) {
       this.log_.warn(`Error making youtube_cache_location at {location:${this.youtube_cache_location_}}`, error);
     }
@@ -82,11 +97,11 @@ export default class AudioDownloader {
    * @param amount_mb - amount in megabytes to free
    */
   private async FreeSpace(amount_mb: number) {
-    if (amount_mb > this.max_cachesize_MB_) {
-      this.log_.fatal(`Space of {amount_mb:${amount_mb}} required, but {max_cachesize_MB:${this.max_cachesize_MB_}} avaliable`);
+    if (amount_mb > MAX_CACHESIZE_MB) {
+      this.log_.fatal(`Space of {amount_mb:${amount_mb}} required, but {max_cachesize_MB:${MAX_CACHESIZE_MB}} avaliable`);
       return;
     }
-    if (this.cachesize_MB_ + amount_mb < this.max_cachesize_MB_) return;
+    if (this.cachesize_MB_ + amount_mb < MAX_CACHESIZE_MB) return;
 
     let i = this.downloaders_list_.length - 1;
     while (amount_mb > 0 && i >= 0) {
@@ -148,13 +163,15 @@ export default class AudioDownloader {
   private QueueYoutubeSource(source_id: SourceId): string | undefined {
     this.log_.debug(`Attempting to queue youtube source with {identifier:${source_id.identifier}}`);
 
-    let uid;
-    try {
-      uid = YoutubeDownloader.GenerateUID(source_id.identifier);
-    } catch (error) {
-      return error.message;
+    let uid = source_id.uid;
+    if (!uid) {
+      try {
+        uid = YoutubeDownloader.GenerateUID(source_id.identifier);
+      } catch (error) {
+        return error.message;
+      }
+      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
     }
-    this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
 
     if (this.youtube_cache_[uid]) {
       this.log_.debug(`Youtube source with {uid:${uid}} found in cache, already queued`);
@@ -211,18 +228,37 @@ export default class AudioDownloader {
   }
 
   /**
+   * GetYoutubeCacheLocation() - Gets location of first chunk of cached youtube song once streamable
+   * @param source_id - source id of cache location to fetch
+   */
+  private GetYoutubeCacheLocation(source_id: SourceId): Promise<string> {
+    let uid = source_id.uid;
+    if (!uid) {
+      try {
+        uid = YoutubeDownloader.GenerateUID(source_id.identifier);
+      } catch (error) {
+        return error.message;
+      }
+      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
+    }
+
+    if (!this.youtube_cache_[source_id.uid]) return Promise.reject();
+
+    this.youtube_cache_[source_id.uid].play_count++;
+    this.KeepInOrder(this.youtube_cache_[source_id.uid].list_index, this.downloaders_list_);
+
+    return this.youtube_cache_[source_id.uid].downloader.GetCacheLocation();
+  }
+
+  /**
    * GetCacheLocation() - Gets location of first chunk of cached song once streamable
    * @param source_id - source id of cache location to fetch
+   * @returns Promise that resolve to string or rejects if failed
    */
   GetCacheLocation(source_id: SourceId): Promise<string> {
     switch (source_id.source_type) {
       case (SourceType.Youtube): {
-        if (!this.youtube_cache_[source_id.uid]) return Promise.reject();
-
-        this.youtube_cache_[source_id.uid].play_count++;
-        this.KeepInOrder(this.youtube_cache_[source_id.uid].list_index, this.downloaders_list_);
-
-        return this.youtube_cache_[source_id.uid].downloader.GetCacheLocation();
+        return this.GetYoutubeCacheLocation(source_id);
       }
       default: {
         return Promise.reject();
@@ -230,3 +266,68 @@ export default class AudioDownloader {
     }
   }
 }
+
+
+import ipc from "node-ipc";
+
+export enum FunctionType { QueueSource, GetCacheLocation }
+export type FunctionRequest = {
+  uid: string;
+  function_type: FunctionType;
+  args: Array<any>;
+};
+export type FunctionResponse = {
+  success: boolean;
+  error?: Error;
+  result: any;
+}
+
+const logger = new Logger("audio_downloader");
+const audio_downloader = new AudioDownloader(logger);
+
+ipc.config.silent = true;
+ipc.config.rawBuffer = false;
+ipc.config.appspace = MIKU_CONSTS.APP_NAMESPACE;
+ipc.config.id = MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID;
+
+logger.debug(`Starting ipc server for audio downloader in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} and {id:${MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID}}`);
+ipc.serve(() => {
+  ipc.server.on("error", (error) => {
+    logger.error("Error on ipc server", error);
+  });
+
+  ipc.server.on("socket.disconnected", (socket, destroyed_socket_id) => {
+    logger.warn(`IPC socket with {id:${destroyed_socket_id}} disconnected`);
+  });
+
+  ipc.server.on("message", async (data: FunctionRequest, socket) => {
+    switch (data.function_type) {
+      case (FunctionType.QueueSource): {
+        let result;
+        try {
+          result = audio_downloader.QueueSource(data.args[0]);
+          ipc.server.emit(socket, data.uid, { success: true, result });
+        } catch (error) {
+          ipc.server.emit(socket, data.uid, { success: false, error });
+        }
+        break;
+      }
+      case (FunctionType.GetCacheLocation): {
+        let result;
+        try {
+          result = await audio_downloader.GetCacheLocation(data.args[0]);
+          ipc.server.emit(socket, data.uid, { success: true, result });
+        } catch (error) {
+          ipc.server.emit(socket, data.uid, { success: false, error });
+        }
+        break;
+      }
+      default: {
+        const error = new Error("Audio Downloader Interface Error: function type invalid");
+        ipc.server.emit(socket, data.uid, { success: false, error });
+      }
+    }
+  });
+});
+
+ipc.server.start();
