@@ -178,6 +178,7 @@ export default class AudioDownloader {
       return undefined;
     }
 
+    this.log_.debug(`Youtube source with {uid:${uid}} not found in cache, queueing download and adding to index`);
     const downloader_tracker = {
       list_index: this.downloaders_list_.length,
       play_count: 0,
@@ -242,12 +243,11 @@ export default class AudioDownloader {
       this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
     }
 
-    if (!this.youtube_cache_[source_id.uid]) return Promise.reject();
+    if (!this.youtube_cache_[uid]) return Promise.reject();
+    this.youtube_cache_[uid].play_count++;
+    this.KeepInOrder(this.youtube_cache_[uid].list_index, this.downloaders_list_);
 
-    this.youtube_cache_[source_id.uid].play_count++;
-    this.KeepInOrder(this.youtube_cache_[source_id.uid].list_index, this.downloaders_list_);
-
-    return this.youtube_cache_[source_id.uid].downloader.GetCacheLocation();
+    return this.youtube_cache_[uid].downloader.GetCacheLocation();
   }
 
   /**

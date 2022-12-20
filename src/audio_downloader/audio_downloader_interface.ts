@@ -67,8 +67,6 @@ export default class AudioDownloaderInterface {
       this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].emit("message", function_req);
 
       this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].on(function_req.uid, (response: FunctionResponse) => {
-        console.log(response);
-
         if (response.success) {
           resolve(response.result);
           return;
