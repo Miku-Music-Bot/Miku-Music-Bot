@@ -45,7 +45,6 @@ class Profiler {
     }
     if (options && options.level) level = options.level;
 
-
     let message = `Task "${this.name_}" completed after ${this.duration_} milliseconds`
     if (options && options.message) { message = options.message; }
 

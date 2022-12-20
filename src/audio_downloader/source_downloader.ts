@@ -29,8 +29,8 @@ export default interface SourceDownloader {
   BeginDownload(): void;
 
   /**
-   * DeleteCache() - Deletes downloaded audio
-   * @returns Promise that resolves to location if successful, rejected if failed
+   * GetStream() - Gets location of first chunk of cached song once streamable
+   * @returns Promise that resolves to location of first chunk if successful, rejected if failed
    */
   GetCacheLocation(): Promise<string>;
 
