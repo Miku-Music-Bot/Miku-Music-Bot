@@ -167,7 +167,7 @@ export default class YoutubeDownloader implements SourceDownloader {
     }
 
     // start download from youtube
-    const raw_youtube_download = ytdlp.downloader(this.uid_, [
+    let raw_youtube_download = ytdlp.downloader(this.uid_, [
       "-o", "-",
       format,
       "--no-playlist",
@@ -175,9 +175,39 @@ export default class YoutubeDownloader implements SourceDownloader {
       "--quiet"
     ]);
 
+    // create ffmpeg processor input
+    const ffmpeg_processor_input = new PassThrough();
+    raw_youtube_download.stream.on("data", (data) => ffmpeg_processor_input.write(data));
+    raw_youtube_download.stream.on("end", () => ffmpeg_processor_input.end());
+    // Restart download every 4 hours to avoid youtube expired download link if live
+    if (live) {
+      setInterval(() => {
+        this.log_.debug(`Livestream with {uid:${this.uid_}} has downloaded for 4 hours, refreshing download link`);
+        const new_youtube_download = ytdlp.downloader(this.uid_, [
+          "-o", "-",
+          format,
+          "--no-playlist",
+          "--ffmpeg-location", ffmpegPath,
+          "--quiet"
+        ]);
+
+        new_youtube_download.stream.once("data", () => {
+          raw_youtube_download.stream.removeAllListeners("data");
+          raw_youtube_download.Abort();
+
+          raw_youtube_download = new_youtube_download;
+          raw_youtube_download.stream.on("data", (data) => ffmpeg_processor_input.write(data));
+          raw_youtube_download.stream.on("end", () => ffmpeg_processor_input.end());
+          this.log_.debug(`Livestream with {uid:${this.uid_}} successfully refreshed downloaded link`);
+        })
+      }, 4 * 60 * 60 * 1000);
+    }
+
+
+
     // create ffmpeg processor
     const raw_pcm_s16le_output = new PassThrough();
-    ffmpeg(raw_youtube_download.stream)
+    ffmpeg(ffmpeg_processor_input)
       .audioChannels(MIKU_CONSTS.AUDIO_CHANNELS)
       .audioFrequency(MIKU_CONSTS.AUDIO_FREQUENCY)
       .format(MIKU_CONSTS.PCM_FORMAT)
@@ -250,12 +280,18 @@ export default class YoutubeDownloader implements SourceDownloader {
       if (live && this.delete_lock_ === 0) {
         this.log_.debug(`Livestream with {uid:${this.uid_}} has 0 listeners, aborting download`);
         raw_youtube_download.Abort();
+        this.events_.emit("finish", false);
       }
       chunk_data(data);
     });
     raw_pcm_s16le_output.on("end", async () => {
       // Reaching this indicates successful download
       await write_chunk(data_chunk);
+
+      if (live) {
+        this.events_.emit("finish", false);
+        return;
+      }
 
       this.downloading_ = false;
       this.downloaded_ = true;

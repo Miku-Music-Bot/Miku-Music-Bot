@@ -1,6 +1,12 @@
 
 const APP_NAMESPACE = "Miku-Music-Bot";
 const AUDIO_DOWNLOADER_IPC_ID = "Miku-Audio-Downloader";
+const AUDIO_STREAMER_IPC_ID = "Miku-Audio-Streamer";
+const DATABASE_HANDLER_IPC_ID = "Miku-Database-Handler";
+const MESSAGE_LISTENER_IPC_ID = "Miku-Message-Listener";
+const PERMISSIONS_HANDLER_IPC_ID = "Miku-Permissions-Handler";
+const SEARCH_HANDER_IPC_ID = "Miku-Search-Handler";
+const WEB_CLIENT_IPC_ID = "Miku-Web-Client";
 
 const AUDIO_CHANNELS = 2;
 const AUDIO_FREQUENCY = 48000;
@@ -14,6 +20,12 @@ const STREAMABLE_AFTER_NUM_CHUNKS = 3;
 const MIKU_CONSTS = {
   APP_NAMESPACE,
   AUDIO_DOWNLOADER_IPC_ID,
+  AUDIO_STREAMER_IPC_ID,
+  DATABASE_HANDLER_IPC_ID,
+  MESSAGE_LISTENER_IPC_ID,
+  PERMISSIONS_HANDLER_IPC_ID,
+  SEARCH_HANDER_IPC_ID,
+  WEB_CLIENT_IPC_ID,
 
   AUDIO_CHANNELS,
   AUDIO_FREQUENCY,

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import ipc from "node-ipc";
 
 import MIKU_CONSTS from "../constants";
 import Logger from "../logger";
@@ -14,13 +15,13 @@ export enum SourceType { Youtube, GoogleDrive }
 export type SourceId = {
   source_type: SourceType;
   uid?: string;
-  identifier?: string;
+  url?: string;
 }
 
 /**
  * AudioDownloader - Handles downloading and caching audio
  */
-export default class AudioDownloader {
+class AudioDownloader {
   private downloading_ = false;
   private download_queue_: Array<SourceDownloader> = [];
 
@@ -161,16 +162,16 @@ export default class AudioDownloader {
    * @returns 
    */
   private QueueYoutubeSource(source_id: SourceId): string | undefined {
-    this.log_.debug(`Attempting to queue youtube source with {identifier:${source_id.identifier}}`);
+    this.log_.debug(`Attempting to queue youtube source with {url:${source_id.url}}`);
 
     let uid = source_id.uid;
     if (!uid) {
       try {
-        uid = YoutubeDownloader.GenerateUID(source_id.identifier);
+        uid = YoutubeDownloader.GenerateUID(source_id.url);
       } catch (error) {
         return error.message;
       }
-      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
+      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {url: ${source_id.url}}`);
     }
 
     if (this.youtube_cache_[uid]) {
@@ -236,11 +237,11 @@ export default class AudioDownloader {
     let uid = source_id.uid;
     if (!uid) {
       try {
-        uid = YoutubeDownloader.GenerateUID(source_id.identifier);
+        uid = YoutubeDownloader.GenerateUID(source_id.url);
       } catch (error) {
         return error.message;
       }
-      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {identifier: ${source_id.identifier}}`);
+      this.log_.debug(`Parsed {uid:${uid}} from youtube source with {url: ${source_id.url}}`);
     }
 
     if (!this.youtube_cache_[uid]) return Promise.reject();
@@ -266,9 +267,6 @@ export default class AudioDownloader {
     }
   }
 }
-
-
-import ipc from "node-ipc";
 
 export enum FunctionType { QueueSource, GetCacheLocation }
 export type FunctionRequest = {
