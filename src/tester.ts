@@ -7,14 +7,18 @@ import { fork } from "child_process";
 
 const log = new Logger("test");
 
-fork(__dirname + "/audio_downloader/audio_downloader.js");
+fork(__dirname + "/database_handler/database_handler.js");
 
-import AudioDownloaderInterface from "./audio_downloader/audio_downloader_interface";
-import { SourceType } from "./audio_downloader/audio_downloader";
+import DatabaseHandlerInterface from "./database_handler/database_handler_interface";
 
-const a = new AudioDownloaderInterface(log);
 
-setTimeout(async () => {
-  a.QueueSource({ source_type: SourceType.Youtube, url: "https://www.youtube.com/watch?v=jfKfPfyJRdk" });
-  a.GetCacheLocation({ source_type: SourceType.Youtube, url: "https://www.youtube.com/watch?v=jfKfPfyJRdk" });
-}, 10000);
+setTimeout(() => {
+  const d = new DatabaseHandlerInterface(log);
+
+  setTimeout(async () => {
+    const id = "some_id";
+    await d.DeleteGuild(id)
+
+  }, 1000);
+
+}, 5000);

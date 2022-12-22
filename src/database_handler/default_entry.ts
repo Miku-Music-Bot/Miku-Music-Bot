@@ -1,8 +1,8 @@
 import { SourceType } from "../audio_downloader/audio_downloader";
 
-enum SourceEntryType { SingleSong, MultiSong }
+export enum SourceEntryType { SingleSong, MultiSong }
 
-type SingleSongSourceEntry = {
+export type SingleSongSourceEntry = {
   entry_type: SourceEntryType.SingleSong;
   source_type: SourceType;
   uid: string;
@@ -11,14 +11,14 @@ type SingleSongSourceEntry = {
   duration_sec: number;
 }
 
-type MultiSongSourceEntry = {
+export type MultiSongSourceEntry = {
   entry_type: SourceEntryType.MultiSong;
   source_type: SourceType;
   url: string;
   songs: Array<SingleSongSourceEntry>
 }
 
-type DatabaseEntry = {
+export type DatabaseEntry = {
   guild_id: string;
   guild_config: {
     prefix: string;
@@ -64,14 +64,20 @@ type DatabaseEntry = {
   saved_songs: Array<SingleSongSourceEntry | MultiSongSourceEntry>
 }
 
-const DEFAULT_DATABSE_ENTRY = {
+export const DEFAULT_DATABSE_ENTRY: DatabaseEntry = Object.freeze({
   guild_id: "",
-  message: {
+  guild_config: {
     prefix: "!miku ",
     channel_id: "",
     autoplay: false,
-    shuffle: false
-  }
-}
-
-export default DEFAULT_DATABSE_ENTRY;
+    shuffle: false,
+  },
+  audio_processing_config: {
+    volume: 1,
+    normalize: false,
+    nightcore: false,
+    eq: []
+  },
+  permissions_config: {},
+  saved_songs: []
+});

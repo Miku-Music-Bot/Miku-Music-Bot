@@ -108,11 +108,11 @@ export default class YoutubeDownloader implements SourceDownloader {
     } catch (error) {
       this.downloading_ = false;
       this.log_.error(`Error fetching video info for video with {uid: ${this.uid_}}`, error);
+      fetch_info_profiler.stop({ success: false, level: "error" });
       return Promise.reject();
-    } finally {
-      fetch_info_profiler.stop({ conditional_level: { "warn": 1000, "error": 5000 } });
     }
-
+    
+    fetch_info_profiler.stop({ conditional_level: { "warn": 1000, "error": 5000 } });
     return Promise.resolve({ live, duration_sec });
   }
 
@@ -233,7 +233,7 @@ export default class YoutubeDownloader implements SourceDownloader {
       } catch (error) {
         this.log_.info(`Song with uid: ${this.uid_} failed to download`);
         this.log_.fatal(`Error while writing chunk number {chunk_num: ${chunk_num}} for video with {uid: ${this.uid_}} to {location:${location}}`, error);
-        download_profiler.stop({ level: "error" });
+        download_profiler.stop({ success: false, level: "error" });
         this.events_.emit("finish", false);
       }
 
@@ -304,7 +304,7 @@ export default class YoutubeDownloader implements SourceDownloader {
       }
       this.events_.emit("finish", true);
       this.log_.info(`Song with uid: ${this.uid_} downloaded`);
-      download_profiler.stop({ conditional_level: { warn: live ? undefined : duration_sec * 0.75, error: live ? undefined : duration_sec } });
+      download_profiler.stop({ conditional_level: { warn: live ? undefined : duration_sec * 500, error: live ? undefined : duration_sec * 750 } });
     });
   }
 

@@ -23,6 +23,7 @@ class Profiler {
 
   stop(options?: {
     message?: string,
+    success?: boolean,
     level?: "debug" | "info" | "warn" | "error" | "fatal",
     conditional_level?: {
       debug?: number,
@@ -45,7 +46,10 @@ class Profiler {
     }
     if (options && options.level) level = options.level;
 
-    let message = `Task "${this.name_}" completed after ${this.duration_} milliseconds`
+    let success = true;
+    if (options && options.success) { success = options.success; }
+
+    let message = `Task "${this.name_}" completed ${(success) ? "successfully" : "unsuccessfully"} after ${this.duration_} milliseconds`
     if (options && options.message) { message = options.message; }
 
     if (level === "debug") this.log_.debug(message);

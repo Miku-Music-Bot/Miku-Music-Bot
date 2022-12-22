@@ -52,18 +52,20 @@ export default class AudioDownloaderInterface {
   }
 
   /**
-   * QueueSource() - Queues a source to be downloaded
-   * @param source_id - source id of source to queue
-   * @returns resolves to nothing if success, rejects to user friendly error message
+   * RequestFunction() - Runs a specific function and returns the result
+   * @param function_type - type of function to run
+   * @param args - arguments of function
+   * @returns Promise resolving to function's response or rejects if there is an error
    */
-  QueueSource(source_id: SourceId): Promise<string | undefined> {
-    if (!this.ready_) return Promise.reject("Downloader Not Ready, Try Again In A Moment");
+  private RequestFunction(function_type: FunctionType, args: Array<any>): Promise<any> {
+    if (!this.ready_) return Promise.reject("Audio Downloader Not Ready, Try Again In A Moment");
     return new Promise((resolve, reject) => {
       const function_req: FunctionRequest = {
         uid: this.GenerateUID(),
-        function_type: FunctionType.QueueSource,
-        args: [source_id]
+        function_type,
+        args
       }
+
       this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].emit("message", function_req);
 
       this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].on(function_req.uid, (response: FunctionResponse) => {
@@ -72,8 +74,17 @@ export default class AudioDownloaderInterface {
           return;
         }
         reject(response.error);
-      })
+      });
     });
+  }
+
+  /**
+   * QueueSource() - Queues a source to be downloaded
+   * @param source_id - source id of source to queue
+   * @returns resolves to nothing if success, rejects to user friendly error message
+   */
+  QueueSource(source_id: SourceId): Promise<string | undefined> {
+    return this.RequestFunction(FunctionType.QueueSource, [source_id]);
   }
 
   /**
@@ -82,22 +93,6 @@ export default class AudioDownloaderInterface {
    * @returns Promise that resolve to string or rejects if failed
    */
   GetCacheLocation(source_id: SourceId): Promise<string> {
-    if (!this.ready_) return Promise.reject("Downloader Not Ready, Try Again In A Moment");
-    return new Promise((resolve, reject) => {
-      const function_req: FunctionRequest = {
-        uid: this.GenerateUID(),
-        function_type: FunctionType.GetCacheLocation,
-        args: [source_id]
-      }
-      this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].emit("message", function_req);
-
-      this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].on(function_req.uid, (response: FunctionResponse) => {
-        if (response.success) {
-          resolve(response.result);
-          return;
-        }
-        reject(response.error);
-      })
-    });
+    return this.RequestFunction(FunctionType.GetCacheLocation, [source_id]);
   }
 }
