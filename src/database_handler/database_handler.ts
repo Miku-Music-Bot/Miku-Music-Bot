@@ -8,8 +8,10 @@ import { DatabaseEntry, DEFAULT_DATABSE_ENTRY } from "./default_entry";
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DATABASE_NAME = process.env.MONGODB_DATABASE_NAME;
 const MONGODB_COLLECTION_NAME = process.env.MONGODB_COLLECTION_NAME;
+
+let ipc_ready = false;
+let db_ready = false;
 class DatabaseHandler {
-  private ready_ = false;
   private client_: MongoClient;
   private collection_: Collection<DatabaseEntry>;
 
@@ -40,9 +42,10 @@ class DatabaseHandler {
 
     const db = this.client_.db(MONGODB_DATABASE_NAME);
     this.collection_ = db.collection(MONGODB_COLLECTION_NAME);
-    this.ready_ = true;
     this.log_.debug(`Connected to mongodb with {database_name:${MONGODB_DATABASE_NAME}} and {collection_name:${MONGODB_COLLECTION_NAME}}`);
     connection_profiler.stop({ conditional_level: { warn: 3000, error: 10000 } });
+    db_ready = true;
+    if (ipc_ready) process.send("ready");
   }
 
   /**
@@ -377,6 +380,9 @@ ipc.serve(() => {
       }
     }
   });
+
+  ipc_ready = true;
+  if (db_ready) process.send("ready");
 });
 
 ipc.server.start();

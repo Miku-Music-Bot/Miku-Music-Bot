@@ -185,7 +185,7 @@ class AudioDownloader {
       play_count: 0,
       downloader: new YoutubeDownloader(uid, this.youtube_cache_location_, this.youtube_downloaders_logger_)
     };
-    this.youtube_cache_[uid] = downloader_tracker
+    this.youtube_cache_[uid] = downloader_tracker;
     this.downloaders_list_.push(downloader_tracker);
     this.QueueDownload(downloader_tracker.downloader);
     return undefined;
@@ -326,6 +326,8 @@ ipc.serve(() => {
       }
     }
   });
+
+  process.send("ready");
 });
 
 ipc.server.start();

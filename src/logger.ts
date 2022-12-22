@@ -49,7 +49,7 @@ class Profiler {
     let success = true;
     if (options && options.success) { success = options.success; }
 
-    let message = `Task "${this.name_}" completed ${(success) ? "successfully" : "unsuccessfully"} after ${this.duration_} milliseconds`
+    let message = `Task "${this.name_}" completed ${(success) ? "successfully" : "unsuccessfully"} after ${this.duration_} milliseconds`;
     if (options && options.message) { message = options.message; }
 
     if (level === "debug") this.log_.debug(message);

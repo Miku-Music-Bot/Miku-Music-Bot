@@ -17,7 +17,7 @@ setTimeout(() => {
 
   setTimeout(async () => {
     const id = "some_id";
-    await d.DeleteGuild(id)
+    await d.DeleteGuild(id);
 
   }, 1000);
 
