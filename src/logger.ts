@@ -129,7 +129,7 @@ export default class Logger {
     this.logger_.add(new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.simple(),
+        winston.format.simple()
       ),
     }));
   }
@@ -138,7 +138,7 @@ export default class Logger {
   fatal(msg: string, error?: Error) {
     if (!error) error = new Error(msg);
     msg = "[FATAL] " + msg;
-    this.logger_.error(msg, error);
+    this.logger_.error(`${msg}\nError Message: `, error);
     setTimeout(() => {
       process.exit();
     }, 1000);
@@ -147,13 +147,13 @@ export default class Logger {
   // For messages about recoverable errors
   error(msg: string, error?: Error) {
     if (!error) error = new Error(msg);
-    this.logger_.error(msg, error);
+    this.logger_.error(`${msg}\nError Message: `, error);
   }
 
   // For messages about something that doesn't impact operation but may indicate a problem if it continues
   warn(msg: string, error?: Error) {
     if (error) {
-      this.logger_.warn(msg, error);
+      this.logger_.error(`${msg}\nError Message: `, error);
     } else {
       this.logger_.warn(msg);
     }

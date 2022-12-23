@@ -1,4 +1,5 @@
 import ipc from "node-ipc";
+import EventEmitter from "events";
 
 import Logger from "../logger";
 import MIKU_CONSTS from "../constants";
@@ -9,10 +10,11 @@ import { DatabaseEntry } from "./default_entry";
  * DatabaseHandlerInterface - Class for interfacing with database handler from seperate process
  */
 export default class DatabaseHandlerInterface {
+  private events_ = new EventEmitter;
+
   private ipc_ = new ipc.IPC();
 
   private counter_ = 0;
-  private ready_ = false;
 
   private log_: Logger;
 
@@ -33,14 +35,17 @@ export default class DatabaseHandlerInterface {
       // Establish listeners
       const connection = this.ipc_.of[MIKU_CONSTS.DATABASE_HANDLER_IPC_ID];
       connection.on("connect", () => {
-        this.ready_ = true;
         this.log_.debug(`ipc connection to {id:${MIKU_CONSTS.DATABASE_HANDLER_IPC_ID}} in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} established`);
       });
 
       connection.on("disconnect", () => {
         this.log_.warn(`ipc connection to {id:${MIKU_CONSTS.DATABASE_HANDLER_IPC_ID}} in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} disconnected`);
       });
-    })
+
+      connection.on("message", (response: FunctionResponse) => {
+        this.events_.emit(response.uid, response);
+      });
+    });
   }
 
   /**
@@ -59,22 +64,21 @@ export default class DatabaseHandlerInterface {
    * @returns Promise resolving to function's response or rejects if there is an error
    */
   private RequestFunction(function_type: FunctionType, args: Array<any>): Promise<any> {
-    if (!this.ready_) return Promise.reject("Database Not Ready, Try Again In A Moment");
     return new Promise((resolve, reject) => {
       const function_req: FunctionRequest = {
         uid: this.GenerateUID(),
         function_type,
         args
-      }
+      };
 
       this.ipc_.of[MIKU_CONSTS.DATABASE_HANDLER_IPC_ID].emit("message", function_req);
 
-      this.ipc_.of[MIKU_CONSTS.DATABASE_HANDLER_IPC_ID].on(function_req.uid, (response: FunctionResponse) => {
+      this.events_.once(function_req.uid, (response: FunctionResponse) => {
         if (response.success) {
           resolve(response.result);
           return;
         }
-        reject(response.error);
+        reject(new Error(response.error));
       });
     });
   }

@@ -1,4 +1,5 @@
 import ipc from "node-ipc";
+import EventEmitter from "events";
 
 import Logger from "../logger";
 import MIKU_CONSTS from "../constants";
@@ -8,6 +9,8 @@ import { SourceId, FunctionType, FunctionRequest, FunctionResponse } from "./aud
  * AudioDownloaderInterface - Class for interfacing with audio downloader from seperate process
  */
 export default class AudioDownloaderInterface {
+  private events_ = new EventEmitter;
+
   private ipc_ = new ipc.IPC();
 
   private counter_ = 0;
@@ -39,7 +42,11 @@ export default class AudioDownloaderInterface {
       connection.on("disconnect", () => {
         this.log_.warn(`ipc connection to {id:${MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID}} in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} disconnected`);
       });
-    })
+
+      connection.on("message", (response: FunctionResponse) => {
+        this.events_.emit(response.uid, response);
+      });
+    });
   }
 
   /**
@@ -64,16 +71,16 @@ export default class AudioDownloaderInterface {
         uid: this.GenerateUID(),
         function_type,
         args
-      }
+      };
 
       this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].emit("message", function_req);
 
-      this.ipc_.of[MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID].on(function_req.uid, (response: FunctionResponse) => {
+      this.events_.on(function_req.uid, (response: FunctionResponse) => {
         if (response.success) {
           resolve(response.result);
           return;
         }
-        reject(response.error);
+        reject(new Error(response.error));
       });
     });
   }

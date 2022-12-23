@@ -47,11 +47,11 @@ const logger = new Logger("component");
 const components = [
   {
     name: "Database Handler",
-    location: path.join(__dirname, "database_handler", "database_handler.js")
+    location: path.join(__dirname, "database_handler", "database_handler_server.js")
   },
   {
     name: "Audio Downloader",
-    location: path.join(__dirname, "audio_downloader", "audio_downloader.js")
+    location: path.join(__dirname, "audio_downloader", "audio_downloader_server.js")
   }
 ];
 

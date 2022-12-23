@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "prestart": "npm run build",
+    "start": "node build/miku"
   },
   "repository": {
     "type": "git",

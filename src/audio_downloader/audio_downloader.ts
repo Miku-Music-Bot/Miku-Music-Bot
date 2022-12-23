@@ -1,8 +1,6 @@
 import fs from "fs";
 import path from "path";
-import ipc from "node-ipc";
 
-import MIKU_CONSTS from "../constants";
 import Logger from "../logger";
 import SourceDownloader from "./source_downloader";
 import YoutubeDownloader from "./youtube_downloader";
@@ -18,10 +16,23 @@ export type SourceId = {
   url?: string;
 }
 
+export enum FunctionType { QueueSource, GetCacheLocation }
+export type FunctionRequest = {
+  uid: string;
+  function_type: FunctionType;
+  args: Array<any>;
+};
+export type FunctionResponse = {
+  uid: string;
+  success: boolean;
+  error?: string;
+  result: any;
+}
+
 /**
  * AudioDownloader - Handles downloading and caching audio
  */
-class AudioDownloader {
+export default class AudioDownloader {
   private downloading_ = false;
   private download_queue_: Array<SourceDownloader> = [];
 
@@ -267,67 +278,3 @@ class AudioDownloader {
     }
   }
 }
-
-export enum FunctionType { QueueSource, GetCacheLocation }
-export type FunctionRequest = {
-  uid: string;
-  function_type: FunctionType;
-  args: Array<any>;
-};
-export type FunctionResponse = {
-  success: boolean;
-  error?: Error;
-  result: any;
-}
-
-const logger = new Logger("audio_downloader");
-const audio_downloader = new AudioDownloader(logger);
-
-ipc.config.silent = true;
-ipc.config.rawBuffer = false;
-ipc.config.appspace = MIKU_CONSTS.APP_NAMESPACE;
-ipc.config.id = MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID;
-
-logger.debug(`Starting ipc server for audio downloader in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} and {id:${MIKU_CONSTS.AUDIO_DOWNLOADER_IPC_ID}}`);
-ipc.serve(() => {
-  ipc.server.on("error", (error) => {
-    logger.error("Error on ipc server", error);
-  });
-
-  ipc.server.on("socket.disconnected", (socket, destroyed_socket_id) => {
-    logger.warn(`IPC socket with {id:${destroyed_socket_id}} disconnected`);
-  });
-
-  ipc.server.on("message", async (data: FunctionRequest, socket) => {
-    switch (data.function_type) {
-      case (FunctionType.QueueSource): {
-        let result;
-        try {
-          result = audio_downloader.QueueSource(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.GetCacheLocation): {
-        let result;
-        try {
-          result = await audio_downloader.GetCacheLocation(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      default: {
-        const error = new Error("Audio Downloader Interface Error: function type invalid");
-        ipc.server.emit(socket, data.uid, { success: false, error });
-      }
-    }
-  });
-
-  process.send("ready");
-});
-
-ipc.server.start();

@@ -1,17 +1,44 @@
-import ipc from "node-ipc";
 import { MongoClient, Collection } from "mongodb";
 
-import MIKU_CONSTS from "../constants";
 import Logger from "../logger";
 import { DatabaseEntry, DEFAULT_DATABSE_ENTRY } from "./default_entry";
+import EventEmitter from "events";
+import TypedEventEmitter from "typed-emitter";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DATABASE_NAME = process.env.MONGODB_DATABASE_NAME;
 const MONGODB_COLLECTION_NAME = process.env.MONGODB_COLLECTION_NAME;
 
-let ipc_ready = false;
-let db_ready = false;
-class DatabaseHandler {
+export enum FunctionType {
+  NewGuild,
+  DeleteGuild,
+
+  FetchGuildConfig,
+  UpdateGuildConfig,
+
+  FetchAudioProcessingConfig,
+  UpdateAudioProcessingConfig,
+
+  FetchPermissionsConfig,
+  UpdatePermissionsConfig
+}
+
+export type FunctionRequest = {
+  uid: string;
+  function_type: FunctionType;
+  args: Array<any>;
+};
+export type FunctionResponse = {
+  uid: string;
+  success: boolean;
+  error?: string;
+  result: any;
+}
+
+export default class DatabaseHandler {
+  private events_ = new EventEmitter as TypedEventEmitter<{ ready: () => void }>;
+  get events() { return this.events_; }
+
   private client_: MongoClient;
   private collection_: Collection<DatabaseEntry>;
 
@@ -44,8 +71,7 @@ class DatabaseHandler {
     this.collection_ = db.collection(MONGODB_COLLECTION_NAME);
     this.log_.debug(`Connected to mongodb with {database_name:${MONGODB_DATABASE_NAME}} and {collection_name:${MONGODB_COLLECTION_NAME}}`);
     connection_profiler.stop({ conditional_level: { warn: 3000, error: 10000 } });
-    db_ready = true;
-    if (ipc_ready) process.send("ready");
+    this.events_.emit("ready");
   }
 
   /**
@@ -63,7 +89,7 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to add new entry to database for {guild_id:${guild_id}}`, error);
       new_guild_entry_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully added new entry to database for {guild_id:${guild_id}}`);
@@ -84,7 +110,7 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to delete entry in database for {guild_id:${guild_id}}`, error);
       delete_guild_entry_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully deleted entry entry in database for {guild_id:${guild_id}}`);
@@ -108,7 +134,13 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to fetch guild config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
+    }
+
+    if (!response) {
+      const error = new Error("No entry matching guild_id found");
+      this.log_.error(`Failed to fetch guild config for {guild_id:${guild_id}}`, error);
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully fetched guild config for {guild_id:${guild_id}}`);
@@ -136,7 +168,7 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to update guild config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully updated guild config for {guild_id:${guild_id}}`);
@@ -160,7 +192,13 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed fetching audio processing config for {guild_id:${guild_id}}`, error);
       fetch_audio_processing_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
+    }
+
+    if (!response) {
+      const error = new Error("No entry matching guild_id found");
+      this.log_.error(`Failed to fetch audio processing config for {guild_id:${guild_id}}`, error);
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully fetched audio processing config for {guild_id:${guild_id}}`);
@@ -188,7 +226,7 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to update audio processing config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully updated audio processing config for {guild_id:${guild_id}}`);
@@ -212,9 +250,14 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed fetching permissions config for {guild_id:${guild_id}}`, error);
       fetch_permissions_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
+    if (!response) {
+      const error = new Error("No entry matching guild_id found");
+      this.log_.error(`Failed to fetch permissions config for {guild_id:${guild_id}}`, error);
+      return Promise.reject(error);
+    }
     this.log_.debug(`Successfully fetched permissions config for {guild_id:${guild_id}}`);
     fetch_permissions_config_profiler.stop();
     return Promise.resolve(response.permissions_config);
@@ -240,7 +283,7 @@ class DatabaseHandler {
     } catch (error) {
       this.log_.error(`Failed to update permissions config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
-      return Promise.reject();
+      return Promise.reject(error);
     }
 
     this.log_.debug(`Successfully updated permissions config for {guild_id:${guild_id}}`);
@@ -248,141 +291,3 @@ class DatabaseHandler {
     return Promise.resolve();
   }
 }
-
-export enum FunctionType {
-  NewGuild,
-  DeleteGuild,
-
-  FetchGuildConfig,
-  UpdateGuildConfig,
-
-  FetchAudioProcessingConfig,
-  UpdateAudioProcessingConfig,
-
-  FetchPermissionsConfig,
-  UpdatePermissionsConfig
-}
-
-export type FunctionRequest = {
-  uid: string;
-  function_type: FunctionType;
-  args: Array<any>;
-};
-export type FunctionResponse = {
-  success: boolean;
-  error?: Error;
-  result: any;
-}
-
-const logger = new Logger("database_handler");
-const database_handler = new DatabaseHandler(logger);
-
-ipc.config.silent = true;
-ipc.config.rawBuffer = false;
-ipc.config.appspace = MIKU_CONSTS.APP_NAMESPACE;
-ipc.config.id = MIKU_CONSTS.DATABASE_HANDLER_IPC_ID;
-
-logger.debug(`Starting ipc server for database handler in {namespace:${MIKU_CONSTS.APP_NAMESPACE}} and {id:${MIKU_CONSTS.DATABASE_HANDLER_IPC_ID}}`);
-ipc.serve(() => {
-  ipc.server.on("error", (error) => {
-    logger.error("Error on ipc server", error);
-  });
-
-  ipc.server.on("socket.disconnected", (socket, destroyed_socket_id) => {
-    logger.warn(`IPC socket with {id:${destroyed_socket_id}} disconnected`);
-  });
-
-  ipc.server.on("message", async (data: FunctionRequest, socket) => {
-    switch (data.function_type) {
-      case (FunctionType.NewGuild): {
-        let result;
-        try {
-          result = await database_handler.NewGuild(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.DeleteGuild): {
-        let result;
-        try {
-          result = await database_handler.DeleteGuild(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.FetchGuildConfig): {
-        let result;
-        try {
-          result = await database_handler.FetchGuildConfig(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.UpdateGuildConfig): {
-        let result;
-        try {
-          result = await database_handler.UpdateGuildConfig(data.args[0], data.args[1]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.FetchAudioProcessingConfig): {
-        let result;
-        try {
-          result = await database_handler.FetchAudioProcessingConfig(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.UpdateAudioProcessingConfig): {
-        let result;
-        try {
-          result = await database_handler.UpdateAudioProcessingConfig(data.args[0], data.args[1]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.FetchPermissionsConfig): {
-        let result;
-        try {
-          result = await database_handler.FetchPermissionsConfig(data.args[0]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      case (FunctionType.UpdatePermissionsConfig): {
-        let result;
-        try {
-          result = await database_handler.UpdatePermissionsConfig(data.args[0], data.args[1]);
-          ipc.server.emit(socket, data.uid, { success: true, result });
-        } catch (error) {
-          ipc.server.emit(socket, data.uid, { success: false, error });
-        }
-        break;
-      }
-      default: {
-        const error = new Error("Database Handler Interface Error: function type invalid");
-        ipc.server.emit(socket, data.uid, { success: false, error });
-      }
-    }
-  });
-
-  ipc_ready = true;
-  if (db_ready) process.send("ready");
-});
-
-ipc.server.start();

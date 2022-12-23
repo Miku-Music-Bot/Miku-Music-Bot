@@ -1,10 +1,10 @@
 import Discord from "discord.js";
+import UI from "./ui";
 
-export default class GuildHandler {
-  private guild_id: string;
+export default class GuildHandler extends UI {
 
   constructor(guild_id: string) {
-    this.guild_id = guild_id;
+    super(guild_id);
   }
 
   MessageHandler(message: Discord.Message) {

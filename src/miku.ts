@@ -5,7 +5,7 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 import StartComponents from "./start_components";
 import Logger from "./logger";
-import GuildHandler from "./message_listener/guild_handler";
+import GuildHandler from "./guild_handler/guild_handler";
 
 const logger = new Logger("miku");
 
