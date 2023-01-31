@@ -14,13 +14,17 @@
     "plugins": [
         "@typescript-eslint"
     ],
-	"ignorePatterns": ["build/*"],
+    "ignorePatterns": [
+        "build/*"
+    ],
     "rules": {
         "semi": "error",
         "indent": [
             "error",
             2,
-			{ "SwitchCase": 1 }
+            {
+                "SwitchCase": 1
+            }
         ],
         "linebreak-style": [
             "error",
@@ -30,6 +34,6 @@
             "error",
             "double"
         ],
-		"@typescript-eslint/no-explicit-any": "off"
+        "@typescript-eslint/no-explicit-any": "off"
     }
 }
