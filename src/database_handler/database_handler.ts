@@ -1,13 +1,14 @@
 import { MongoClient, Collection } from "mongodb";
 
 import Logger from "../logger";
-import { DatabaseEntry, DEFAULT_DATABSE_ENTRY } from "./default_entry";
+import { DatabaseEntry, DEFAULT_DATABSE_ENTRY, SongEntry } from "./default_entry";
 import EventEmitter from "events";
 import TypedEventEmitter from "typed-emitter";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DATABASE_NAME = process.env.MONGODB_DATABASE_NAME;
-const MONGODB_COLLECTION_NAME = process.env.MONGODB_COLLECTION_NAME;
+const MONGODB_GUILD_COLLECTION_NAME = process.env.MONGODB_GUILD_COLLECTION_NAME;
+const MONGODB_SONG_COLLECTION_NAME = process.env.MONGODB_SONG_COLLECTION_NAME;
 
 export enum FunctionType {
   NewGuild,
@@ -40,7 +41,8 @@ export default class DatabaseHandler {
   get events() { return this.events_; }
 
   private client_: MongoClient;
-  private collection_: Collection<DatabaseEntry>;
+  private guild_collection_: Collection<DatabaseEntry>;
+  private song_collection_: Collection<SongEntry>;
 
   private log_: Logger;
 
@@ -56,7 +58,7 @@ export default class DatabaseHandler {
    */
   private async ConnectDB() {
     const connection_profiler = this.log_.profile("Connect to Mongodb Database");
-    this.log_.debug(`Attempting to connect to mongodb with {database_name:${MONGODB_DATABASE_NAME}} and {collection_name:${MONGODB_COLLECTION_NAME}}`);
+    this.log_.debug(`Attempting to connect to mongodb with {database_name:${MONGODB_DATABASE_NAME}}`);
 
     try {
       await this.client_.connect();
@@ -68,8 +70,9 @@ export default class DatabaseHandler {
     }
 
     const db = this.client_.db(MONGODB_DATABASE_NAME);
-    this.collection_ = db.collection(MONGODB_COLLECTION_NAME);
-    this.log_.debug(`Connected to mongodb with {database_name:${MONGODB_DATABASE_NAME}} and {collection_name:${MONGODB_COLLECTION_NAME}}`);
+    this.guild_collection_ = db.collection(MONGODB_GUILD_COLLECTION_NAME);
+    this.song_collection_ = db.collection(MONGODB_SONG_COLLECTION_NAME);
+    this.log_.debug(`Connected to mongodb with {database_name:${MONGODB_DATABASE_NAME}}`);
     connection_profiler.stop({ conditional_level: { warn: 3000, error: 10000 } });
     this.events_.emit("ready");
   }
@@ -85,7 +88,7 @@ export default class DatabaseHandler {
     const new_guild_entry = Object.assign({}, DEFAULT_DATABSE_ENTRY);
     new_guild_entry.guild_id = guild_id;
     try {
-      await this.collection_.insertOne(new_guild_entry);
+      await this.guild_collection_.insertOne(new_guild_entry);
     } catch (error) {
       this.log_.error(`Failed to add new entry to database for {guild_id:${guild_id}}`, error);
       new_guild_entry_profiler.stop({ success: false, level: "error" });
@@ -106,7 +109,7 @@ export default class DatabaseHandler {
     this.log_.debug(`Deleting entry in database for {guild_id:${guild_id}}`);
 
     try {
-      await this.collection_.deleteOne({ guild_id });
+      await this.guild_collection_.deleteOne({ guild_id });
     } catch (error) {
       this.log_.error(`Failed to delete entry in database for {guild_id:${guild_id}}`, error);
       delete_guild_entry_profiler.stop({ success: false, level: "error" });
@@ -130,7 +133,7 @@ export default class DatabaseHandler {
     try {
       const query = { guild_id };
       const options = { projection: { _id: 0, guild_config: 1 } };
-      response = await this.collection_.findOne(query, options);
+      response = await this.guild_collection_.findOne(query, options);
     } catch (error) {
       this.log_.error(`Failed to fetch guild config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
@@ -164,7 +167,7 @@ export default class DatabaseHandler {
           guild_config: new_config
         }
       };
-      await this.collection_.updateOne(query, options);
+      await this.guild_collection_.updateOne(query, options);
     } catch (error) {
       this.log_.error(`Failed to update guild config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
@@ -188,7 +191,7 @@ export default class DatabaseHandler {
     try {
       const query = { guild_id };
       const options = { projection: { _id: 0, audio_processing_config: 1 } };
-      response = await this.collection_.findOne(query, options);
+      response = await this.guild_collection_.findOne(query, options);
     } catch (error) {
       this.log_.error(`Failed fetching audio processing config for {guild_id:${guild_id}}`, error);
       fetch_audio_processing_config_profiler.stop({ success: false, level: "error" });
@@ -222,7 +225,7 @@ export default class DatabaseHandler {
           audio_processing_config: new_config
         }
       };
-      await this.collection_.updateOne(query, options);
+      await this.guild_collection_.updateOne(query, options);
     } catch (error) {
       this.log_.error(`Failed to update audio processing config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });
@@ -246,7 +249,7 @@ export default class DatabaseHandler {
     try {
       const query = { guild_id };
       const options = { projection: { _id: 0, permissions_config: 1 } };
-      response = await this.collection_.findOne(query, options);
+      response = await this.guild_collection_.findOne(query, options);
     } catch (error) {
       this.log_.error(`Failed fetching permissions config for {guild_id:${guild_id}}`, error);
       fetch_permissions_config_profiler.stop({ success: false, level: "error" });
@@ -279,7 +282,7 @@ export default class DatabaseHandler {
           permissions_config: new_config
         }
       };
-      await this.collection_.updateOne(query, options);
+      await this.guild_collection_.updateOne(query, options);
     } catch (error) {
       this.log_.error(`Failed to update permissions config for {guild_id:${guild_id}}`, error);
       fetch_guild_config_profiler.stop({ success: false, level: "error" });

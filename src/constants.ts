@@ -13,7 +13,7 @@ const AUDIO_FREQUENCY = 48000;
 const PCM_FORMAT = "s16le";
 const BIT_DEPTH = 16;
 const SIZE_OF_1_SEC_PCM = AUDIO_CHANNELS * AUDIO_FREQUENCY * BIT_DEPTH / 8;    // Length of 1 second of pcm audio
-const CHUNK_SIZE = SIZE_OF_1_SEC_PCM * 10;
+const CHUNK_SIZE = SIZE_OF_1_SEC_PCM;
 
 const STREAMABLE_AFTER_NUM_CHUNKS = 3;
 
@@ -35,6 +35,6 @@ const MIKU_CONSTS = {
   CHUNK_SIZE,
 
   STREAMABLE_AFTER_NUM_CHUNKS,
-}
+};
 
 export default MIKU_CONSTS;

@@ -13,13 +13,11 @@ import MIKU_CONSTS from "../constants";
 import SourceDownloader, { DownloaderEvents, DownloaderTypes } from "./source_downloader";
 import Logger from "../logger";
 
-
-
 /**
  * YoutubeDownloader - Handles downloading audio from youtube
  */
 export default class YoutubeDownloader implements SourceDownloader {
-  private events_ = new EventEmitter as TypedEventEmitter<DownloaderEvents>
+  private events_ = new EventEmitter as TypedEventEmitter<DownloaderEvents>;
   get events() { return this.events_; }
 
   private uid_: string;
@@ -62,7 +60,6 @@ export default class YoutubeDownloader implements SourceDownloader {
   }
 
   /**
-   * constructor()
    * @param uid - unique identifier of youtube video
    * @param cache_location - location to save downloaded audio to
    */
@@ -90,7 +87,7 @@ export default class YoutubeDownloader implements SourceDownloader {
         }
         this.log_.error(`Error while deleting incompleted cached data for video with {uid:${this.uid_}}`, error);
       });
-    })
+    });
   }
 
   /**
@@ -199,7 +196,7 @@ export default class YoutubeDownloader implements SourceDownloader {
           raw_youtube_download.stream.on("data", (data) => ffmpeg_processor_input.write(data));
           raw_youtube_download.stream.on("end", () => ffmpeg_processor_input.end());
           this.log_.debug(`Livestream with {uid:${this.uid_}} successfully refreshed downloaded link`);
-        })
+        });
       }, 4 * 60 * 60 * 1000);
     }
 
@@ -260,7 +257,7 @@ export default class YoutubeDownloader implements SourceDownloader {
         this.log_.fatal(`Error while deleting {chunk_num:${chunk_num_to_delete}} at {location:${delete_location}} for livestream with {uid:${this.uid_}}`, error);
         this.events_.emit("finish", false);
       }
-    }
+    };
 
     // chunks data into groups 
     let data_chunk = Buffer.alloc(0);
@@ -273,7 +270,7 @@ export default class YoutubeDownloader implements SourceDownloader {
         data_chunk = data_chunk.subarray(MIKU_CONSTS.CHUNK_SIZE);
         write_chunk(save);
       }
-    }
+    };
 
     raw_pcm_s16le_output.on("data", (data) => {
       // Abort download if is a livestream and nobody is listening anymore
@@ -386,7 +383,7 @@ export default class YoutubeDownloader implements SourceDownloader {
         .catch(() => {
           this.delete_lock_--;
           reject();
-        })
+        });
     });
   }
 

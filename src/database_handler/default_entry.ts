@@ -61,7 +61,7 @@ export type DatabaseEntry = {
       clear_channel: boolean;
     }
   }
-  saved_songs: Array<SingleSongSourceEntry | MultiSongSourceEntry>
+  saved_sources: Array<SingleSongSourceEntry | MultiSongSourceEntry>
 }
 
 export const DEFAULT_DATABSE_ENTRY: DatabaseEntry = Object.freeze({
@@ -79,5 +79,15 @@ export const DEFAULT_DATABSE_ENTRY: DatabaseEntry = Object.freeze({
     eq: []
   },
   permissions_config: {},
-  saved_songs: []
+  saved_sources: []
 });
+
+export type SongEntry = {
+  source_type: SourceType;
+  uid: string;
+  url: string;
+  guild_id: string;
+  title: string;
+  duration_sec: number;
+  artist: string;
+}

@@ -8,7 +8,7 @@ export type DownloaderEvents = {
   "finish": (success: boolean) => void;       // emitted when download is finished or failed (only valid for non-live videos)
 };
 
-export default interface SourceDownloader {
+interface SourceDownloader {
   get events(): TypedEventEmitter<DownloaderEvents>;
 
   get uid(): string;                  // unique identifier of song
@@ -46,3 +46,5 @@ export default interface SourceDownloader {
    */
   DeleteCache(): Promise<void>;
 }
+
+export default SourceDownloader;
