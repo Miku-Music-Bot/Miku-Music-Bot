@@ -1,0 +1,78 @@
+import winston from "winston";
+
+import Profiler, { LevelThresholds } from "./profiler";
+import createWinstonLogger from "./create_winston_logger";
+
+/**
+ * Logger()
+ * A winston logger wrapper
+ */
+export default class Logger {
+  private logger_: winston.Logger;
+
+  /**
+   * @param name - Name of logger
+   */
+  constructor(name: string) {
+    this.logger_ = createWinstonLogger(name);
+  }
+
+  /**
+   * fatal() - For messages about irrecoverable errors
+   * @param msg - message to log
+   * @param error - optional error message
+   */
+  fatal(msg: string, error?: Error) {
+    if (!error) error = new Error(msg);
+    msg = "[FATAL] " + msg;
+    this.logger_.error(`${msg} -`, error);
+  }
+
+  /**
+   * error() - For messages about recoverable errors
+   * @param msg - message to log
+   * @param error - optional error message
+   */
+  error(msg: string, error?: Error) {
+    if (!error) error = new Error(msg);
+    this.logger_.error(`${msg} -`, error);
+  }
+
+  /**
+   * warn() - For messages about something that doesn't impact operation but may indicate a problem if it continues
+   * @param msg - message to log
+   * @param error - optional error message
+   */
+  warn(msg: string, error?: Error) {
+    if (error) {
+      this.logger_.warn(`${msg} -`, error);
+    } else {
+      this.logger_.warn(msg);
+    }
+  }
+
+  /**
+   * info() - For general messages that tell what the program is doing
+   * @param msg - message to log
+   */
+  info(msg: string) {
+    this.logger_.info(msg);
+  }
+
+  /**
+   * debug() - For detailed messages that tell what the program is doing
+   * @param msg - message to log
+   */
+  debug(msg: string) {
+    this.logger_.debug(msg);
+  }
+
+  /**
+   * profile() - Starts a profiler with given name
+   * @param name - name of task to profile
+   * @param level_thresholds - optional thresholds for severity of logs (in milliseconds)
+   */
+  profile(name: string, level_thresholds?: LevelThresholds): Profiler {
+    return new Profiler(this, name, level_thresholds);
+  }
+}
