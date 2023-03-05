@@ -12,14 +12,15 @@ const ZIP_LOGS = process.env.ZIP_LOGS === "true";
 const LOG_MAX_SIZE = process.env.LOG_MAX_SIZE;
 const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
 
-const MIKU_CONSTS = {
+const MIKU_CONSTS = Object.freeze({
   ipc_config: {
-    retry: 5000,
+    retry: 1000,
     silent: true,
     rawBuffer: false,
 
-    APP_NAMESPACE: "Miku-Music-Bot",
-    LOGGER_IPC_ID: "Miku-Logger",
+    app_namespace: "Miku-Music-Bot",
+    logger_ipc_id: "Miku-Logger",
+    music_ipc_id: "Miku-Music-Cache"
   },
   logger: {
     log_file: LOG_FILE,
@@ -31,6 +32,6 @@ const MIKU_CONSTS = {
     max_size: LOG_MAX_SIZE,
     max_files: LOG_MAX_FILES,
   }
-};
+});
 
 export default MIKU_CONSTS;

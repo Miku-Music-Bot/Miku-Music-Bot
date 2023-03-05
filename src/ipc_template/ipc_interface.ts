@@ -18,6 +18,7 @@ export default class IPCInterface<FunctionNames> {
 
   private counter_ = Date.now() * 1000;
   private ready_ = false;
+  private running_ = false;
 
   private log_: Logger;
 
@@ -33,21 +34,23 @@ export default class IPCInterface<FunctionNames> {
     this.ipc_.config.retry = MIKU_CONSTS.ipc_config.retry;
     this.ipc_.config.silent = MIKU_CONSTS.ipc_config.silent;
     this.ipc_.config.rawBuffer = MIKU_CONSTS.ipc_config.rawBuffer;
-    this.ipc_.config.appspace = MIKU_CONSTS.ipc_config.APP_NAMESPACE;
+    this.ipc_.config.appspace = MIKU_CONSTS.ipc_config.app_namespace;
     this.ipc_.config.id = ipc_id + "-Interface-" + Date.now().toString();
 
-    this.log_.debug(`Attempting ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.APP_NAMESPACE}}`);
+    this.log_.debug(`Attempting ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}}`);
     this.ipc_.connectTo(ipc_id, () => {
       // Establish listeners
       const connection = this.ipc_.of[ipc_id];
       connection.on("connect", () => {
         this.ready_ = true;
-        this.log_.debug(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.APP_NAMESPACE}} established`);
+        this.RunQueue();
+        this.log_.debug(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} established`);
       });
 
       connection.on("disconnect", () => {
         this.ready_ = false;
-        this.log_.warn(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.APP_NAMESPACE}} disconnected`);
+        this.running_ = false;
+        this.log_.warn(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} disconnected`);
       });
 
       connection.on("message", (response: FunctionResponse) => {
@@ -60,18 +63,28 @@ export default class IPCInterface<FunctionNames> {
    * RunQueue() - Runs queued commands in function queue
    */
   private RunQueue() {
-    if (this.queue_.length === 0) return;
-    if (!this.ready_) { setTimeout(() => this.RunQueue(), 10); }
+    if (this.running_) return;
+    if (this.queue_.length === 0) {
+      this.running_ = false;
+      return;
+    }
+    if (!this.ready_) { setTimeout(() => this.RunQueue(), 10); return; }
 
+    this.running_ = true;
     const function_req = this.queue_[0];
 
-    this.events_.once(function_req.uid, () => { this.RunQueue(); });
+    this.events_.once(function_req.uid, () => {
+      this.running_ = false;
+      this.queue_.shift();
+      this.RunQueue();
+    });
 
     try {
       this.ipc_.of[this.ipc_id_].emit("message", function_req);
-      this.queue_.shift();
     } catch (error) {
       this.log_.error("Error sending function request", error);
+      this.running_ = false;
+      this.RunQueue();
     }
   }
 
@@ -89,7 +102,7 @@ export default class IPCInterface<FunctionNames> {
     };
 
     this.queue_.push(function_req);
-    if (this.queue_.length === 1) { this.RunQueue(); }
+    this.RunQueue();
 
     return new Promise((resolve, reject) => {
       this.events_.once(function_req.uid, (response: FunctionResponse) => {

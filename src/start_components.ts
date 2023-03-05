@@ -4,6 +4,8 @@ import EventEmitter from "events";
 import TypedEventEmitter from "typed-emitter";
 
 import Logger from "./logger/logger";
+import MIKU_CONSTS from "./constants";
+import MusicCacheInterface from "./music_cache/music_cache_ipc_interface";
 
 class Component {
   private events_ = new EventEmitter as TypedEventEmitter<{ ready: () => void }>;
@@ -45,7 +47,12 @@ class Component {
 }
 
 const logger = new Logger("Component-Manager");
-const components: Array<{ name: string, location: string }> = [];
+const components: Array<{ name: string, location: string }> = [
+  {
+    name: MIKU_CONSTS.ipc_config.music_ipc_id,
+    location: path.join(__dirname, "music_cache", "music_cache_ipc_server.js")
+  }
+];
 
 export default function StartComponents(index?: number): Promise<void> {
   if (!index) index = 0;
@@ -54,16 +61,6 @@ export default function StartComponents(index?: number): Promise<void> {
   return new Promise((resolve) => {
     const component = new Component(components[index].name, components[index].location, logger);
     component.events.once("ready", () => {
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-      logger.debug("hi");
-
       resolve(StartComponents(index + 1));
     });
   });
