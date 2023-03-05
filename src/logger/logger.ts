@@ -17,6 +17,12 @@ export default class Logger {
     this.logger_ = createWinstonLogger(name);
   }
 
+  private sendErrorNotification(level: "fatal" | "error" | "warn", msg: string, error?: Error) {
+    /**
+     * @todo send error email
+     */
+  }
+
   /**
    * fatal() - For messages about irrecoverable errors
    * @param msg - message to log
@@ -26,6 +32,7 @@ export default class Logger {
     if (!error) error = new Error(msg);
     msg = "[FATAL] " + msg;
     this.logger_.error(`${msg} -`, error);
+    this.sendErrorNotification("fatal", msg, error);
   }
 
   /**
@@ -36,6 +43,7 @@ export default class Logger {
   error(msg: string, error?: Error) {
     if (!error) error = new Error(msg);
     this.logger_.error(`${msg} -`, error);
+    this.sendErrorNotification("error", msg, error);
   }
 
   /**
@@ -46,8 +54,10 @@ export default class Logger {
   warn(msg: string, error?: Error) {
     if (error) {
       this.logger_.warn(`${msg} -`, error);
+      this.sendErrorNotification("warn", msg, error);
     } else {
       this.logger_.warn(msg);
+      this.sendErrorNotification("warn", msg);
     }
   }
 

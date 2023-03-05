@@ -20,7 +20,6 @@ const MIKU_CONSTS = {
 
     APP_NAMESPACE: "Miku-Music-Bot",
     LOGGER_IPC_ID: "Miku-Logger",
-    LOG_ANALYTICS: "Miku-Log-Analytics",
   },
   logger: {
     log_file: LOG_FILE,
@@ -31,10 +30,6 @@ const MIKU_CONSTS = {
     zip_logs: ZIP_LOGS,
     max_size: LOG_MAX_SIZE,
     max_files: LOG_MAX_FILES,
-    debug_history_len: 100,
-    info_history_len: 100,
-    log_count_history_len: 1000,
-    count_interval: (1000 * 60) * 10,
   }
 };
 
