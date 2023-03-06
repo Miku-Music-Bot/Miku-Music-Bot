@@ -8,9 +8,11 @@ const sqlite3 = verbose();
  * SQLiteInterface() - Provides abstractions to SQLite3 to make it easier to interact with a databse
  */
 export default class SQLiteInterface {
-  private db_: Database;
-  private ready_: Promise<void>;
   protected log_: Logger;
+  private db_: Database;
+
+  private ready_: Promise<void>;
+  get ready() { return this.ready_; }
 
   /**
    * @param database_path - path to the .db file
@@ -67,7 +69,7 @@ export default class SQLiteInterface {
    */
   private initializeDatabase_(database_path: string, tables: Array<{ name: string, cols: string }>): void {
     this.ready_ = new Promise((resolve, reject) => {
-      const profile = this.log_.profile("Initialize Database");
+      const profile = this.log_.profile("Initialize Database", { info: 0, error: 5000 });
       const existed = fs.existsSync(database_path);
 
       // load database from file, fatal error if this fails
