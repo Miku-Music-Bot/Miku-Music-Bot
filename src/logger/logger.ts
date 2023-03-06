@@ -17,7 +17,7 @@ export default class Logger {
     this.logger_ = createWinstonLogger(name);
   }
 
-  private sendErrorNotification(level: "fatal" | "error" | "warn", msg: string, error?: Error) {
+  private async sendErrorNotification(level: "fatal" | "error" | "warn", msg: string, error?: Error) {
     /**
      * @todo send error email
      */
@@ -32,7 +32,7 @@ export default class Logger {
     if (!error) error = new Error(msg);
     msg = "[FATAL] " + msg;
     this.logger_.error(`${msg} -`, error);
-    this.sendErrorNotification("fatal", msg, error);
+    this.sendErrorNotification("fatal", msg, error).then(() => process.exit());
   }
 
   /**
