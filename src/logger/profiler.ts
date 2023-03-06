@@ -51,7 +51,7 @@ export default class Profiler {
 
     // determine level based on thresholds
     let level = "debug";
-    if (options && this.level_thresholds_) {
+    if (this.level_thresholds_) {
       if (this.duration_ >= this.level_thresholds_.fatal) level = "fatal";
       else if (this.duration_ >= this.level_thresholds_.error)
         level = "error";
