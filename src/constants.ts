@@ -12,6 +12,10 @@ const ZIP_LOGS = process.env.ZIP_LOGS === "true";
 const LOG_MAX_SIZE = process.env.LOG_MAX_SIZE;
 const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
 
+const SONG_DB_LOCATION = process.env.SONG_DB_LOCATION;
+
+const MIKU_DOMAIN = process.env.MIKU_DOMAIN;
+
 const MIKU_CONSTS = Object.freeze({
   ipc_config: {
     retry: 1000,
@@ -20,7 +24,8 @@ const MIKU_CONSTS = Object.freeze({
 
     app_namespace: "Miku-Music-Bot",
     logger_ipc_id: "Miku-Logger",
-    music_ipc_id: "Miku-Music-Cache"
+    music_ipc_id: "Miku-Music-Cache",
+    song_db_ipc_id: "Miku-Song-DB",
   },
   logger: {
     log_file: LOG_FILE,
@@ -31,6 +36,13 @@ const MIKU_CONSTS = Object.freeze({
     zip_logs: ZIP_LOGS,
     max_size: LOG_MAX_SIZE,
     max_files: LOG_MAX_FILES,
+  },
+  song_db: {
+    db_location: SONG_DB_LOCATION,
+  },
+  web: {
+    domain: MIKU_DOMAIN,
+    default_thumbnail: `${MIKU_DOMAIN}/thumbnails/default`
   }
 });
 

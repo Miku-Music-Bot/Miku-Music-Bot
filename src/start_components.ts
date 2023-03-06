@@ -5,7 +5,6 @@ import TypedEventEmitter from "typed-emitter";
 
 import Logger from "./logger/logger";
 import MIKU_CONSTS from "./constants";
-import MusicCacheInterface from "./music_cache/music_cache_ipc_interface";
 
 class Component {
   private events_ = new EventEmitter as TypedEventEmitter<{ ready: () => void }>;
@@ -39,15 +38,19 @@ class Component {
     });
 
     component.on("exit", (code) => {
-      this.log_.debug(`Component at {location:${this.js_file_location_}} named {component_name:${this.component_name_}} exited with {code:${code}}, restarting it`);
+      this.log_.debug(`Component at {location:${this.js_file_location_}} named {component_name:${this.component_name_}} exited with {code:${code}}, restarting it in 5 seconds`);
       component.removeAllListeners();
-      this.StartComponent();
+      setTimeout(() => this.StartComponent(), 5000);
     });
   }
 }
 
 const logger = new Logger("Component-Manager");
 const components: Array<{ name: string, location: string }> = [
+  {
+    name: MIKU_CONSTS.ipc_config.song_db_ipc_id,
+    location: path.join(__dirname, "song_db", "song_db_ipc_server.js")
+  },
   {
     name: MIKU_CONSTS.ipc_config.music_ipc_id,
     location: path.join(__dirname, "music_cache", "music_cache_ipc_server.js")

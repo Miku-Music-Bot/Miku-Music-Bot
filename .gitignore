@@ -2,7 +2,7 @@
 /.vscode
 /build
 /cache
+/databases
 /logs
 
-package-lock.json
 .env
