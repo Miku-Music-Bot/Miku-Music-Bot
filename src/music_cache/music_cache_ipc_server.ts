@@ -22,5 +22,5 @@ StartIPCServer(
     }
   },
   logger,
-  Promise.reject(),
+  Promise.resolve(),
 );
