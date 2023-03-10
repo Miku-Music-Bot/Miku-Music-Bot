@@ -126,4 +126,11 @@ export default class IPCInterface<FunctionNames> {
     this.counter_++;
     return this.counter_.toString();
   }
+
+  /**
+   * disconnect() - Disconnects IPC connection
+   */
+  disconnect() {
+    this.ipc_.disconnect(this.ipc_id_);
+  }
 }
