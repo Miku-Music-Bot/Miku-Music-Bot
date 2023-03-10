@@ -1,7 +1,7 @@
-import fs from "fs";
+import fs from 'fs';
 
-import { Database, verbose, RunResult } from "sqlite3";
-import Logger from "../logger/logger";
+import { Database, verbose, RunResult } from 'sqlite3';
+import Logger from '../logger/logger';
 const sqlite3 = verbose();
 
 /**
@@ -12,7 +12,9 @@ export default class SQLiteInterface {
   private db_: Database;
 
   private ready_: Promise<void>;
-  get ready() { return this.ready_; }
+  get ready() {
+    return this.ready_;
+  }
 
   /**
    * @param database_path - path to the .db file
@@ -20,13 +22,13 @@ export default class SQLiteInterface {
    * ex. { name: "Test", cols: "(col1 STRING, col2 STRING)" } creates a table named test with 2 columns named col1 and col2
    * @param logger - logger
    */
-  constructor(database_path: string, tables: Array<{ name: string, cols: string }>, logger: Logger) {
+  constructor(database_path: string, tables: Array<{ name: string; cols: string }>, logger: Logger) {
     this.log_ = logger;
     this.initializeDatabase_(database_path, tables);
   }
 
   /**
-   * dbRun() - Runs an SQLite command 
+   * dbRun() - Runs an SQLite command
    * @param cmd - command to run
    * @param params - parameters to pass to command
    * @returns - results of command
@@ -36,7 +38,10 @@ export default class SQLiteInterface {
     return new Promise((resolve, reject) => {
       this.db_.serialize(() => {
         this.db_.run(cmd, params, function (error) {
-          if (error) { reject(error); return; }
+          if (error) {
+            reject(error);
+            return;
+          }
           resolve(this);
         });
       });
@@ -54,7 +59,10 @@ export default class SQLiteInterface {
     return new Promise((resolve, reject) => {
       this.db_.serialize(() => {
         this.db_.all(cmd, params, (error, rows) => {
-          if (error) { reject(error); return; }
+          if (error) {
+            reject(error);
+            return;
+          }
           resolve(rows);
         });
       });
@@ -67,9 +75,9 @@ export default class SQLiteInterface {
    * @param tables - array of tables to create (runs commands in the format: "CREATE TABLE ${name} ${cols}")
    * ex. { name: "Test", cols: "(col1 STRING, col2 STRING)" } creates a table named test with 2 columns named col1 and col2
    */
-  private initializeDatabase_(database_path: string, tables: Array<{ name: string, cols: string }>): void {
+  private initializeDatabase_(database_path: string, tables: Array<{ name: string; cols: string }>): void {
     this.ready_ = new Promise((resolve, reject) => {
-      const profile = this.log_.profile("Initialize Database", { info: 0, error: 5000 });
+      const profile = this.log_.profile('Initialize Database', { info: 0, error: 5000 });
       const existed = fs.existsSync(database_path);
 
       // load database from file, fatal error if this fails
@@ -98,7 +106,7 @@ export default class SQLiteInterface {
         this.db_.run(`CREATE TABLE ${tables[i].name} ${tables[i].cols}`, (error) => {
           if (error) {
             this.log_.fatal(`Error creating table: ${tables[i].name}.`, error);
-            profile.stop({ success: false, level: "fatal" });
+            profile.stop({ success: false, level: 'fatal' });
             return;
           }
 
@@ -122,7 +130,7 @@ export default class SQLiteInterface {
     return new Promise((resolve, reject) => {
       this.db_.close((error) => {
         if (error) {
-          this.log_.error("Error while closing database", error);
+          this.log_.error('Error while closing database', error);
           reject(error);
           return;
         }

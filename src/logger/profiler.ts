@@ -1,4 +1,4 @@
-import Logger from "./logger";
+import Logger from './logger';
 
 export type LevelThresholds = {
   debug?: number;
@@ -40,46 +40,38 @@ export default class Profiler {
    * @param options.level - log level of message (overrides auto generated log level from level_thresholds)
    * @returns duration of task (in milliseconds)
    */
-  stop(options?: {
-    message?: string,
-    success?: boolean,
-    level?: "debug" | "info" | "warn" | "error" | "fatal"
-  }): number {
+  stop(options?: { message?: string; success?: boolean; level?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' }): number {
     // don't log another message if stop called multiple times, just return original duration of task
     if (this.duration_) return this.duration_;
     this.duration_ = Date.now() - this.start_time_;
 
     // determine level based on thresholds
-    let level = "debug";
+    let level = 'debug';
     if (this.level_thresholds_) {
-      if (this.duration_ >= this.level_thresholds_.fatal) level = "fatal";
-      else if (this.duration_ >= this.level_thresholds_.error)
-        level = "error";
-      else if (this.duration_ >= this.level_thresholds_.warn) level = "warn";
-      else if (this.duration_ >= this.level_thresholds_.info) level = "info";
-      else level = "debug";
+      if (this.duration_ >= this.level_thresholds_.fatal) level = 'fatal';
+      else if (this.duration_ >= this.level_thresholds_.error) level = 'error';
+      else if (this.duration_ >= this.level_thresholds_.warn) level = 'warn';
+      else if (this.duration_ >= this.level_thresholds_.info) level = 'info';
+      else level = 'debug';
     }
     // override level if level is given explicitly
     if (options && options.level) level = options.level;
 
     let success = true;
-    if (options && typeof options.success !== "undefined") {
+    if (options && typeof options.success !== 'undefined') {
       success = options.success;
     }
 
-    let message =
-      `Task "${this.name_}" completed ` +
-      `${success ? "successfully " : "unsuccessfully "}` +
-      `after ${this.duration_} milliseconds`;
+    let message = `Task "${this.name_}" completed ` + `${success ? 'successfully ' : 'unsuccessfully '}` + `after ${this.duration_} milliseconds`;
     if (options && options.message) {
       message = options.message;
     }
 
-    if (level === "debug") this.logger_.debug(message);
-    else if (level === "info") this.logger_.info(message);
-    else if (level === "warn") this.logger_.warn(message);
-    else if (level === "error") this.logger_.error(message);
-    else if (level === "fatal") this.logger_.fatal(message);
+    if (level === 'debug') this.logger_.debug(message);
+    else if (level === 'info') this.logger_.info(message);
+    else if (level === 'warn') this.logger_.warn(message);
+    else if (level === 'error') this.logger_.error(message);
+    else if (level === 'fatal') this.logger_.fatal(message);
 
     return this.duration_;
   }

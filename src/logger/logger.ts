@@ -1,7 +1,7 @@
-import winston from "winston";
+import winston from 'winston';
 
-import Profiler, { LevelThresholds } from "./profiler";
-import createWinstonLogger from "./create_winston_logger";
+import Profiler, { LevelThresholds } from './profiler';
+import createWinstonLogger from './create_winston_logger';
 
 /**
  * Logger()
@@ -17,7 +17,7 @@ export default class Logger {
     this.logger_ = createWinstonLogger(name);
   }
 
-  private async sendErrorNotification(level: "fatal" | "error" | "warn", msg: string, error?: Error) {
+  private async sendErrorNotification(level: 'fatal' | 'error' | 'warn', msg: string, error?: Error) {
     /**
      * @todo send error email
      */
@@ -30,9 +30,11 @@ export default class Logger {
    */
   fatal(msg: string, error?: Error) {
     if (!error) error = new Error(msg);
-    msg = "[FATAL] " + msg;
+    msg = '[FATAL] ' + msg;
     this.logger_.error(`${msg} -`, error);
-    this.sendErrorNotification("fatal", msg, error).then(() => process.exit());
+    this.sendErrorNotification('fatal', msg, error).then(() => {
+      throw error;
+    });
   }
 
   /**
@@ -43,7 +45,7 @@ export default class Logger {
   error(msg: string, error?: Error) {
     if (!error) error = new Error(msg);
     this.logger_.error(`${msg} -`, error);
-    this.sendErrorNotification("error", msg, error);
+    this.sendErrorNotification('error', msg, error);
   }
 
   /**
@@ -54,10 +56,10 @@ export default class Logger {
   warn(msg: string, error?: Error) {
     if (error) {
       this.logger_.warn(`${msg} -`, error);
-      this.sendErrorNotification("warn", msg, error);
+      this.sendErrorNotification('warn', msg, error);
     } else {
       this.logger_.warn(msg);
-      this.sendErrorNotification("warn", msg);
+      this.sendErrorNotification('warn', msg);
     }
   }
 

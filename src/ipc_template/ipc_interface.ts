@@ -1,16 +1,16 @@
-import ipc from "node-ipc";
-import EventEmitter from "events";
+import ipc from 'node-ipc';
+import EventEmitter from 'events';
 
-import MIKU_CONSTS from "../constants";
-import Logger from "../logger/logger";
+import MIKU_CONSTS from '../constants';
+import Logger from '../logger/logger';
 
-import { FunctionResponse, FunctionRequest } from "./ipc_types";
+import { FunctionResponse, FunctionRequest } from './ipc_types';
 
 /**
  * IPCInterface - Template code for IPC Interfacess
  */
 export default class IPCInterface<FunctionNames> {
-  private events_ = new EventEmitter;
+  private events_ = new EventEmitter();
 
   private ipc_ = new ipc.IPC();
   private ipc_id_: string;
@@ -35,25 +35,25 @@ export default class IPCInterface<FunctionNames> {
     this.ipc_.config.silent = MIKU_CONSTS.ipc_config.silent;
     this.ipc_.config.rawBuffer = MIKU_CONSTS.ipc_config.rawBuffer;
     this.ipc_.config.appspace = MIKU_CONSTS.ipc_config.app_namespace;
-    this.ipc_.config.id = ipc_id + "-Interface-" + Date.now().toString();
+    this.ipc_.config.id = ipc_id + '-Interface-' + Date.now().toString();
 
     this.log_.debug(`Attempting ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}}`);
     this.ipc_.connectTo(ipc_id, () => {
       // Establish listeners
       const connection = this.ipc_.of[ipc_id];
-      connection.on("connect", () => {
+      connection.on('connect', () => {
         this.ready_ = true;
         this.RunQueue();
         this.log_.debug(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} established`);
       });
 
-      connection.on("disconnect", () => {
+      connection.on('disconnect', () => {
         this.ready_ = false;
         this.running_ = false;
         this.log_.warn(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} disconnected`);
       });
 
-      connection.on("message", (response: FunctionResponse) => {
+      connection.on('message', (response: FunctionResponse) => {
         this.events_.emit(response.uid, response);
       });
     });
@@ -68,7 +68,10 @@ export default class IPCInterface<FunctionNames> {
       this.running_ = false;
       return;
     }
-    if (!this.ready_) { setTimeout(() => this.RunQueue(), 10); return; }
+    if (!this.ready_) {
+      setTimeout(() => this.RunQueue(), 10);
+      return;
+    }
 
     this.running_ = true;
     const function_req = this.queue_[0];
@@ -80,9 +83,9 @@ export default class IPCInterface<FunctionNames> {
     });
 
     try {
-      this.ipc_.of[this.ipc_id_].emit("message", function_req);
+      this.ipc_.of[this.ipc_id_].emit('message', function_req);
     } catch (error) {
-      this.log_.error("Error sending function request", error);
+      this.log_.error('Error sending function request', error);
       this.running_ = false;
       this.RunQueue();
     }
@@ -98,7 +101,7 @@ export default class IPCInterface<FunctionNames> {
     const function_req: FunctionRequest<FunctionNames> = {
       uid: this.GenerateUID(),
       function_type,
-      args
+      args,
     };
 
     this.queue_.push(function_req);
