@@ -1,4 +1,4 @@
-import MIKU_CONSTS from '../constants';
+import { ipc_config } from '../constants';
 import Logger from '../logger/logger';
 
 import IPCInterface from '../ipc_template/ipc_interface';
@@ -6,7 +6,7 @@ import { MusicCacheFunctions } from './music_cache';
 
 export default class MusicCacheInterface extends IPCInterface<MusicCacheFunctions> {
   constructor(logger: Logger) {
-    super(MIKU_CONSTS.ipc_config.music_ipc_id, logger);
+    super(ipc_config.music_ipc_id, logger);
   }
 
   async cache(url: string): Promise<void> {

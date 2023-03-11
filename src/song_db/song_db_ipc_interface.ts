@@ -1,4 +1,4 @@
-import MIKU_CONSTS from '../constants';
+import { ipc_config } from '../constants';
 import Logger from '../logger/logger';
 
 import IPCInterface from '../ipc_template/ipc_interface';
@@ -6,7 +6,7 @@ import { SongDBFunctions } from './song_db';
 
 export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   constructor(logger: Logger) {
-    super(MIKU_CONSTS.ipc_config.music_ipc_id, logger);
+    super(ipc_config.music_ipc_id, logger);
   }
 
   /**

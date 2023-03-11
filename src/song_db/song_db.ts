@@ -1,4 +1,4 @@
-import MIKU_CONSTS from '../constants';
+import { SongDBConfig } from '../constants';
 import Logger from '../logger/logger';
 import SQLiteInterface from '../sqlite_interface/sqlite_interface';
 
@@ -38,8 +38,8 @@ const db_tables = [
  * SongDB() - SQLite interface for saving song information
  */
 export default class SongDB extends SQLiteInterface {
-  constructor(logger: Logger) {
-    super(MIKU_CONSTS.song_db.db_location, db_tables, logger);
+  constructor(logger: Logger, songdb_config: SongDBConfig) {
+    super(songdb_config.db_location, db_tables, logger);
   }
 
   /**

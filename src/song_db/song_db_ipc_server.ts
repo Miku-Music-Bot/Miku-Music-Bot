@@ -1,14 +1,14 @@
-import MIKU_CONSTS from '../constants';
+import { ipc_config, songdb_config } from '../constants';
 import StartIPCServer from '../ipc_template/ipc_server';
 import { FunctionRequest } from '../ipc_template/ipc_types';
 import Logger from '../logger/logger';
 import SongDB, { SongDBFunctions } from './song_db';
 
-const logger = new Logger(MIKU_CONSTS.ipc_config.song_db_ipc_id);
-const song_db = new SongDB(logger);
+const logger = new Logger(ipc_config.song_db_ipc_id);
+const song_db = new SongDB(logger, songdb_config);
 
 StartIPCServer(
-  MIKU_CONSTS.ipc_config.song_db_ipc_id,
+  ipc_config.song_db_ipc_id,
   async (data: FunctionRequest<SongDBFunctions>) => {
     switch (data.function_type) {
       case SongDBFunctions.getCacheInfo: {

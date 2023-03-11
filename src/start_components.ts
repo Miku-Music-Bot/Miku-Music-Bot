@@ -4,7 +4,7 @@ import EventEmitter from 'events';
 import TypedEventEmitter from 'typed-emitter';
 
 import Logger from './logger/logger';
-import MIKU_CONSTS from './constants';
+import { ipc_config } from './constants';
 
 class Component {
   private events_ = new EventEmitter() as TypedEventEmitter<{ ready: () => void }>;
@@ -50,11 +50,11 @@ class Component {
 const logger = new Logger('Component-Manager');
 const components: Array<{ name: string; location: string }> = [
   {
-    name: MIKU_CONSTS.ipc_config.song_db_ipc_id,
+    name: ipc_config.song_db_ipc_id,
     location: path.join(__dirname, 'song_db', 'song_db_ipc_server.js'),
   },
   {
-    name: MIKU_CONSTS.ipc_config.music_ipc_id,
+    name: ipc_config.music_ipc_id,
     location: path.join(__dirname, 'music_cache', 'music_cache_ipc_server.js'),
   },
 ];

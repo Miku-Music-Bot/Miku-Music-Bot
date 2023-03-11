@@ -1,7 +1,7 @@
 import ipc from 'node-ipc';
 import EventEmitter from 'events';
 
-import MIKU_CONSTS from '../constants';
+import { ipc_config } from '../constants';
 import Logger from '../logger/logger';
 
 import { FunctionResponse, FunctionRequest } from './ipc_types';
@@ -31,26 +31,26 @@ export default class IPCInterface<FunctionNames> {
 
     this.ipc_id_ = ipc_id;
 
-    this.ipc_.config.retry = MIKU_CONSTS.ipc_config.retry;
-    this.ipc_.config.silent = MIKU_CONSTS.ipc_config.silent;
-    this.ipc_.config.rawBuffer = MIKU_CONSTS.ipc_config.rawBuffer;
-    this.ipc_.config.appspace = MIKU_CONSTS.ipc_config.app_namespace;
+    this.ipc_.config.retry = ipc_config.retry;
+    this.ipc_.config.silent = ipc_config.silent;
+    this.ipc_.config.rawBuffer = ipc_config.rawBuffer;
+    this.ipc_.config.appspace = ipc_config.app_namespace;
     this.ipc_.config.id = ipc_id + '-Interface-' + Date.now().toString();
 
-    this.log_.debug(`Attempting ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}}`);
+    this.log_.debug(`Attempting ipc connection to {id:${ipc_id}} in {namespace:${ipc_config.app_namespace}}`);
     this.ipc_.connectTo(ipc_id, () => {
       // Establish listeners
       const connection = this.ipc_.of[ipc_id];
       connection.on('connect', () => {
         this.ready_ = true;
         this.RunQueue();
-        this.log_.debug(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} established`);
+        this.log_.debug(`ipc connection to {id:${ipc_id}} in {namespace:${ipc_config.app_namespace}} established`);
       });
 
       connection.on('disconnect', () => {
         this.ready_ = false;
         this.running_ = false;
-        this.log_.warn(`ipc connection to {id:${ipc_id}} in {namespace:${MIKU_CONSTS.ipc_config.app_namespace}} disconnected`);
+        this.log_.warn(`ipc connection to {id:${ipc_id}} in {namespace:${ipc_config.app_namespace}} disconnected`);
       });
 
       connection.on('message', (response: FunctionResponse) => {

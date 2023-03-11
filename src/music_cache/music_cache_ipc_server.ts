@@ -1,15 +1,15 @@
-import MIKU_CONSTS from '../constants';
+import { ipc_config } from '../constants';
 import Logger from '../logger/logger';
 
 import StartIPCServer from '../ipc_template/ipc_server';
 import { FunctionRequest } from '../ipc_template/ipc_types';
 import MusicCache, { MusicCacheFunctions } from './music_cache';
 
-const logger = new Logger(MIKU_CONSTS.ipc_config.music_ipc_id);
+const logger = new Logger(ipc_config.music_ipc_id);
 const music_cache = new MusicCache(logger);
 
 StartIPCServer(
-  MIKU_CONSTS.ipc_config.music_ipc_id,
+  ipc_config.music_ipc_id,
   async (data: FunctionRequest<MusicCacheFunctions>) => {
     switch (data.function_type) {
       case MusicCacheFunctions.cache: {

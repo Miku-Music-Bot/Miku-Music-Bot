@@ -16,34 +16,37 @@ const SONG_DB_LOCATION = process.env.SONG_DB_LOCATION;
 
 const MIKU_DOMAIN = process.env.MIKU_DOMAIN;
 
-const MIKU_CONSTS = Object.freeze({
-  ipc_config: {
-    retry: 1000,
-    silent: true,
-    rawBuffer: false,
+export const ipc_config = Object.freeze({
+  retry: 1000,
+  silent: true,
+  rawBuffer: false,
 
-    app_namespace: 'Miku-Music-Bot',
-    logger_ipc_id: 'Miku-Logger',
-    music_ipc_id: 'Miku-Music-Cache',
-    song_db_ipc_id: 'Miku-Song-DB',
-  },
-  logger: {
-    log_file: LOG_FILE,
-    log_console: LOG_CONSOLE,
-    file_directory: LOG_FILE_DIRECTORY,
-    file_name: LOG_FILE_NAME,
-    date_pattern: LOG_DATE_PATTERN,
-    zip_logs: ZIP_LOGS,
-    max_size: LOG_MAX_SIZE,
-    max_files: LOG_MAX_FILES,
-  },
-  song_db: {
-    db_location: SONG_DB_LOCATION,
-  },
-  web: {
-    domain: MIKU_DOMAIN,
-    default_thumbnail: `${MIKU_DOMAIN}/thumbnails/default`,
-  },
+  app_namespace: 'Miku-Music-Bot',
+  logger_ipc_id: 'Miku-Logger',
+  music_ipc_id: 'Miku-Music-Cache',
+  song_db_ipc_id: 'Miku-Song-DB',
 });
+export type IPCConfig = typeof ipc_config;
 
-export default MIKU_CONSTS;
+export const logger_config = Object.freeze({
+  log_file: LOG_FILE,
+  log_console: LOG_CONSOLE,
+  file_directory: LOG_FILE_DIRECTORY,
+  file_name: LOG_FILE_NAME,
+  date_pattern: LOG_DATE_PATTERN,
+  zip_logs: ZIP_LOGS,
+  max_size: LOG_MAX_SIZE,
+  max_files: LOG_MAX_FILES,
+});
+export type LoggerConfig = typeof logger_config;
+
+export const songdb_config = Object.freeze({
+  db_location: SONG_DB_LOCATION,
+});
+export type SongDBConfig = typeof songdb_config;
+
+export const web_config = Object.freeze({
+  domain: MIKU_DOMAIN,
+  default_thumbnail: `${MIKU_DOMAIN}/thumbnails/default`,
+});
+export type WebConfig = typeof web_config;
