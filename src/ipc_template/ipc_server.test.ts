@@ -59,7 +59,7 @@ async function promiseReject(): Promise<string> {
 }
 
 // Start the IPC server
-if (StartServer) {
+function TestIPCServer(ready: Promise<void>) {
   StartIPCServer(
     'IPC-Server-Test',
     async (data: FunctionRequest<TestFunctions>) => {
@@ -85,6 +85,6 @@ if (StartServer) {
       }
     },
     logger,
-    Promise.resolve()
+    ready
   );
 }

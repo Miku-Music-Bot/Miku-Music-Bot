@@ -1,4 +1,4 @@
-import StartComponents from './start_components';
+import StartComponents from './start_components/start_components';
 import SongDBInterface from './song_db/song_db_ipc_interface';
 import Logger from './logger/logger';
 

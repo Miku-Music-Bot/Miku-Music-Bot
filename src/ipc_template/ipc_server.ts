@@ -1,6 +1,6 @@
 import ipc from 'node-ipc';
 
-import { ipc_config } from '../constants';
+import { ipc_config } from '../constants/constants';
 import Logger from '../logger/logger';
 import { FunctionRequest } from './ipc_types';
 
@@ -11,7 +11,12 @@ import { FunctionRequest } from './ipc_types';
  * @param logger - logger
  * @param ready - promise that resolves once process is ready to start
  */
-export default function StartIPCServer<FunctionNames>(ipc_id: string, run_function: (data: FunctionRequest<FunctionNames>) => Promise<string>, logger: Logger, ready: Promise<void>) {
+export default function StartIPCServer<FunctionNames>(
+  ipc_id: string,
+  logger: Logger,
+  ready: Promise<void>,
+  run_function: (data: FunctionRequest<FunctionNames>) => Promise<string>
+): typeof ipc {
   ready.catch((error) => {
     logger.fatal(`Error getting component with {id:${ipc_id}} ready`, error);
   });
@@ -46,4 +51,5 @@ export default function StartIPCServer<FunctionNames>(ipc_id: string, run_functi
   });
 
   ipc.server.start();
+  return ipc;
 }

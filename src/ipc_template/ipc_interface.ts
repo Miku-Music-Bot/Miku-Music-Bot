@@ -1,7 +1,7 @@
 import ipc from 'node-ipc';
 import EventEmitter from 'events';
 
-import { ipc_config } from '../constants';
+import { ipc_config } from '../constants/constants';
 import Logger from '../logger/logger';
 
 import { FunctionResponse, FunctionRequest } from './ipc_types';

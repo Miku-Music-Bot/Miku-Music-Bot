@@ -1,4 +1,4 @@
-import { SongDBConfig } from '../constants';
+import { SongDBConfig } from '../constants/constants';
 import Logger from '../logger/logger';
 import SQLiteInterface from '../sqlite_interface/sqlite_interface';
 

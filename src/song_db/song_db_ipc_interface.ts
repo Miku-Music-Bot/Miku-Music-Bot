@@ -1,4 +1,4 @@
-import { ipc_config } from '../constants';
+import { ipc_config } from '../constants/constants';
 import Logger from '../logger/logger';
 
 import IPCInterface from '../ipc_template/ipc_interface';
