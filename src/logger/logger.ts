@@ -2,7 +2,7 @@ import winston from 'winston';
 
 import Profiler, { LevelThresholds } from './profiler';
 import createWinstonLogger from './create_winston_logger';
-import { LoggerConfig, logger_config } from '../constants';
+import { LoggerConfig, logger_config } from '../constants/constants';
 
 /**
  * Logger()
@@ -28,6 +28,15 @@ export default class Logger {
     /**
      * @todo send error email
      */
+  }
+
+  /**
+   * releaseFiles() - Releases the log files and stops writting logs
+   */
+  releaseFiles() {
+    for (let i = 0; i < this.transports_.length; i++) {
+      this.logger_.remove(this.transports_[i]);
+    }
   }
 
   /**

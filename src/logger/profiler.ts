@@ -17,7 +17,7 @@ export default class Profiler {
   private logger_: Logger;
   private name_: string;
   private start_time_: number;
-  private duration_: number;
+  private duration_ = -1;
   private level_thresholds_: LevelThresholds = { debug: 0 };
 
   /**
@@ -42,7 +42,7 @@ export default class Profiler {
    */
   stop(options?: { message?: string; success?: boolean; level?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' }): number {
     // don't log another message if stop called multiple times, just return original duration of task
-    if (this.duration_) return this.duration_;
+    if (this.duration_ !== -1) return this.duration_;
     this.duration_ = Date.now() - this.start_time_;
 
     // determine level based on thresholds
@@ -62,16 +62,19 @@ export default class Profiler {
       success = options.success;
     }
 
-    let message = `Task "${this.name_}" completed ` + `${success ? 'successfully ' : 'unsuccessfully '}` + `after ${this.duration_} milliseconds`;
+    let message =
+      `Task "${this.name_}" completed ` +
+      `${success ? 'successfully ' : 'unsuccessfully '}` +
+      `after ${this.duration_} milliseconds`;
     if (options && options.message) {
       message = options.message;
     }
 
     if (level === 'debug') this.logger_.debug(message);
-    else if (level === 'info') this.logger_.info(message);
-    else if (level === 'warn') this.logger_.warn(message);
-    else if (level === 'error') this.logger_.error(message);
-    else if (level === 'fatal') this.logger_.fatal(message);
+    if (level === 'info') this.logger_.info(message);
+    if (level === 'warn') this.logger_.warn(message);
+    if (level === 'error') this.logger_.error(message);
+    if (level === 'fatal') this.logger_.fatal(message);
 
     return this.duration_;
   }

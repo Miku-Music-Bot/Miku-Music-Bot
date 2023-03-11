@@ -25,7 +25,7 @@
                 "tabWidth": 2,
                 "useTabs": false,
                 "singleQuote": true,
-                "printWidth": 200
+                "printWidth": 125
             }
         ],
         "node/no-unpublished-import": [

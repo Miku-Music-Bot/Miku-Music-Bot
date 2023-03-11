@@ -27,6 +27,7 @@
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/chai": "^4.3.4",
+    "@types/fs-extra": "^11.0.1",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.0",
     "@types/node-ipc": "^9.2.0",
@@ -46,6 +47,7 @@
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
     "events": "^3.3.0",
+    "fs-extra": "^11.1.0",
     "node-ipc": "^10.1.0",
     "sqlite3": "^5.1.4",
     "winston": "^3.8.2",

@@ -1,6 +1,6 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
-import { LoggerConfig } from '../constants';
+import { LoggerConfig } from '../constants/constants';
 
 /**
  * createWinstonLogger() - Creates a winston logger based on settings in MIKU_CONSTS
@@ -18,10 +18,13 @@ export default function createWinstonLogger(name: string, config: LoggerConfig) 
     exitOnError: false,
   });
 
-  const format = winston.format.combine(winston.format.errors({ stack: true }), winston.format.timestamp(), winston.format.json());
-
   // add file logging transports if logging to file is enabled
   if (config.log_file) {
+    const format = winston.format.combine(
+      winston.format.errors({ stack: true }),
+      winston.format.timestamp(),
+      winston.format.json()
+    );
     const debug_transport = new winston.transports.DailyRotateFile({
       level: 'debug',
       dirname: config.file_directory,
@@ -59,9 +62,15 @@ export default function createWinstonLogger(name: string, config: LoggerConfig) 
     warn: 'yellow',
     error: 'red',
   });
-  const console_transport = new winston.transports.Console({ format });
-  transports.push(console_transport);
-  logger.add(console_transport);
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.errors({ stack: true }),
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    })
+  );
 
   return { logger, transports };
 }
