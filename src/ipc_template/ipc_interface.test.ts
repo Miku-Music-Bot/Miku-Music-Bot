@@ -169,15 +169,19 @@ describe('IPC Interface', () => {
     test_server.server.stop();
   });
 
-  it('does not emit ready ', (done) => {
-    process.send = () => {
-      assert.fail('Does not send ready when promise rejects');
+  it('does not emit ready on failed start', (done) => {
+    let fail = false;
+    process.send = (msg: string) => {
+      if (msg === 'ready') fail = true;
+      return true;
     };
 
     const test_server = CreateTestIPCServer(Promise.reject());
     setTimeout(() => {
       test_server.server.stop();
+
+      assert.equal(fail, false, 'Does not send ready');
       done();
-    }, 1000);
+    }, 100);
   });
 });
