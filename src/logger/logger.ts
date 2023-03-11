@@ -50,9 +50,7 @@ export default class Logger {
     msg = '[FATAL] ' + msg;
     this.logger_.error(`${msg} -`, error);
 
-    this.sendErrorNotification('fatal', msg, error).then(() => {
-      throw error;
-    });
+    this.sendErrorNotification('fatal', msg, error);
   }
 
   /**

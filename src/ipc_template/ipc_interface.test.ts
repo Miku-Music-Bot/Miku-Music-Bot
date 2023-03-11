@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import ipc from 'node-ipc';
 
 import IPCInterface from './ipc_interface';
 import CreateTestIPCServer, { TestFunctions } from './ipc_server.test';
@@ -22,6 +23,24 @@ const logger = {
   error: log,
   fatal: log,
 } as Logger;
+
+/**
+ * SetupConnection() - Sets up server and interface
+ * @returns - NodeIPC server and TestInterface
+ */
+function SetupConnection(): Promise<{ test_server: typeof ipc; test_interface: TestIPCInterface }> {
+  return new Promise((resolve) => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
+    process.send = (msg: string) => {
+      assert.equal(msg, 'ready', 'Sends ready once promise resolves');
+
+      const test_interface = new TestIPCInterface();
+
+      resolve({ test_server, test_interface });
+      return true;
+    };
+  });
+}
 
 class TestIPCInterface extends IPCInterface<TestFunctions> {
   constructor() {
@@ -55,8 +74,7 @@ class TestIPCInterface extends IPCInterface<TestFunctions> {
 
 describe('IPC Interface', () => {
   it('sends and returns boolean argument', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result = await test_interface.boolArg(false);
 
@@ -67,8 +85,7 @@ describe('IPC Interface', () => {
   });
 
   it('sends and returns integer argument', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result0 = await test_interface.numArg(1);
     const result1 = await test_interface.numArg(0);
@@ -83,8 +100,7 @@ describe('IPC Interface', () => {
   });
 
   it('sends and returns float argument', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result0 = await test_interface.numArg(1.111);
     const result1 = await test_interface.numArg(-1.111);
@@ -97,8 +113,7 @@ describe('IPC Interface', () => {
   });
 
   it('send and returns string argument', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result0 = await test_interface.strArg('');
     const result1 = await test_interface.strArg('hi');
@@ -111,8 +126,7 @@ describe('IPC Interface', () => {
   });
 
   it('send and returns object argument', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result0 = await test_interface.objArg({
       bool: false,
@@ -129,8 +143,7 @@ describe('IPC Interface', () => {
   });
 
   it('returns resolved promise', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     const result = await test_interface.promiseResolve();
 
@@ -141,8 +154,7 @@ describe('IPC Interface', () => {
   });
 
   it('throws error on rejected promise', async () => {
-    const test_server = CreateTestIPCServer(Promise.resolve());
-    const test_interface = new TestIPCInterface();
+    const { test_server, test_interface } = await SetupConnection();
 
     try {
       await test_interface.promiseReject();
@@ -155,5 +167,17 @@ describe('IPC Interface', () => {
 
     test_interface.disconnect();
     test_server.server.stop();
+  });
+
+  it('does not emit ready ', (done) => {
+    process.send = () => {
+      assert.fail('Does not send ready when promise rejects');
+    };
+
+    const test_server = CreateTestIPCServer(Promise.reject());
+    setTimeout(() => {
+      test_server.server.stop();
+      done();
+    }, 1000);
   });
 });
