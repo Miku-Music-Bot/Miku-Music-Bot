@@ -27,7 +27,7 @@ export default class IPCInterface<FunctionNames> {
    * @param logger - logger
    */
   constructor(ipc_id: string, logger: Logger) {
-    if (logger) this.log_ = logger;
+    this.log_ = logger;
 
     this.ipc_id_ = ipc_id;
 

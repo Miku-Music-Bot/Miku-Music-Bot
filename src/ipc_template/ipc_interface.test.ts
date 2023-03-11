@@ -1,9 +1,7 @@
 import { assert } from 'chai';
-import path from 'path';
-import { fork } from 'child_process';
 
 import IPCInterface from './ipc_interface';
-import { TestFunctions } from './ipc_server.test';
+import CreateTestIPCServer, { TestFunctions } from './ipc_server.test';
 import Logger from '../logger/logger';
 
 // Create a fake logger
@@ -55,25 +53,21 @@ class TestIPCInterface extends IPCInterface<TestFunctions> {
   }
 }
 
-before(function () {
-  this.test_server = fork(path.join(__dirname, 'ipc_server.test.js'), ['-start-server']);
-});
-
-after(async function () {
-  this.test_server.kill();
-});
-
 describe('IPC Interface', () => {
   it('sends and returns boolean argument', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
     const test_interface = new TestIPCInterface();
 
     const result = await test_interface.boolArg(false);
 
     assert.equal(result, true, 'Return opposite of argument');
+
     test_interface.disconnect();
+    test_server.server.stop();
   });
 
   it('sends and returns integer argument', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
     const test_interface = new TestIPCInterface();
 
     const result0 = await test_interface.numArg(1);
@@ -83,10 +77,13 @@ describe('IPC Interface', () => {
     assert.equal(result0, 2, 'Return double of argument');
     assert.equal(result1, 0, 'Return double of argument');
     assert.equal(result2, -2, 'Return double of argument');
+
     test_interface.disconnect();
+    test_server.server.stop();
   });
 
   it('sends and returns float argument', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
     const test_interface = new TestIPCInterface();
 
     const result0 = await test_interface.numArg(1.111);
@@ -94,6 +91,69 @@ describe('IPC Interface', () => {
 
     assert.equal(result0, 2.222, 'Return double of argument');
     assert.equal(result1, -2.222, 'Return double of argument');
+
     test_interface.disconnect();
+    test_server.server.stop();
+  });
+
+  it('send and returns string argument', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
+    const test_interface = new TestIPCInterface();
+
+    const result0 = await test_interface.strArg('');
+    const result1 = await test_interface.strArg('hi');
+
+    assert.equal(result0, '', 'Return doubled argument');
+    assert.equal(result1, 'hihi', 'Return doubled argument');
+
+    test_interface.disconnect();
+    test_server.server.stop();
+  });
+
+  it('send and returns object argument', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
+    const test_interface = new TestIPCInterface();
+
+    const result0 = await test_interface.objArg({
+      bool: false,
+      num: 12,
+      str: 'hi',
+    });
+
+    assert.equal(result0.bool, true, 'Return opposite of argument');
+    assert.equal(result0.num, 24, 'Return double of argument');
+    assert.equal(result0.str, 'hihi', 'Return doubled argument');
+
+    test_interface.disconnect();
+    test_server.server.stop();
+  });
+
+  it('returns resolved promise', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
+    const test_interface = new TestIPCInterface();
+
+    const result = await test_interface.promiseResolve();
+
+    assert.equal(result, 'resolved', 'Returns correct promise');
+
+    test_interface.disconnect();
+    test_server.server.stop();
+  });
+
+  it('throws error on rejected promise', async () => {
+    const test_server = CreateTestIPCServer(Promise.resolve());
+    const test_interface = new TestIPCInterface();
+
+    try {
+      await test_interface.promiseReject();
+      assert.fail('Rejected promise is rejected');
+    } catch (error) {
+      assert.throws(() => {
+        throw error;
+      }, 'rejected');
+    }
+
+    test_interface.disconnect();
+    test_server.server.stop();
   });
 });

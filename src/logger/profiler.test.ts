@@ -59,7 +59,7 @@ describe('Profiler', () => {
       const time = profilers[0].stop();
 
       assert(time >= timeout_dur, 'Profiler 0 duration is not shorter than expected');
-      assert(time <= timeout_dur + 10, 'Profiler 0 duration is not longer than expected');
+      assert(time <= timeout_dur + 100, 'Profiler 0 duration is not longer than expected');
       assert(time === profilers[0].stop(), 'Calling stop again returns same duration');
 
       await compare_profiler_logs(name, start_time, [

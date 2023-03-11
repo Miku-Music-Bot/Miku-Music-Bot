@@ -1,18 +1,12 @@
+import ipc from 'node-ipc';
+
 import Logger from '../logger/logger';
 import StartIPCServer from './ipc_server';
 import { FunctionRequest } from './ipc_types';
 
-let StartServer = false;
-let SILENT = false;
-process.argv.forEach((val) => {
-  if (val === '-silent') SILENT = true;
-  if (val === '-start-server') StartServer = true;
-});
-
 // Create a fake logger
 function log(msg: string, error?: Error) {
   if (error) console.error(error);
-  if (SILENT) console.log(msg);
 }
 const logger = {
   debug: log,
@@ -59,32 +53,27 @@ async function promiseReject(): Promise<string> {
 }
 
 // Start the IPC server
-function TestIPCServer(ready: Promise<void>) {
-  StartIPCServer(
-    'IPC-Server-Test',
-    async (data: FunctionRequest<TestFunctions>) => {
-      switch (data.function_type) {
-        case TestFunctions.boolArg: {
-          return JSON.stringify(await boolArg(JSON.parse(data.args[0])));
-        }
-        case TestFunctions.numArg: {
-          return JSON.stringify(await numArg(JSON.parse(data.args[0])));
-        }
-        case TestFunctions.strArg: {
-          return strArg(data.args[0]);
-        }
-        case TestFunctions.objArg: {
-          return JSON.stringify(await objArg(JSON.parse(data.args[0])));
-        }
-        case TestFunctions.promiseResolve: {
-          return promiseResolve();
-        }
-        case TestFunctions.promiseReject: {
-          return promiseReject();
-        }
+export default function CreateTestIPCServer(ready: Promise<void>): typeof ipc {
+  return StartIPCServer('IPC-Server-Test', logger, ready, async (data: FunctionRequest<TestFunctions>) => {
+    switch (data.function_type) {
+      case TestFunctions.boolArg: {
+        return JSON.stringify(await boolArg(JSON.parse(data.args[0])));
       }
-    },
-    logger,
-    ready
-  );
+      case TestFunctions.numArg: {
+        return JSON.stringify(await numArg(JSON.parse(data.args[0])));
+      }
+      case TestFunctions.strArg: {
+        return strArg(data.args[0]);
+      }
+      case TestFunctions.objArg: {
+        return JSON.stringify(await objArg(JSON.parse(data.args[0])));
+      }
+      case TestFunctions.promiseResolve: {
+        return promiseResolve();
+      }
+      case TestFunctions.promiseReject: {
+        return promiseReject();
+      }
+    }
+  });
 }
