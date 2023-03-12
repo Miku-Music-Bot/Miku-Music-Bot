@@ -25,7 +25,7 @@ export enum SongDBFunctions {
 const db_tables = [
   {
     name: 'song_cache',
-    cols: '(song_uid STRING, cached BOOLEAN, cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT)',
+    cols: '(song_uid STRING, cached NUMBER(1), cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT)',
   },
   {
     name: 'song_info',
@@ -67,9 +67,27 @@ export default class SongDB extends SQLiteInterface {
     size_bytes: number;
     playbacks: number;
   }> {
-    return new Promise((resolve, reject) => {
-      //
+    const results: Array<{
+      cached: number;
+      cache_location: string;
+      start_chunk: number;
+      end_chunk: number;
+      size_bytes: number;
+      playbacks: number;
+    }> = await this.dbAll('SELECT * FROM song_cache WHERE song_uid = $song_uid', {
+      $song_uid: song_uid,
     });
+
+    if (results.length === 0) return Promise.reject(new Error('Song does not exist in song database'));
+
+    return {
+      cached: results[0].cached === 1,
+      cache_location: results[0].cache_location,
+      start_chunk: results[0].start_chunk,
+      end_chunk: results[0].end_chunk,
+      size_bytes: results[0].size_bytes,
+      playbacks: results[0].playbacks,
+    };
   }
 
   /**
