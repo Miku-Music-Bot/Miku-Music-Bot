@@ -111,7 +111,7 @@ export default class SongDB extends SQLiteInterface {
       playbacks: number;
     }> = await this.dbAll('SELECT * FROM song_cache WHERE song_uid = $song_uid', { $song_uid: song_uid });
 
-    if (results.length === 0) return Promise.reject(new Error('Song does not exist in song database'));
+    if (results.length === 0) throw new Error('Song does not exist in song database');
 
     return {
       cached: results[0].cached === 1,
@@ -143,7 +143,7 @@ export default class SongDB extends SQLiteInterface {
       duration: number;
     }> = await this.dbAll('SELECT * FROM song_info WHERE song_uid = $song_uid', { $song_uid: song_uid });
 
-    if (results.length === 0) return Promise.reject(new Error('Song does not exist in song database'));
+    if (results.length === 0) throw new Error('Song does not exist in song database');
 
     return {
       link: results[0].link,
@@ -180,7 +180,7 @@ export default class SongDB extends SQLiteInterface {
    */
   async uncacheSong(song_uid: string): Promise<void> {
     if (!(await this.containsSong(song_uid))) {
-      Promise.reject(new Error('Song does not exist in song database'));
+      throw new Error('Song does not exist in song database');
     } else {
       await this.dbRun('UPDATE song_cache SET cached = $cached WHERE song_uid = $song_uid', {
         $cached: 0,
@@ -195,7 +195,14 @@ export default class SongDB extends SQLiteInterface {
    * @param start_chunk
    */
   async setStartChunk(song_uid: string, start_chunk: number): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_cache SET start_chunk = $start_chunk WHERE song_uid = $song_uid', {
+        $start_chunk: start_chunk,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -204,7 +211,14 @@ export default class SongDB extends SQLiteInterface {
    * @param end_chunk
    */
   async setEndChunk(song_uid: string, end_chunk: number): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_cache SET end_chunk = $end_chunk WHERE song_uid = $song_uid', {
+        $end_chunk: end_chunk,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -213,7 +227,14 @@ export default class SongDB extends SQLiteInterface {
    * @param size_bytes
    */
   async setSizeBytes(song_uid: string, size_bytes: number): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_cache SET size_bytes = $size_bytes WHERE song_uid = $song_uid', {
+        $size_bytes: size_bytes,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -221,7 +242,13 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to update
    */
   async incrementPlaybacks(song_uid: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_cache SET playbacks = playbacks + 1 WHERE song_uid = $song_uid', {
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
