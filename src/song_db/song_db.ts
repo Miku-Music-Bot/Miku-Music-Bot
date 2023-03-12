@@ -239,6 +239,9 @@ export default class SongDB extends SQLiteInterface {
    * @returns - if song is locked or not
    */
   async isLocked(song_uid: string): Promise<boolean> {
-    return false;
+    const rows: Array<{ 'COUNT(1)': number }> = await this.dbAll('SELECT COUNT(1) FROM locks WHERE song_uid = $song_uid;', {
+      $song_uid: song_uid,
+    });
+    return rows[0]['COUNT(1)'] > 0;
   }
 }

@@ -5,7 +5,6 @@ import Profiler, { LevelThresholds } from './profiler';
 // A fake logger object for use in tests
 export const dummy_logger = {
   debug: (msg: string) => {
-    console.log(msg);
     return;
   },
   info: (msg: string) => {
