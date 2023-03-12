@@ -397,7 +397,7 @@ export default function TestSongDB(
         artist: 'Unknown',
         duration: -1,
       };
-      const actual1 = await song_db.getSongInfo(song_uid0);
+      const actual1 = await song_db.getSongInfo(song_uid1);
       assert.deepEqual(actual1, expected1, 'Does not edit other song info');
 
       await song_db.close();

@@ -257,7 +257,14 @@ export default class SongDB extends SQLiteInterface {
    * @param link - link to update song with
    */
   async setLink(song_uid: string, link: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_info SET link = $link WHERE song_uid = $song_uid', {
+        $link: link,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -266,7 +273,14 @@ export default class SongDB extends SQLiteInterface {
    * @param thumbnail_url
    */
   async setThumbnailUrl(song_uid: string, thumbnail_url: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_info SET thumbnail_url = $thumbnail_url WHERE song_uid = $song_uid', {
+        $thumbnail_url: thumbnail_url,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -275,7 +289,14 @@ export default class SongDB extends SQLiteInterface {
    * @param title
    */
   async setTitle(song_uid: string, title: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_info SET title = $title WHERE song_uid = $song_uid', {
+        $title: title,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -284,7 +305,14 @@ export default class SongDB extends SQLiteInterface {
    * @param artist
    */
   async setArtist(song_uid: string, artist: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_info SET artist = $artist WHERE song_uid = $song_uid', {
+        $artist: artist,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
@@ -293,7 +321,14 @@ export default class SongDB extends SQLiteInterface {
    * @param duration
    */
   async setDuration(song_uid: string, duration: number): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('UPDATE song_info SET duration = $duration WHERE song_uid = $song_uid', {
+        $duration: duration,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
