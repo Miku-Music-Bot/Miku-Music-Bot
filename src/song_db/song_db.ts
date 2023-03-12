@@ -46,12 +46,47 @@ export default class SongDB extends SQLiteInterface {
   }
 
   /**
+   * containsSong() - Checks if a song is in the database or not
+   * @param song_uid - song uid of song to check existence of
+   * @returns - true if in database, false if not
+   */
+  private async containsSong(song_uid: string): Promise<boolean> {
+    const rows: Array<{ 'COUNT(1)': number }> = await this.dbAll(
+      'SELECT COUNT(1) FROM song_cache WHERE song_uid = $song_uid;',
+      {
+        $song_uid: song_uid,
+      }
+    );
+    return rows[0]['COUNT(1)'] === 1;
+  }
+
+  /**
    * addSong() - Adds a song to database
    * @param song_uid - song uid of song to add
    * @param cache_location - cache location of song to add
    */
   private async addSong(song_uid: string, cache_location: string): Promise<void> {
-    //
+    await this.dbRun(
+      'INSERT INTO song_cache VALUES ($song_uid, $cached, $cache_location, $start_chunk, $end_chunk, $size_bytes, $playbacks)',
+      {
+        $song_uid: song_uid,
+        $cached: 1,
+        $cache_location: cache_location,
+        $start_chunk: -1,
+        $end_chunk: -1,
+        $size_bytes: 0,
+        $playbacks: 0,
+      }
+    );
+
+    await this.dbRun('INSERT INTO song_info VALUES ($song_uid, $link, $thumbnail_url, $title, $artist, $duration)', {
+      $song_uid: song_uid,
+      $link: '',
+      $thumbnail_url: '',
+      $title: 'Unknown',
+      $artist: 'Unknown',
+      $duration: -1,
+    });
   }
 
   /**
@@ -125,7 +160,18 @@ export default class SongDB extends SQLiteInterface {
    * @param cache_location - cache location of song to add
    */
   async cacheSong(song_uid: string, cache_location: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      await this.addSong(song_uid, cache_location);
+    } else {
+      await this.dbRun(
+        'UPDATE song_cache SET cached = $cached, cache_location = $cache_location WHERE song_uid = $song_uid',
+        {
+          $cached: 1,
+          $song_uid: song_uid,
+          $cache_location: cache_location,
+        }
+      );
+    }
   }
 
   /**
@@ -133,7 +179,14 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to uncache
    */
   async uncacheSong(song_uid: string): Promise<void> {
-    //
+    if (!(await this.containsSong(song_uid))) {
+      Promise.reject(new Error('Song does not exist in song database'));
+    } else {
+      await this.dbRun('UPDATE song_cache SET cached = $cached WHERE song_uid = $song_uid', {
+        $cached: 0,
+        $song_uid: song_uid,
+      });
+    }
   }
 
   /**
