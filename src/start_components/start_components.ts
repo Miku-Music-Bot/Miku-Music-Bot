@@ -8,11 +8,11 @@ const logger = new Logger('Component-Manager');
 const components: Array<{ name: string; location: string }> = [
   {
     name: ipc_config.song_db_ipc_id,
-    location: path.join(__dirname, 'song_db', 'song_db_ipc_server.js'),
+    location: path.join(__dirname, '..', 'song_db', 'song_db_ipc_server.js'),
   },
   {
     name: ipc_config.music_ipc_id,
-    location: path.join(__dirname, 'music_cache', 'music_cache_ipc_server.js'),
+    location: path.join(__dirname, '..', 'music_cache', 'music_cache_ipc_server.js'),
   },
 ];
 
