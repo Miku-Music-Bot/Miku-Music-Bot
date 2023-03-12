@@ -50,7 +50,7 @@ export default function TestSongDB(
     });
 
     it('finds existing song information', async () => {
-      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db.test.db');
+      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -70,7 +70,7 @@ export default function TestSongDB(
           'https://i.ytimg.com/vi/OSz516-6IR4/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDSbi0rVlwaHd-iNfSxF5ZAqSypVQ',
         title: "Violet's Final Letter",
         artist: 'Evan Call - Topic',
-        duration: 132,
+        duration: 137,
       };
       const actual0 = await song_db.getSongInfo(song_uid0);
       const actual1 = await song_db.getSongInfo(song_uid1);
@@ -82,7 +82,7 @@ export default function TestSongDB(
     });
 
     it('finds existing locks', async () => {
-      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db.test.db');
+      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';

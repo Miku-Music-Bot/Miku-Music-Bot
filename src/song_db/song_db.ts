@@ -74,9 +74,7 @@ export default class SongDB extends SQLiteInterface {
       end_chunk: number;
       size_bytes: number;
       playbacks: number;
-    }> = await this.dbAll('SELECT * FROM song_cache WHERE song_uid = $song_uid', {
-      $song_uid: song_uid,
-    });
+    }> = await this.dbAll('SELECT * FROM song_cache WHERE song_uid = $song_uid', { $song_uid: song_uid });
 
     if (results.length === 0) return Promise.reject(new Error('Song does not exist in song database'));
 
@@ -102,9 +100,23 @@ export default class SongDB extends SQLiteInterface {
     artist: string;
     duration: number;
   }> {
-    return new Promise((resolve, reject) => {
-      //
-    });
+    const results: Array<{
+      link: string;
+      thumbnail_url: string;
+      title: string;
+      artist: string;
+      duration: number;
+    }> = await this.dbAll('SELECT * FROM song_info WHERE song_uid = $song_uid', { $song_uid: song_uid });
+
+    if (results.length === 0) return Promise.reject(new Error('Song does not exist in song database'));
+
+    return {
+      link: results[0].link,
+      thumbnail_url: results[0].thumbnail_url,
+      title: results[0].title,
+      artist: results[0].artist,
+      duration: results[0].duration,
+    };
   }
 
   /**
