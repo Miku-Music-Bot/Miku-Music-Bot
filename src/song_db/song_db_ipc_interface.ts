@@ -6,7 +6,7 @@ import { SongDBFunctions } from './song_db';
 
 export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   constructor(logger: Logger) {
-    super(ipc_config.music_ipc_id, logger);
+    super(ipc_config.song_db_ipc_id, logger);
   }
 
   /**
@@ -44,10 +44,9 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * cacheSong() - Update database so that song is cached
    * @param song_uid - song uid of song to uncache
    * @param cache_location - cache location of song to add
-   * @param link - url of song to add
    */
-  async cacheSong(song_uid: string, cache_location: string, link: string): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.cacheSong, [song_uid, cache_location, link]);
+  async cacheSong(song_uid: string, cache_location: string): Promise<void> {
+    await this.RequestFunction(SongDBFunctions.cacheSong, [song_uid, cache_location]);
   }
 
   /**
@@ -94,6 +93,15 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   }
 
   /**
+   * setLink() - Sets the song's link
+   * @param song_uid - song uid of song to update
+   * @param link - link to update song with
+   */
+  async setLink(song_uid: string, link: string): Promise<void> {
+    await this.RequestFunction(SongDBFunctions.setLink, [song_uid, link]);
+  }
+
+  /**
    * setThumbnailUrl() - Sets the thumbnail_url of song
    * @param song_uid - song uid of song to update
    * @param thumbnail_url
@@ -132,17 +140,34 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   /**
    * addLock() - Adds a delete lock to song
    * @param song_uid - song uid of song to lock
-   * @returns
+   * @returns - unique lock_id
    */
-  async addLock(song_uid: string): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.addLock, [song_uid]);
+  async addLock(song_uid: string): Promise<number> {
+    return parseInt(await this.RequestFunction(SongDBFunctions.addLock, [song_uid]));
   }
 
   /**
    * removeLock() - Removes a delete lock to song
-   * @param song_uid - song uid of song to remove lock from
+   * @param lock_id - song uid of song to remove lock from
    */
-  async removeLock(song_uid: string): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.removeLock, [song_uid]);
+  async removeLock(lock_id: number): Promise<void> {
+    await this.RequestFunction(SongDBFunctions.removeLock, [lock_id.toString()]);
+  }
+
+  /**
+   * isLocked() - Checks if a given song_uid is locked or not
+   * @param song_uid - song uid of song to check status of
+   * @returns - if song is locked or not
+   */
+  async isLocked(song_uid: string): Promise<boolean> {
+    return JSON.parse(await this.RequestFunction(SongDBFunctions.isLocked, [song_uid]));
+  }
+
+  /**
+   * close() - releases lock on database after finishing all queued operations
+   * @returns Promise resolving to nothing (rejected if an error occurs)
+   */
+  async close(): Promise<void> {
+    await this.RequestFunction(SongDBFunctions.close, []);
   }
 }

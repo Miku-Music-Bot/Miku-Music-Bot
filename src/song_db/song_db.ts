@@ -11,12 +11,15 @@ export enum SongDBFunctions {
   setEndChunk,
   setSizeBytes,
   incrementPlaybacks,
+  setLink,
   setThumbnailUrl,
   setTitle,
   setArtist,
   setDuration,
   addLock,
   removeLock,
+  isLocked,
+  close,
 }
 
 const db_tables = [
@@ -46,9 +49,8 @@ export default class SongDB extends SQLiteInterface {
    * addSong() - Adds a song to database
    * @param song_uid - song uid of song to add
    * @param cache_location - cache location of song to add
-   * @param link - url of song to add
    */
-  private async addSong(song_uid: string, cache_location: string, link: string): Promise<void> {
+  private async addSong(song_uid: string, cache_location: string): Promise<void> {
     //
   }
 
@@ -91,9 +93,8 @@ export default class SongDB extends SQLiteInterface {
    * cacheSong() - Update database so that song is cached
    * @param song_uid - song uid of song to uncache
    * @param cache_location - cache location of song to add
-   * @param link - url of song to add
    */
-  async cacheSong(song_uid: string, cache_location: string, link: string): Promise<void> {
+  async cacheSong(song_uid: string, cache_location: string): Promise<void> {
     //
   }
 
@@ -137,6 +138,15 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to update
    */
   async incrementPlaybacks(song_uid: string): Promise<void> {
+    //
+  }
+
+  /**
+   * setLink() - Sets the song's link
+   * @param song_uid - song uid of song to update
+   * @param link - link to update song with
+   */
+  async setLink(song_uid: string, link: string): Promise<void> {
     //
   }
 
@@ -191,5 +201,14 @@ export default class SongDB extends SQLiteInterface {
    */
   async removeLock(lock_id: number): Promise<void> {
     //
+  }
+
+  /**
+   * isLocked() - Checks if a given song_uid is locked or not
+   * @param song_uid - song uid of song to check status of
+   * @returns - if song is locked or not
+   */
+  async isLocked(song_uid: string): Promise<boolean> {
+    return false;
   }
 }
