@@ -41,6 +41,8 @@ const db_tables = [
  * SongDB() - SQLite interface for saving song information
  */
 export default class SongDB extends SQLiteInterface {
+  private lock_id_ = Date.now() * 10;
+
   constructor(logger: Logger, songdb_config: SongDBConfig) {
     super(songdb_config.db_location, db_tables, logger);
   }
@@ -337,7 +339,16 @@ export default class SongDB extends SQLiteInterface {
    * @returns - unique lock_id
    */
   async addLock(song_uid: string): Promise<number> {
-    return 1;
+    const lock_id = this.lock_id_++;
+    if (!(await this.containsSong(song_uid))) {
+      throw new Error('Song does not exist in song database');
+    } else {
+      await this.dbRun('INSERT INTO locks VALUES ($song_uid, $lock_id)', {
+        $lock_id: lock_id,
+        $song_uid: song_uid,
+      });
+    }
+    return lock_id;
   }
 
   /**
@@ -345,7 +356,7 @@ export default class SongDB extends SQLiteInterface {
    * @param lock_id - song uid of song to remove lock from
    */
   async removeLock(lock_id: number): Promise<void> {
-    //
+    await this.dbRun('DELETE FROM locks WHERE lock_id = $lock_id', { $lock_id: lock_id });
   }
 
   /**

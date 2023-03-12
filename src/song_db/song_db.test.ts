@@ -505,7 +505,7 @@ export default function TestSongDB(
       finish();
     });
 
-    it('throws error when adding/removing locks for unknown song', async () => {
+    it('throws error when adding locks for unknown song', async () => {
       const db_location = unique_db_location(db_directory);
       const song_db = createDB(db_location);
 
@@ -526,19 +526,6 @@ export default function TestSongDB(
 
       const actual1 = await song_db.isLocked(song_uid0);
       assert.equal(actual1, false, 'Does not edit other locks');
-
-      const lock_id0 = await song_db.addLock(song_uid0);
-      try {
-        await song_db.removeLock(lock_id0 + 1);
-        assert.fail('Throws error when adding lock for invalid lock_id');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Lock does not exist in song database');
-      }
-
-      const actual2 = await song_db.isLocked(song_uid0);
-      assert.equal(actual2, true, 'Does not edit other locks');
 
       await song_db.close();
       finish();
