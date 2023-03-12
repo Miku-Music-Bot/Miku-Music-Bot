@@ -169,5 +169,6 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    */
   async close(): Promise<void> {
     await this.RequestFunction(SongDBFunctions.close, []);
+    this.disconnect();
   }
 }

@@ -38,21 +38,21 @@ TestSongDB(
   }
 );
 
-// // Test SongDatabaseInterface
-// let component: typeof ipc;
-// TestSongDB(
-//   SONG_DB_DIRECTORY,
-//   'Song Database Interface',
-//   (db_location: string) => {
-//     const config: SongDBConfig = {
-//       db_location,
-//     };
+// Test SongDatabaseInterface
+let component: typeof ipc;
+TestSongDB(
+  SONG_DB_DIRECTORY,
+  'Song Database Interface',
+  (db_location: string) => {
+    const config: SongDBConfig = {
+      db_location,
+    };
 
-//     component = StartSongDBComponent(dummy_logger, config);
+    component = StartSongDBComponent(dummy_logger, config);
 
-//     return new SongDBInterface(dummy_logger);
-//   },
-//   () => {
-//     component.server.stop();
-//   }
-// );
+    return new SongDBInterface(dummy_logger);
+  },
+  () => {
+    component.server.stop();
+  }
+);
