@@ -98,6 +98,42 @@ export default function TestSongDB(
     });
   });
 
+  describe(`${name} get song info and cache info`, () => {
+    it('throws error if getting cache info of unknown song_uid', async () => {
+      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
+      const song_db = createDB(db_location);
+
+      try {
+        await song_db.getCacheInfo('yt$M1vsdF4VfU');
+        assert.fail('Throws error when setting cache info of invalid song');
+      } catch (error) {
+        assert.throws(() => {
+          throw error;
+        }, 'Song does not exist in song database');
+      }
+
+      await song_db.close();
+      finish();
+    });
+
+    it('throws error if getting song info of unknown song_uid', async () => {
+      const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
+      const song_db = createDB(db_location);
+
+      try {
+        await song_db.getSongInfo('yt$M1vsdF4VfU');
+        assert.fail('Throws error when setting cache info of invalid song');
+      } catch (error) {
+        assert.throws(() => {
+          throw error;
+        }, 'Song does not exist in song database');
+      }
+
+      await song_db.close();
+      finish();
+    });
+  });
+
   describe(`${name} cache/uncache song`, () => {
     it('caches a new songs', async () => {
       const db_location = unique_db_location(db_directory);

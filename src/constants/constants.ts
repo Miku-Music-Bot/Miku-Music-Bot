@@ -17,7 +17,7 @@ const SONG_DB_LOCATION = process.env.SONG_DB_LOCATION;
 const MIKU_DOMAIN = process.env.MIKU_DOMAIN;
 
 export const ipc_config = Object.freeze({
-  retry: 1000,
+  retry: 100,
   silent: true,
   rawBuffer: false,
 
