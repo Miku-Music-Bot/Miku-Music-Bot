@@ -22,6 +22,7 @@ export enum SongDBFunctions {
   close,
 }
 
+// Info about the tables needed for SongDB
 const db_tables = [
   {
     name: 'song_cache',
@@ -38,7 +39,7 @@ const db_tables = [
 ];
 
 /**
- * SongDB() - SQLite interface for saving song information
+ * SongDB() - An SQLite interface for saving song cache, info, and lock information for MusicCache
  */
 export default class SongDB extends SQLiteInterface {
   private lock_id_ = Date.now() * 10;

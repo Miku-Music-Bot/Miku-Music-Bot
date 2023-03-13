@@ -10,6 +10,13 @@ export function unique_db_location(dir: string) {
   return path.join(dir, name);
 }
 
+/**
+ * TestSongDB() - Runs tests on a given SongDB or SongDBInterface
+ * @param db_directory - directory test databases should be stored in
+ * @param name - name of interface to test (SongDB vs SongDBInterface)
+ * @param createDB - function to create a SongDB/SongDBInterface at given directory
+ * @param finish - called after each test is finished
+ */
 export default function TestSongDB(
   db_directory: string,
   name: string,

@@ -4,6 +4,9 @@ import Logger from '../logger/logger';
 import IPCInterface from '../ipc_template/ipc_interface';
 import { SongDBFunctions } from './song_db';
 
+/**
+ * SongDBInterface - Connects to a SongDB component running as a seperate thread
+ */
 export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   constructor(logger: Logger) {
     super(ipc_config.song_db_ipc_id, logger);
