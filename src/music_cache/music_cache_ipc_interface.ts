@@ -6,6 +6,10 @@ import { MusicCacheFunctions } from './music_cache';
 
 /**
  * MusicCacheInterface - Connects to a MusicCacheInterface component running as a seperate thread
+ * Lifecycle of a song:
+ * - Call cache() to begin download of song to cache (or keep song in cache if already cached)
+ * - Call cacheLocation() to get the location of the cached song
+ * - Call releaseLock() to release the playback lock on the song so that it may be deleted if space is needed
  */
 export default class MusicCacheInterface extends IPCInterface<MusicCacheFunctions> {
   constructor(logger: Logger) {

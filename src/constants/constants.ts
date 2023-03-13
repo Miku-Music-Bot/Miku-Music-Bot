@@ -14,6 +14,9 @@ const LOG_MAX_FILES = process.env.LOG_MAX_FILES;
 
 const SONG_DB_LOCATION = process.env.SONG_DB_LOCATION;
 
+const CACHE_DIRECTORY = process.env.CACHE_DIRECTORY;
+const MAX_CACHESIZE_MiB = parseInt(process.env.MAX_CACHESIZE_MiB);
+
 const MIKU_DOMAIN = process.env.MIKU_DOMAIN;
 
 export const ipc_config = Object.freeze({
@@ -44,6 +47,12 @@ export const songdb_config = Object.freeze({
   db_location: SONG_DB_LOCATION,
 });
 export type SongDBConfig = typeof songdb_config;
+
+export const music_cache_config = Object.freeze({
+  cache_dir: CACHE_DIRECTORY,
+  cache_size_bytes: MAX_CACHESIZE_MiB * (1 << 20),
+});
+export type MusicCacheConfig = typeof music_cache_config;
 
 export const web_config = Object.freeze({
   domain: MIKU_DOMAIN,

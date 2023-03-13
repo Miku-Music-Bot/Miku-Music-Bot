@@ -1,4 +1,7 @@
+import { MusicCacheConfig } from '../constants/constants';
 import Logger from '../logger/logger';
+import { DownloaderTypes } from './downloaders/parse_url';
+import DownloaderInterface from './downloaders/downloader_interface';
 
 export enum MusicCacheFunctions {
   cache,
@@ -14,8 +17,30 @@ export enum MusicCacheFunctions {
  * - Call releaseLock() to release the playback lock on the song so that it may be deleted if space is needed
  */
 export default class MusicCache {
-  constructor(logger: Logger) {
-    //
+  private log_: Logger;
+  private max_size_bytes_: number;
+  private cache_dir_: string;
+
+  private parseURL_: (url: string) => { link: string; song_uid: string; type: DownloaderTypes };
+  private createDownloader_: (type: DownloaderTypes) => DownloaderInterface;
+
+  /**
+   * @param logger - logger
+   * @param config - MusicCache configuration
+   * @param parseURL - function to parse a given url to determine its song_uid and downloader type
+   * @param createDownloader - creates the correct downloader given downloader type
+   */
+  constructor(
+    logger: Logger,
+    config: MusicCacheConfig,
+    parseURL: (url: string) => { link: string; song_uid: string; type: DownloaderTypes },
+    createDownloader: (type: DownloaderTypes) => DownloaderInterface
+  ) {
+    this.log_ = logger;
+    this.max_size_bytes_ = config.cache_size_bytes;
+    this.cache_dir_ = config.cache_dir;
+    this.parseURL_ = parseURL;
+    this.createDownloader_ = createDownloader;
   }
 
   /**
