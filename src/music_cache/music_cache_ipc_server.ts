@@ -17,5 +17,9 @@ StartIPCServer(ipc_config.music_ipc_id, logger, Promise.resolve(), async (data: 
     case MusicCacheFunctions.cacheLocation: {
       return JSON.stringify(music_cache.cacheLocation(data.args[0]));
     }
+    case MusicCacheFunctions.releaseLock: {
+      await music_cache.releaseLock(parseInt(data.args[0]));
+      return '';
+    }
   }
 });

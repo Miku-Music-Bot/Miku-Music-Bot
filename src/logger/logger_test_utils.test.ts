@@ -2,36 +2,7 @@ import { assert } from 'chai';
 import fs from 'fs-extra';
 import path from 'path';
 
-import { LoggerConfig } from '../constants/constants';
-
 export const LOG_FILE_DIRECTORY = path.join(__dirname, 'test_logs');
-export const config: LoggerConfig = Object.assign({
-  log_file: true,
-  log_console: false,
-  file_directory: LOG_FILE_DIRECTORY,
-  file_name: '%DATE%.log',
-  date_pattern: 'YYYY-MM-DD',
-  zip_logs: false,
-  max_size: '20m',
-  max_files: '5',
-});
-
-// ensure empty temporary log directory exists before running tests
-before(async () => {
-  fs.mkdirSync(LOG_FILE_DIRECTORY, { recursive: true });
-  fs.emptyDirSync(LOG_FILE_DIRECTORY);
-});
-
-// delete temporary log directory after running tests
-after(async () => {
-  fs.rmSync(LOG_FILE_DIRECTORY, { recursive: true, force: true });
-});
-
-// Returns a unique string each time to be used as a logger name
-let id = 0;
-export function unique_logger_name() {
-  return `Logger-Test-${id++}`;
-}
 
 /**
  * format_date() - Formats UNIX timestamp in YYYY-MM-DD format

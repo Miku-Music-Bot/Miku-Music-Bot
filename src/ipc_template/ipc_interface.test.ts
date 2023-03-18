@@ -1,28 +1,10 @@
 import { assert } from 'chai';
+import sinon from 'sinon';
 import ipc from 'node-ipc';
 
-import IPCInterface from './ipc_interface';
-import CreateTestIPCServer, { TestFunctions } from './ipc_server.test';
-import Logger from '../logger/logger';
+import stubDummyLogger from '../test_utils/stub_logger.test';
 
-// Create a fake logger
-let SILENT = false;
-process.argv.forEach((val) => {
-  if (val === 'silent') {
-    SILENT = true;
-  }
-});
-function log(msg: string, error?: Error) {
-  if (error) console.error(error);
-  if (SILENT) console.log(msg);
-}
-const logger = {
-  debug: log,
-  info: log,
-  warn: log,
-  error: log,
-  fatal: log,
-} as Logger;
+import { CreateTestIPCServer, TestIPCInterface } from './ipc_interface_test_utils.test';
 
 /**
  * SetupConnection() - Sets up server and interface
@@ -42,37 +24,15 @@ function SetupConnection(): Promise<{ test_server: typeof ipc; test_interface: T
   });
 }
 
-class TestIPCInterface extends IPCInterface<TestFunctions> {
-  constructor() {
-    super('IPC-Server-Test', logger);
-  }
-
-  async boolArg(bool: boolean) {
-    return JSON.parse(await this.RequestFunction(TestFunctions.boolArg, [JSON.stringify(bool)]));
-  }
-
-  async numArg(num: number) {
-    return JSON.parse(await this.RequestFunction(TestFunctions.numArg, [JSON.stringify(num)]));
-  }
-
-  async strArg(str: string) {
-    return this.RequestFunction(TestFunctions.strArg, [str]);
-  }
-
-  async objArg(obj: { bool: boolean; num: number; str: string }) {
-    return JSON.parse(await this.RequestFunction(TestFunctions.objArg, [JSON.stringify(obj)]));
-  }
-
-  async promiseResolve() {
-    return this.RequestFunction(TestFunctions.promiseResolve, []);
-  }
-
-  async promiseReject() {
-    return this.RequestFunction(TestFunctions.promiseReject, []);
-  }
-}
-
 describe('IPC Interface', () => {
+  before(() => {
+    stubDummyLogger();
+  });
+
+  after(() => {
+    sinon.restore();
+  });
+
   it('sends and returns boolean argument', async () => {
     const { test_server, test_interface } = await SetupConnection();
 

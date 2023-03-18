@@ -2,7 +2,7 @@ import winston from 'winston';
 
 import Profiler, { LevelThresholds } from './profiler';
 import createWinstonLogger from './create_winston_logger';
-import { LoggerConfig, logger_config } from '../constants/constants';
+import { logger_config } from '../constants/constants';
 
 /**
  * Logger()
@@ -15,10 +15,8 @@ export default class Logger {
   /**
    * @param name - Name of logger
    */
-  constructor(name: string, config?: LoggerConfig) {
-    if (!config) config = logger_config;
-
-    const { transports, logger } = createWinstonLogger(name, config);
+  constructor(name: string) {
+    const { transports, logger } = createWinstonLogger(name, logger_config);
 
     this.transports_ = transports;
     this.logger_ = logger;

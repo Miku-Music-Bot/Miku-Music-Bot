@@ -4,17 +4,8 @@ import Logger from '../logger/logger';
 import StartIPCServer from './ipc_server';
 import { FunctionRequest } from './ipc_types';
 
-// Create a fake logger
-function log(msg: string, error?: Error) {
-  if (error) console.error(error);
-}
-const logger = {
-  debug: log,
-  info: log,
-  warn: log,
-  error: log,
-  fatal: log,
-} as Logger;
+import '../test_utils/stub_logger.test';
+import IPCInterface from './ipc_interface';
 
 export enum TestFunctions {
   boolArg,
@@ -53,7 +44,9 @@ async function promiseReject(): Promise<string> {
 }
 
 // Start the IPC server
-export default function CreateTestIPCServer(ready: Promise<void>): typeof ipc {
+export function CreateTestIPCServer(ready: Promise<void>): typeof ipc {
+  const logger = new Logger('IPC-Server-Test');
+
   return StartIPCServer('IPC-Server-Test', logger, ready, async (data: FunctionRequest<TestFunctions>) => {
     switch (data.function_type) {
       case TestFunctions.boolArg: {
@@ -76,4 +69,38 @@ export default function CreateTestIPCServer(ready: Promise<void>): typeof ipc {
       }
     }
   });
+}
+
+/**
+ * TestIPCInterface() - A simple IPCInterface to test IPCInterface functions
+ */
+export class TestIPCInterface extends IPCInterface<TestFunctions> {
+  constructor() {
+    const logger = new Logger('IPC-Server-Test');
+    super('IPC-Server-Test', logger);
+  }
+
+  async boolArg(bool: boolean) {
+    return JSON.parse(await this.RequestFunction(TestFunctions.boolArg, [JSON.stringify(bool)]));
+  }
+
+  async numArg(num: number) {
+    return JSON.parse(await this.RequestFunction(TestFunctions.numArg, [JSON.stringify(num)]));
+  }
+
+  async strArg(str: string) {
+    return this.RequestFunction(TestFunctions.strArg, [str]);
+  }
+
+  async objArg(obj: { bool: boolean; num: number; str: string }) {
+    return JSON.parse(await this.RequestFunction(TestFunctions.objArg, [JSON.stringify(obj)]));
+  }
+
+  async promiseResolve() {
+    return this.RequestFunction(TestFunctions.promiseResolve, []);
+  }
+
+  async promiseReject() {
+    return this.RequestFunction(TestFunctions.promiseReject, []);
+  }
 }

@@ -1,7 +1,12 @@
+import path from 'path';
+import fs from 'fs-extra';
+
 import { MusicCacheConfig } from '../constants/constants';
 import Logger from '../logger/logger';
 import { DownloaderTypes } from './downloaders/parse_url';
 import DownloaderInterface from './downloaders/downloader_interface';
+import SongDBInterface from '../song_db/song_db_ipc_interface';
+import SongDB from '../song_db/song_db';
 
 export enum MusicCacheFunctions {
   cache,
@@ -21,6 +26,8 @@ export default class MusicCache {
   private max_size_bytes_: number;
   private cache_dir_: string;
 
+  private db_: SongDBInterface | SongDB;
+
   private parseURL_: (url: string) => { link: string; song_uid: string; type: DownloaderTypes };
   private createDownloader_: (type: DownloaderTypes) => DownloaderInterface;
 
@@ -30,17 +37,8 @@ export default class MusicCache {
    * @param parseURL - function to parse a given url to determine its song_uid and downloader type
    * @param createDownloader - creates the correct downloader given downloader type
    */
-  constructor(
-    logger: Logger,
-    config: MusicCacheConfig,
-    parseURL: (url: string) => { link: string; song_uid: string; type: DownloaderTypes },
-    createDownloader: (type: DownloaderTypes) => DownloaderInterface
-  ) {
+  constructor(logger: Logger) {
     this.log_ = logger;
-    this.max_size_bytes_ = config.cache_size_bytes;
-    this.cache_dir_ = config.cache_dir;
-    this.parseURL_ = parseURL;
-    this.createDownloader_ = createDownloader;
   }
 
   /**
@@ -48,8 +46,20 @@ export default class MusicCache {
    * @param url - url of song to cache
    * @returns - cache lock_id for the song (must be unlocked after song has been played)
    */
-  cache(url: string): Promise<number> {
-    return;
+  async cache(url: string): Promise<number> {
+    const { link, song_uid } = this.parseURL_(url);
+
+    const cache_loc = path.join(this.cache_dir_, song_uid.split('$')[0], song_uid.split('$')[1]);
+
+    try {
+      await fs.promises.mkdir(cache_loc, { recursive: true });
+    } catch (error) {
+      this.log_.fatal(`Failed to create directory for song with {url:${url}} at {location:${cache_loc}}`, error);
+      throw new Error('Failed to create directory in cache location');
+    }
+    await this.db_.cacheSong(song_uid, cache_loc);
+    await this.db_.setLink(song_uid, link);
+    return await this.db_.addLock(song_uid);
   }
 
   /**
@@ -67,6 +77,6 @@ export default class MusicCache {
    * @returns - Promise that resolves once lock has been successfully released
    */
   releaseLock(lock_id: number): Promise<void> {
-    return;
+    return Promise.resolve();
   }
 }

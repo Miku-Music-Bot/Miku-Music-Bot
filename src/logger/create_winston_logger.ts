@@ -52,9 +52,6 @@ export default function createWinstonLogger(name: string, config: LoggerConfig) 
     logger.add(info_transport);
   }
 
-  // Done here if logging to console is not needed
-  if (!config.log_console) return { logger, transports };
-
   // Add some colors to console output
   winston.addColors({
     debug: 'blue',
@@ -64,6 +61,7 @@ export default function createWinstonLogger(name: string, config: LoggerConfig) 
   });
   logger.add(
     new winston.transports.Console({
+      silent: !config.log_console,
       format: winston.format.combine(
         winston.format.errors({ stack: true }),
         winston.format.colorize(),

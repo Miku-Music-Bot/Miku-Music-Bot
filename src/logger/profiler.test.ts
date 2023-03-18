@@ -1,221 +1,183 @@
 import { assert } from 'chai';
+import sinon from 'sinon';
 
 import Logger from './logger';
-
-import { config, unique_logger_name, filter_debug, fetch_log, compare_logs } from './logger_test_helper.test';
-
-// number of milliseconds to wait after logging message before reading log file
-const WRITE_WAIT = 100;
-
-/**
- * createProfilers() - Creates a number of profilers
- * @param count - number of profilers to create;
- * @returns - start_time of profilers, name of logger, logger itself, and array of profilers
- */
-function createProfilers(count: number) {
-  const start_time = Date.now();
-  const name = unique_logger_name();
-  const logger = new Logger(name, config);
-
-  const profilers = [];
-  for (let i = 0; i < count; i++) {
-    profilers.push(logger.profile(`profile${i}`));
-  }
-
-  return { start_time, name, logger, profilers };
-}
-
-/**
- * compare_profiler_logs() - Checks the results of profiler logs
- * @param name - name of logger
- * @param start_time - start time of logger
- * @param expected_debug - expected debug messages of logger
- * @returns - Promise that resovles once done checking logs
- */
-function compare_profiler_logs(
-  name: string,
-  start_time: number,
-  expected_debug: Array<{ level: 'debug' | 'info' | 'warn' | 'error' | 'fatal'; message: string }>
-): Promise<void> {
-  return new Promise((resolve) => {
-    const expected_info = filter_debug(expected_debug);
-
-    setTimeout(() => {
-      const { debug, info } = fetch_log(name);
-      compare_logs(debug, expected_debug, start_time, Date.now());
-      compare_logs(info, expected_info, start_time, Date.now());
-
-      resolve();
-    }, WRITE_WAIT);
-  });
-}
+import stubConfig from '../test_utils/stub_config.test';
 
 describe('Profiler', () => {
-  it('returns accurate time and writes default log message', (done) => {
-    const { start_time, name, logger, profilers } = createProfilers(1);
-
-    const timeout_dur = 100;
-    setTimeout(async () => {
-      const time = profilers[0].stop();
-
-      assert(time >= timeout_dur, 'Profiler 0 duration is not shorter than expected');
-      assert(time <= timeout_dur + 100, 'Profiler 0 duration is not longer than expected');
-      assert(time === profilers[0].stop(), 'Calling stop again returns same duration');
-
-      await compare_profiler_logs(name, start_time, [
-        {
-          level: 'debug',
-          message: 'Task "profile0" completed successfully after ',
-        },
-      ]);
-
-      logger.releaseFiles();
-      done();
-    }, timeout_dur);
+  beforeEach(() => {
+    stubConfig({ logger_config: { log_file: false, log_console: false } });
   });
 
-  it('writes custom log message and success', (done) => {
-    const { start_time, name, logger, profilers } = createProfilers(3);
-
-    const timeout_dur = 100;
-    setTimeout(async () => {
-      profilers[0].stop({ message: 'with message' });
-      profilers[1].stop({ success: false });
-      profilers[2].stop({ message: 'not successful with message', success: false });
-
-      await compare_profiler_logs(name, start_time, [
-        {
-          level: 'debug',
-          message: 'with message',
-        },
-        {
-          level: 'debug',
-          message: 'Task "profile1" completed unsuccessfully after ',
-        },
-        {
-          level: 'debug',
-          message: 'not successful with message',
-        },
-      ]);
-
-      logger.releaseFiles();
-      done();
-    }, timeout_dur);
+  afterEach(() => {
+    sinon.restore();
   });
 
-  it('writes message with custom log level', (done) => {
-    const { start_time, name, logger, profilers } = createProfilers(4);
+  it('returns accurate time and writes default log message', () => {
+    const clock = sinon.useFakeTimers();
 
-    const timeout_dur = 100;
-    setTimeout(async () => {
-      profilers[0].stop({ level: 'debug' });
-      profilers[1].stop({ level: 'info' });
-      profilers[2].stop({ level: 'warn' });
-      profilers[3].stop({ level: 'error' });
+    const logger = new Logger('TestLogger');
+    const debug_spy = sinon.spy(logger, 'debug');
 
-      await compare_profiler_logs(name, start_time, [
-        {
-          level: 'debug',
-          message: 'Task "profile0" completed successfully after ',
-        },
-        {
-          level: 'info',
-          message: 'Task "profile1" completed successfully after ',
-        },
-        {
-          level: 'warn',
-          message: 'Task "profile2" completed successfully after ',
-        },
-        {
-          level: 'error',
-          message: 'Task "profile3" completed successfully after ',
-        },
-      ]);
+    const profile0 = logger.profile('profile0');
 
-      logger.releaseFiles();
-      done();
-    }, timeout_dur);
+    clock.tick(100);
+    const time = profile0.stop();
+    clock.restore();
+
+    assert(
+      debug_spy.getCall(0).calledWith('Task "profile0" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(time === 100, 'Returns correct duration');
+    assert(time === profile0.stop(), 'Calling stop again returns same duration');
   });
 
-  it('write message with automatically determined log levels', (done) => {
-    const { start_time, name, logger, profilers } = createProfilers(5);
+  it('writes custom log message and success', async () => {
+    const clock = sinon.useFakeTimers();
 
-    profilers[0] = logger.profile('profile0', { debug: 100, info: 100, warn: 100, error: 100, fatal: 100 });
-    profilers[1] = logger.profile('profile1', { debug: 100, info: 100, warn: 100, error: 100, fatal: 10000 });
-    profilers[2] = logger.profile('profile2', { debug: 100, info: 100, warn: 100, error: 10000, fatal: 10000 });
-    profilers[3] = logger.profile('profile3', { debug: 100, info: 100, warn: 10000, error: 10000, fatal: 10000 });
-    profilers[4] = logger.profile('profile4', { debug: 100, info: 10000, warn: 10000, error: 10000, fatal: 10000 });
-    profilers[5] = logger.profile('profile5', { debug: 10000, info: 10000, warn: 10000, error: 10000, fatal: 10000 });
+    const logger = new Logger('TestLogger');
+    const debug_spy = sinon.spy(logger, 'debug');
 
-    const timeout_dur = 100;
-    setTimeout(async () => {
-      profilers[0].stop();
-      profilers[1].stop();
-      profilers[2].stop();
-      profilers[3].stop();
-      profilers[4].stop();
-      profilers[5].stop();
+    const profile0 = logger.profile('profile0');
+    const profile1 = logger.profile('profile1');
+    const profile2 = logger.profile('profile2');
 
-      await compare_profiler_logs(name, start_time, [
-        {
-          level: 'error',
-          message: '[FATAL] Task "profile0" completed successfully after ',
-        },
-        {
-          level: 'error',
-          message: 'Task "profile1" completed successfully after ',
-        },
-        {
-          level: 'warn',
-          message: 'Task "profile2" completed successfully after ',
-        },
-        {
-          level: 'info',
-          message: 'Task "profile3" completed successfully after ',
-        },
-        {
-          level: 'debug',
-          message: 'Task "profile4" completed successfully after ',
-        },
-        {
-          level: 'debug',
-          message: 'Task "profile5" completed successfully after ',
-        },
-      ]);
+    clock.tick(100);
+    profile0.stop({ message: 'with message' });
+    profile1.stop({ success: false });
+    profile2.stop({ message: 'not successful with message', success: false });
+    clock.restore();
 
-      logger.releaseFiles();
-      done();
-    }, timeout_dur);
+    assert(debug_spy.getCall(0).calledWith('with message'), 'Logs correct message');
+    assert(
+      debug_spy.getCall(1).calledWith('Task "profile1" completed unsuccessfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(debug_spy.getCall(2).calledWith('not successful with message'), 'Logs correct message');
   });
 
-  it('writes message with complex settings', (done) => {
-    const { start_time, name, logger, profilers } = createProfilers(3);
+  it('writes message with custom log level', () => {
+    const clock = sinon.useFakeTimers();
 
-    profilers[0] = logger.profile('profile0', { debug: 100, info: 100, warn: 100, error: 100, fatal: 10000 });
+    const logger = new Logger('TestLogger');
+    const debug_spy = sinon.spy(logger, 'debug');
+    const info_spy = sinon.spy(logger, 'info');
+    const warn_spy = sinon.spy(logger, 'warn');
+    const error_spy = sinon.spy(logger, 'error');
+    const fatal_spy = sinon.spy(logger, 'fatal');
 
-    const timeout_dur = 100;
-    setTimeout(async () => {
-      profilers[0].stop({ message: 'with message', level: 'info', success: false });
-      profilers[1].stop({ level: 'fatal', success: false });
-      profilers[2].stop({ message: 'with message', level: 'error', success: true });
+    const profile0 = logger.profile('profile0');
+    const profile1 = logger.profile('profile1');
+    const profile2 = logger.profile('profile2');
+    const profile3 = logger.profile('profile3');
+    const profile4 = logger.profile('profile4');
 
-      await compare_profiler_logs(name, start_time, [
-        {
-          level: 'info',
-          message: 'with message',
-        },
-        {
-          level: 'error',
-          message: '[FATAL] Task "profile1" completed unsuccessfully after ',
-        },
-        {
-          level: 'error',
-          message: 'with message',
-        },
-      ]);
+    clock.tick(100);
+    profile0.stop({ level: 'debug' });
+    profile1.stop({ level: 'info' });
+    profile2.stop({ level: 'warn' });
+    profile3.stop({ level: 'error' });
+    profile4.stop({ level: 'fatal' });
+    clock.restore();
 
-      logger.releaseFiles();
-      done();
-    }, timeout_dur);
+    assert(
+      debug_spy.getCall(0).calledWith('Task "profile0" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      info_spy.getCall(0).calledWith('Task "profile1" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      warn_spy.getCall(0).calledWith('Task "profile2" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      error_spy.getCall(0).calledWith('Task "profile3" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      fatal_spy.getCall(0).calledWith('Task "profile4" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+  });
+
+  it('write message with automatically determined log levels', () => {
+    const clock = sinon.useFakeTimers();
+
+    const logger = new Logger('TestLogger');
+    const debug_spy = sinon.spy(logger, 'debug');
+    const info_spy = sinon.spy(logger, 'info');
+    const warn_spy = sinon.spy(logger, 'warn');
+    const error_spy = sinon.spy(logger, 'error');
+    const fatal_spy = sinon.spy(logger, 'fatal');
+
+    const profile0 = logger.profile('profile0', { debug: 100, info: 100, warn: 100, error: 100, fatal: 100 });
+    const profile1 = logger.profile('profile1', { debug: 100, info: 100, warn: 100, error: 100, fatal: 101 });
+    const profile2 = logger.profile('profile2', { debug: 100, info: 100, warn: 100, error: 101, fatal: 101 });
+    const profile3 = logger.profile('profile3', { debug: 100, info: 100, warn: 101, error: 101, fatal: 101 });
+    const profile4 = logger.profile('profile4', { debug: 100, info: 101, warn: 101, error: 101, fatal: 101 });
+    const profile5 = logger.profile('profile5', { debug: 101, info: 101, warn: 101, error: 101, fatal: 101 });
+
+    clock.tick(100);
+    profile0.stop();
+    profile1.stop();
+    profile2.stop();
+    profile3.stop();
+    profile4.stop();
+    profile5.stop();
+    clock.restore();
+
+    assert(
+      fatal_spy.getCall(0).calledWith('Task "profile0" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      error_spy.getCall(0).calledWith('Task "profile1" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      warn_spy.getCall(0).calledWith('Task "profile2" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      info_spy.getCall(0).calledWith('Task "profile3" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      debug_spy.getCall(0).calledWith('Task "profile4" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(
+      debug_spy.getCall(1).calledWith('Task "profile5" completed successfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+  });
+
+  it('writes message with complex settings', () => {
+    const clock = sinon.useFakeTimers();
+
+    const logger = new Logger('TestLogger');
+    const info_spy = sinon.spy(logger, 'info');
+    const error_spy = sinon.spy(logger, 'error');
+    const fatal_spy = sinon.spy(logger, 'fatal');
+
+    const profile0 = logger.profile('profile0', { debug: 100, info: 100, warn: 100, error: 100, fatal: 101 });
+    const profile1 = logger.profile('profile1');
+    const profile2 = logger.profile('profile2');
+
+    clock.tick(100);
+    profile0.stop({ message: 'with message', level: 'info', success: false });
+    profile1.stop({ level: 'fatal', success: false });
+    profile2.stop({ message: 'with message', level: 'error', success: true });
+    clock.restore();
+
+    assert(info_spy.getCall(0).calledWith('with message'), 'Logs correct message');
+    assert(
+      fatal_spy.getCall(0).calledWith('Task "profile1" completed unsuccessfully after 100 milliseconds'),
+      'Logs correct message'
+    );
+    assert(error_spy.getCall(0).calledWith('with message'), 'Logs correct message');
   });
 });
