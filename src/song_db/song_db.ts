@@ -1,4 +1,4 @@
-import { SongDBConfig } from '../constants/constants';
+import { songdb_config } from '../constants/constants';
 import Logger from '../logger/logger';
 import SQLiteInterface from '../sqlite_interface/sqlite_interface';
 
@@ -44,7 +44,7 @@ const db_tables = [
 export default class SongDB extends SQLiteInterface {
   private lock_id_ = Date.now() * 10;
 
-  constructor(logger: Logger, songdb_config: SongDBConfig) {
+  constructor(logger: Logger) {
     super(songdb_config.db_location, db_tables, logger);
   }
 

@@ -6,11 +6,11 @@ import * as config from '../constants/constants';
  * @param new_config - new config to use
  */
 export default function stubConfig(new_config: {
-  ipc_config?: object;
-  logger_config?: object;
-  songdb_config?: object;
-  music_cache_config?: object;
-  web_config?: object;
+  ipc_config?: Partial<config.IPCConfig>;
+  logger_config?: Partial<config.LoggerConfig>;
+  songdb_config?: Partial<config.SongDBConfig>;
+  music_cache_config?: Partial<config.MusicCacheConfig>;
+  web_config?: Partial<config.WebConfig>;
 }) {
   let prop: keyof typeof new_config;
   for (prop in new_config) {

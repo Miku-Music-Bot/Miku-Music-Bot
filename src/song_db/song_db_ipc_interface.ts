@@ -25,7 +25,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
     size_bytes: number;
     playbacks: number;
   }> {
-    return JSON.parse(await this.RequestFunction(SongDBFunctions.getCacheInfo, [song_uid]));
+    return await this.RequestFunction(SongDBFunctions.getCacheInfo, [song_uid]);
   }
 
   /**
@@ -40,7 +40,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
     artist: string;
     duration: number;
   }> {
-    return JSON.parse(await this.RequestFunction(SongDBFunctions.getSongInfo, [song_uid]));
+    return this.RequestFunction(SongDBFunctions.getSongInfo, [song_uid]);
   }
 
   /**
@@ -66,7 +66,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param start_chunk
    */
   async setStartChunk(song_uid: string, start_chunk: number): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.setStartChunk, [song_uid, start_chunk.toString()]);
+    await this.RequestFunction(SongDBFunctions.setStartChunk, [song_uid, start_chunk]);
   }
 
   /**
@@ -75,7 +75,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param end_chunk
    */
   async setEndChunk(song_uid: string, end_chunk: number): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.setEndChunk, [song_uid, end_chunk.toString()]);
+    await this.RequestFunction(SongDBFunctions.setEndChunk, [song_uid, end_chunk]);
   }
 
   /**
@@ -84,7 +84,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param size_bytes
    */
   async setSizeBytes(song_uid: string, size_bytes: number): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.setSizeBytes, [song_uid, size_bytes.toString()]);
+    await this.RequestFunction(SongDBFunctions.setSizeBytes, [song_uid, size_bytes]);
   }
 
   /**
@@ -137,7 +137,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param duration
    */
   async setDuration(song_uid: string, duration: number): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.setDuration, [song_uid, duration.toString()]);
+    await this.RequestFunction(SongDBFunctions.setDuration, [song_uid, duration]);
   }
 
   /**
@@ -146,7 +146,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @returns - unique lock_id
    */
   async addLock(song_uid: string): Promise<number> {
-    return parseInt(await this.RequestFunction(SongDBFunctions.addLock, [song_uid]));
+    return await this.RequestFunction(SongDBFunctions.addLock, [song_uid]);
   }
 
   /**
@@ -154,7 +154,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param lock_id - song uid of song to remove lock from
    */
   async removeLock(lock_id: number): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.removeLock, [lock_id.toString()]);
+    await this.RequestFunction(SongDBFunctions.removeLock, [lock_id]);
   }
 
   /**
@@ -163,7 +163,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @returns - if song is locked or not
    */
   async isLocked(song_uid: string): Promise<boolean> {
-    return JSON.parse(await this.RequestFunction(SongDBFunctions.isLocked, [song_uid]));
+    return await this.RequestFunction(SongDBFunctions.isLocked, [song_uid]);
   }
 
   /**

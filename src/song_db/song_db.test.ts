@@ -1,15 +1,17 @@
+import { assert } from 'chai';
 import sinon from 'sinon';
 import ipc from 'node-ipc';
 import path from 'path';
 
-import TestSongDB from './song_db_test_utils.test';
-import { SongDBConfig } from '../constants/constants';
-import SongDB from './song_db';
-import SongDBInterface from './song_db_ipc_interface';
-import StartSongDBComponent from './song_db_ipc_server';
-
 import { createDirectory, removeDirectory } from '../test_utils/test_directory.test';
 import stubDummyLogger, { dummy_logger } from '../test_utils/stub_logger.test';
+import stubConfig from '../test_utils/stub_config.test';
+
+import TestSongDB from './song_db_test_utils.test';
+import * as SongDB from './song_db';
+import SongDBInterface from './song_db_ipc_interface';
+import * as SongDBServer from './song_db_ipc_server';
+import * as StartIPCServer from '../ipc_template/ipc_server';
 
 const SONG_DB_DIRECTORY = path.join(__dirname, 'test_songdb');
 
@@ -17,6 +19,9 @@ const SONG_DB_DIRECTORY = path.join(__dirname, 'test_songdb');
 describe('SongDatabase', () => {
   before(() => {
     createDirectory(SONG_DB_DIRECTORY);
+  });
+
+  beforeEach(() => {
     stubDummyLogger();
   });
 
@@ -27,11 +32,13 @@ describe('SongDatabase', () => {
   TestSongDB(
     SONG_DB_DIRECTORY,
     (db_location: string) => {
-      const config: SongDBConfig = {
-        db_location,
-      };
+      stubConfig({
+        songdb_config: {
+          db_location,
+        },
+      });
 
-      return new SongDB(dummy_logger, config);
+      return new SongDB.default(dummy_logger);
     },
     () => {
       return;
@@ -43,6 +50,14 @@ describe('SongDatabase', () => {
 describe('SongDatabaseInterface', () => {
   before(() => {
     createDirectory(SONG_DB_DIRECTORY);
+  });
+
+  beforeEach(() => {
+    stubConfig({
+      ipc_config: {
+        retry: 0,
+      },
+    });
     stubDummyLogger();
   });
 
@@ -54,11 +69,13 @@ describe('SongDatabaseInterface', () => {
   TestSongDB(
     SONG_DB_DIRECTORY,
     (db_location: string) => {
-      const config: SongDBConfig = {
-        db_location,
-      };
+      stubConfig({
+        songdb_config: {
+          db_location,
+        },
+      });
 
-      component = StartSongDBComponent(dummy_logger, config);
+      component = SongDBServer.StartSongDBComponent();
 
       return new SongDBInterface(dummy_logger);
     },
@@ -66,4 +83,19 @@ describe('SongDatabaseInterface', () => {
       component.server.stop();
     }
   );
+
+  describe('Start Component', () => {
+    it('should start component when "start-component" argument is set', async () => {
+      const song_db_stub = sinon.stub(SongDB, 'default').callsFake(() => {
+        return {} as unknown as SongDB.default;
+      });
+      const start_ipc_server_stub = sinon.stub(StartIPCServer, 'default').callsFake(sinon.fake());
+
+      process.argv.push('start-component');
+      SongDBServer.CheckStartComponent();
+
+      assert.equal(song_db_stub.callCount, 1, 'Component was started');
+      assert.equal(start_ipc_server_stub.callCount, 1, 'Component was started');
+    });
+  });
 });
