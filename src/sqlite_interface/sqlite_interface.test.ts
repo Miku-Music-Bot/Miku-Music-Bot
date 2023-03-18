@@ -128,8 +128,6 @@ describe('SQLite Interface', () => {
         throw error;
       }, 'Failed to Run Command');
     }
-
-    await sqlite_interface.close();
   });
 
   it('rejects dbRun if sqlite3 returns error', async () => {
@@ -192,8 +190,5 @@ describe('SQLite Interface', () => {
         throw error;
       }, 'Failed to Close');
     }
-    sinon.restore();
-
-    await sqlite_interface.close();
   });
 });
