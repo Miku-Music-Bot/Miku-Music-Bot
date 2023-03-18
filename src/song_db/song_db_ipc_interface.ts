@@ -145,7 +145,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param song_uid - song uid of song to lock
    * @returns - unique lock_id
    */
-  async addLock(song_uid: string): Promise<number> {
+  async addLock(song_uid: string): Promise<string> {
     return await this.RequestFunction(SongDBFunctions.addLock, [song_uid]);
   }
 
@@ -153,7 +153,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * removeLock() - Removes a delete lock to song
    * @param lock_id - song uid of song to remove lock from
    */
-  async removeLock(lock_id: number): Promise<void> {
+  async removeLock(lock_id: string): Promise<void> {
     await this.RequestFunction(SongDBFunctions.removeLock, [lock_id]);
   }
 

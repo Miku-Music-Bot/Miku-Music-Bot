@@ -46,7 +46,7 @@ export default class MusicCache {
    * @param url - url of song to cache
    * @returns - cache lock_id for the song (must be unlocked after song has been played)
    */
-  async cache(url: string): Promise<number> {
+  async cache(url: string): Promise<string> {
     const { link, song_uid } = this.parseURL_(url);
 
     const cache_loc = path.join(this.cache_dir_, song_uid.split('$')[0], song_uid.split('$')[1]);

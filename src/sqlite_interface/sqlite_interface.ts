@@ -1,8 +1,7 @@
 import fs from 'fs';
 
-import { Database, verbose, RunResult } from 'sqlite3';
+import sqlite3, { Database, RunResult } from 'sqlite3';
 import Logger from '../logger/logger';
-const sqlite3 = verbose();
 
 /**
  * SQLiteInterface() - Provides abstractions to SQLite3 to make it easier to interact with a databse
@@ -107,6 +106,7 @@ export default class SQLiteInterface {
           if (error) {
             this.log_.fatal(`Error creating table: ${tables[i].name}.`, error);
             profile.stop({ success: false, level: 'fatal' });
+            reject(error);
             return;
           }
 
@@ -118,6 +118,8 @@ export default class SQLiteInterface {
           }
         });
       }
+
+      if (tables.length === 0) resolve();
     });
   }
 

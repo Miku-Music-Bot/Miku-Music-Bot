@@ -111,7 +111,7 @@ export default function TestSongDB(
 
       try {
         await song_db.getCacheInfo('yt$M1vsdF4VfU');
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -128,7 +128,7 @@ export default function TestSongDB(
 
       try {
         await song_db.getSongInfo('yt$M1vsdF4VfU');
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -289,7 +289,7 @@ export default function TestSongDB(
       const size_bytes = 128;
       try {
         await song_db.setStartChunk(song_uid1, start_chunk);
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -297,7 +297,7 @@ export default function TestSongDB(
       }
       try {
         await song_db.setEndChunk(song_uid1, end_chunk);
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -305,7 +305,7 @@ export default function TestSongDB(
       }
       try {
         await song_db.setSizeBytes(song_uid1, size_bytes);
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -313,7 +313,7 @@ export default function TestSongDB(
       }
       try {
         await song_db.incrementPlaybacks(song_uid1);
-        assert.fail('Throws error when setting cache info of invalid song');
+        assert.fail('Did not throw error when setting cache info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -349,7 +349,7 @@ export default function TestSongDB(
 
       try {
         await song_db.uncacheSong('yt$unknownid');
-        assert.fail('Throws error on unknown id');
+        assert.fail('Did not throw error on unknown id');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -465,7 +465,7 @@ export default function TestSongDB(
 
       try {
         await song_db.setLink(song_uid1, link);
-        assert.fail('Throws error when setting song info of invalid song');
+        assert.fail('Did not throw error when setting song info of invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;
@@ -516,7 +516,7 @@ export default function TestSongDB(
   });
 
   describe('Add/remove locks', () => {
-    it('locks song then unknowns after locks are removed', async () => {
+    it('locks song then unlocks after locks are removed', async () => {
       const db_location = unique_db_location(db_directory);
       const song_db = createDB(db_location);
 
@@ -559,7 +559,7 @@ export default function TestSongDB(
 
       try {
         await song_db.addLock(song_uid1);
-        assert.fail('Throws error when adding lock for invalid song');
+        assert.fail('Did not throw error when adding lock for invalid song');
       } catch (error) {
         assert.throws(() => {
           throw error;

@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { songdb_config } from '../constants/constants';
 import Logger from '../logger/logger';
 import SQLiteInterface from '../sqlite_interface/sqlite_interface';
@@ -26,15 +28,15 @@ export enum SongDBFunctions {
 const db_tables = [
   {
     name: 'song_cache',
-    cols: '(song_uid STRING, cached NUMBER(1), cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT)',
+    cols: '(song_uid STRING UNIQUE NOT NULL, cached NUMBER(1), cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT)',
   },
   {
     name: 'song_info',
-    cols: '(song_uid STRING, link STRING, thumbnail_url STRING, title STRING, artist STRING, duration INT)',
+    cols: '(song_uid STRING UNIQUE NOT NULL, link STRING, thumbnail_url STRING, title STRING, artist STRING, duration INT)',
   },
   {
     name: 'locks',
-    cols: '(song_uid STRING, lock_id INT)',
+    cols: '(song_uid STRING NOT NULL, lock_id INT UNIQUE NOT NULL)',
   },
 ];
 
@@ -42,8 +44,6 @@ const db_tables = [
  * SongDB() - An SQLite interface for saving song cache, info, and lock information for MusicCache
  */
 export default class SongDB extends SQLiteInterface {
-  private lock_id_ = Date.now() * 10;
-
   constructor(logger: Logger) {
     super(songdb_config.db_location, db_tables, logger);
   }
@@ -339,8 +339,8 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to lock
    * @returns - unique lock_id
    */
-  async addLock(song_uid: string): Promise<number> {
-    const lock_id = this.lock_id_++;
+  async addLock(song_uid: string): Promise<string> {
+    const lock_id = crypto.randomUUID();
     if (!(await this.containsSong(song_uid))) {
       throw new Error('Song does not exist in song database');
     } else {
@@ -356,7 +356,7 @@ export default class SongDB extends SQLiteInterface {
    * removeLock() - Removes a delete lock to song
    * @param lock_id - song uid of song to remove lock from
    */
-  async removeLock(lock_id: number): Promise<void> {
+  async removeLock(lock_id: string): Promise<void> {
     await this.dbRun('DELETE FROM locks WHERE lock_id = $lock_id', { $lock_id: lock_id });
   }
 

@@ -140,7 +140,7 @@ describe('IPCInterface', () => {
 
     try {
       await ipc_interface.RequestFunction(TestFunctionNames.foo, []);
-      assert.fail('Server error causes interface to throw error');
+      assert.fail('Server error did not cause interface to throw error');
     } catch (error) {
       assert.throws(() => {
         throw error;
