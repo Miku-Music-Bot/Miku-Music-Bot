@@ -4,7 +4,7 @@ import EventEmitter from 'events';
 import { ipc_config } from '../constants/constants';
 import Logger from '../logger/logger';
 
-import { FunctionResponse, FunctionRequest } from './ipc_types';
+import { FunctionResponse, FunctionRequest, JSONAble } from './ipc_types';
 
 /**
  * IPCInterface - Template code for IPC Interfacess
@@ -86,8 +86,10 @@ export default class IPCInterface<FunctionNames> {
       this.ipc_.of[this.ipc_id_].emit('message', function_req);
     } catch (error) {
       this.log_.error('Error sending function request', error);
-      this.running_ = false;
-      this.RunQueue();
+      setImmediate(() => {
+        this.running_ = false;
+        this.RunQueue();
+      });
     }
   }
 
@@ -97,11 +99,11 @@ export default class IPCInterface<FunctionNames> {
    * @param args - arguments of function
    * @returns Promise resolving to function's response or rejects if there is an error
    */
-  protected async RequestFunction(function_type: FunctionNames, args: Array<string>): Promise<string> {
+  protected async RequestFunction(function_type: FunctionNames, args: Array<JSONAble>): Promise<any> {
     const function_req: FunctionRequest<FunctionNames> = {
       uid: this.GenerateUID(),
       function_type,
-      args,
+      args: JSON.stringify(args),
     };
 
     this.queue_.push(function_req);
@@ -110,7 +112,7 @@ export default class IPCInterface<FunctionNames> {
     return new Promise((resolve, reject) => {
       this.events_.once(function_req.uid, (response: FunctionResponse) => {
         if (response.success) {
-          resolve(response.result);
+          resolve(JSON.parse(response.result));
           return;
         }
         reject(new Error(response.error));

@@ -19,7 +19,17 @@ const MAX_CACHESIZE_MiB = parseInt(process.env.MAX_CACHESIZE_MiB);
 
 const MIKU_DOMAIN = process.env.MIKU_DOMAIN;
 
-export const ipc_config = Object.freeze({
+export type IPCConfig = {
+  retry: number;
+  silent: boolean;
+  rawBuffer: boolean;
+
+  app_namespace: string;
+  logger_ipc_id: string;
+  music_ipc_id: string;
+  song_db_ipc_id: string;
+};
+export const ipc_config: IPCConfig = Object.freeze({
   retry: 100,
   silent: true,
   rawBuffer: false,
@@ -29,9 +39,18 @@ export const ipc_config = Object.freeze({
   music_ipc_id: 'Miku-Music-Cache',
   song_db_ipc_id: 'Miku-Song-DB',
 });
-export type IPCConfig = typeof ipc_config;
 
-export const logger_config = Object.freeze({
+export type LoggerConfig = {
+  log_file: boolean;
+  log_console: boolean;
+  file_directory: string;
+  file_name: string;
+  date_pattern: string;
+  zip_logs: boolean;
+  max_size: string;
+  max_files: string;
+};
+export const logger_config: LoggerConfig = Object.freeze({
   log_file: LOG_FILE,
   log_console: LOG_CONSOLE,
   file_directory: LOG_FILE_DIRECTORY,
@@ -41,21 +60,28 @@ export const logger_config = Object.freeze({
   max_size: LOG_MAX_SIZE,
   max_files: LOG_MAX_FILES,
 });
-export type LoggerConfig = typeof logger_config;
 
-export const songdb_config = Object.freeze({
+export type SongDBConfig = {
+  db_location: string;
+};
+export const songdb_config: SongDBConfig = Object.freeze({
   db_location: SONG_DB_LOCATION,
 });
-export type SongDBConfig = typeof songdb_config;
 
-export const music_cache_config = Object.freeze({
+export type MusicCacheConfig = {
+  cache_dir: string;
+  cache_size_bytes: number;
+};
+export const music_cache_config: MusicCacheConfig = Object.freeze({
   cache_dir: CACHE_DIRECTORY,
   cache_size_bytes: MAX_CACHESIZE_MiB * (1 << 20),
 });
-export type MusicCacheConfig = typeof music_cache_config;
 
-export const web_config = Object.freeze({
+export type WebConfig = {
+  domain: string;
+  default_thumbnail_url: string;
+};
+export const web_config: WebConfig = Object.freeze({
   domain: MIKU_DOMAIN,
-  default_thumbnail: `${MIKU_DOMAIN}/thumbnails/default`,
+  default_thumbnail_url: `${MIKU_DOMAIN}/thumbnails/default`,
 });
-export type WebConfig = typeof web_config;
