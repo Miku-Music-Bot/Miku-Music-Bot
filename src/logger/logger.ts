@@ -48,7 +48,10 @@ export default class Logger {
     msg = '[FATAL] ' + msg;
     this.logger_.error(`${msg} -`, error);
 
-    this.sendErrorNotification('fatal', msg, error);
+    this.sendErrorNotification('fatal', msg, error).then(() => {
+      // eslint-disable-next-line no-process-exit
+      process.exit(1);
+    });
   }
 
   /**

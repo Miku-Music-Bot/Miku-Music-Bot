@@ -22,7 +22,6 @@ describe('SongDatabase', () => {
 
   after(() => {
     removeDirectory(SONG_DB_DIRECTORY);
-    sinon.restore();
   });
 
   TestSongDB(
@@ -49,7 +48,6 @@ describe('SongDatabaseInterface', () => {
 
   after(() => {
     removeDirectory(SONG_DB_DIRECTORY);
-    sinon.restore();
   });
 
   let component: typeof ipc;

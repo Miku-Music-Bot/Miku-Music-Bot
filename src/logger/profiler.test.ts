@@ -9,10 +9,6 @@ describe('Profiler', () => {
     stubConfig({ logger_config: { log_file: false, log_console: false } });
   });
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
   it('returns accurate time and writes default log message', () => {
     const clock = sinon.useFakeTimers();
 
@@ -59,6 +55,7 @@ describe('Profiler', () => {
 
   it('writes message with custom log level', () => {
     const clock = sinon.useFakeTimers();
+    sinon.stub(process, 'exit');
 
     const logger = new Logger('TestLogger');
     const debug_spy = sinon.spy(logger, 'debug');
@@ -105,6 +102,7 @@ describe('Profiler', () => {
 
   it('write message with automatically determined log levels', () => {
     const clock = sinon.useFakeTimers();
+    sinon.stub(process, 'exit');
 
     const logger = new Logger('TestLogger');
     const debug_spy = sinon.spy(logger, 'debug');
@@ -157,6 +155,7 @@ describe('Profiler', () => {
 
   it('writes message with complex settings', () => {
     const clock = sinon.useFakeTimers();
+    sinon.stub(process, 'exit');
 
     const logger = new Logger('TestLogger');
     const info_spy = sinon.spy(logger, 'info');

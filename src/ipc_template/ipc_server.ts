@@ -19,6 +19,7 @@ export default function StartIPCServer<FunctionNames>(
 ): typeof ipc {
   ready.catch((error) => {
     logger.fatal(`Error getting component with {id:${ipc_id}} ready`, error);
+    throw error;
   });
 
   ipc.config.silent = ipc_config.silent;
@@ -29,7 +30,8 @@ export default function StartIPCServer<FunctionNames>(
   logger.debug(`Starting ipc server in {namespace:${ipc_config.app_namespace}} and {id:${ipc_id}}`);
   ipc.serve(() => {
     ipc.server.on('error', (error) => {
-      logger.error('Error on ipc server', error);
+      logger.fatal('Error on ipc server', error);
+      throw error;
     });
 
     ipc.server.on('socket.disconnected', (socket, destroyed_socket_id) => {

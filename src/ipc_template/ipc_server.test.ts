@@ -6,8 +6,6 @@ import stubDummyLogger from '../test_utils/stub_logger.test';
 import IPCInterface from './ipc_interface';
 import StartIPCServer from './ipc_server';
 
-describe('IPCInterface', () => {
-  beforeEach(() => {
-    stubDummyLogger();
-  });
+describe('Start IPC Server', () => {
+  it('');
 });

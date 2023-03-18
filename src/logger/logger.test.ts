@@ -32,10 +32,6 @@ describe('Logger', () => {
     });
   });
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
   after(() => {
     removeDirectory(LOG_FILE_DIRECTORY);
   });
@@ -103,6 +99,8 @@ describe('Logger', () => {
     it('writes logs to file in correct format', (done) => {
       const start_time = Date.now();
 
+      const process_exit_stub = sinon.stub(process, 'exit');
+
       const name = uniqueID();
       const logger = new Logger(name);
 
@@ -152,6 +150,8 @@ describe('Logger', () => {
 
         compare_logs(debug, expected_debug, start_time, Date.now());
         compare_logs(info, expected_info, start_time, Date.now());
+
+        assert.equal(process_exit_stub.callCount, 2, 'process.exit() called twice because of fatal error');
 
         logger.releaseFiles();
         done();

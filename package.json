@@ -8,7 +8,7 @@
     "fix": "eslint ./**/*.ts --fix",
     "build": "tsc",
     "pretest": "npm run build",
-    "test": "mocha --require source-map-support/register ./build/**/*test.js",
+    "test": "mocha --file ./build/test_utils/global_hooks.test.js --require source-map-support/register ./build/**/*test.js",
     "posttest": "npm run lint",
     "coverage": "nyc npm test",
     "prestart": "npm run build",
