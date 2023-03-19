@@ -21,14 +21,34 @@ export enum SongDBFunctions {
   addLock,
   removeLock,
   isLocked,
+  bestToRemove,
   close,
 }
+
+export type CacheInfo = {
+  song_uid: string;
+  cached: boolean;
+  cache_location: string;
+  start_chunk: number;
+  end_chunk: number;
+  size_bytes: number;
+  playbacks: number;
+  size_over_plays: number;
+};
+export type SongInfo = {
+  song_uid: string;
+  link: string;
+  thumbnail_url: string;
+  title: string;
+  artist: string;
+  duration: number;
+};
 
 // Info about the tables needed for SongDB
 const db_tables = [
   {
     name: 'song_cache',
-    cols: '(song_uid STRING UNIQUE NOT NULL, cached NUMBER(1), cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT)',
+    cols: '(song_uid STRING UNIQUE NOT NULL, cached NUMBER(1), cache_location STRING, start_chunk INT, end_chunk INT, size_bytes INT, playbacks INT, size_over_plays DOUBLE)',
   },
   {
     name: 'song_info',
@@ -70,7 +90,7 @@ export default class SongDB extends SQLiteInterface {
    */
   private async addSong(song_uid: string, cache_location: string): Promise<void> {
     await this.dbRun(
-      'INSERT INTO song_cache VALUES ($song_uid, $cached, $cache_location, $start_chunk, $end_chunk, $size_bytes, $playbacks)',
+      'INSERT INTO song_cache VALUES ($song_uid, $cached, $cache_location, $start_chunk, $end_chunk, $size_bytes, $playbacks, $size_over_plays)',
       {
         $song_uid: song_uid,
         $cached: 1,
@@ -79,6 +99,7 @@ export default class SongDB extends SQLiteInterface {
         $end_chunk: -1,
         $size_bytes: 0,
         $playbacks: 0,
+        $size_over_plays: 0,
       }
     );
 
@@ -97,32 +118,23 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to get info of
    * @returns - object containing cache information about the song
    */
-  async getCacheInfo(song_uid: string): Promise<{
-    cached: boolean;
-    cache_location: string;
-    start_chunk: number;
-    end_chunk: number;
-    size_bytes: number;
-    playbacks: number;
-  }> {
-    const results: Array<{
-      cached: number;
-      cache_location: string;
-      start_chunk: number;
-      end_chunk: number;
-      size_bytes: number;
-      playbacks: number;
-    }> = await this.dbAll('SELECT * FROM song_cache WHERE song_uid = $song_uid', { $song_uid: song_uid });
+  async getCacheInfo(song_uid: string): Promise<CacheInfo> {
+    const results: Array<Omit<CacheInfo, 'cached'> & { cached: number }> = await this.dbAll(
+      'SELECT * FROM song_cache WHERE song_uid = $song_uid',
+      { $song_uid: song_uid }
+    );
 
     if (results.length === 0) throw new Error('Song does not exist in song database');
 
     return {
+      song_uid: results[0].song_uid,
       cached: results[0].cached === 1,
       cache_location: results[0].cache_location,
       start_chunk: results[0].start_chunk,
       end_chunk: results[0].end_chunk,
       size_bytes: results[0].size_bytes,
       playbacks: results[0].playbacks,
+      size_over_plays: results[0].size_over_plays,
     };
   }
 
@@ -131,24 +143,15 @@ export default class SongDB extends SQLiteInterface {
    * @param song_uid - song uid of song to get info of
    * @returns - object containing link, thumbnail, title, artist, and duration of song
    */
-  async getSongInfo(song_uid: string): Promise<{
-    link: string;
-    thumbnail_url: string;
-    title: string;
-    artist: string;
-    duration: number;
-  }> {
-    const results: Array<{
-      link: string;
-      thumbnail_url: string;
-      title: string;
-      artist: string;
-      duration: number;
-    }> = await this.dbAll('SELECT * FROM song_info WHERE song_uid = $song_uid', { $song_uid: song_uid });
+  async getSongInfo(song_uid: string): Promise<SongInfo> {
+    const results: Array<SongInfo> = await this.dbAll('SELECT * FROM song_info WHERE song_uid = $song_uid', {
+      $song_uid: song_uid,
+    });
 
     if (results.length === 0) throw new Error('Song does not exist in song database');
 
     return {
+      song_uid: results[0].song_uid,
       link: results[0].link,
       thumbnail_url: results[0].thumbnail_url,
       title: results[0].title,
@@ -178,17 +181,22 @@ export default class SongDB extends SQLiteInterface {
   }
 
   /**
-   * uncacheSong() - Update database so that song is no longer cached
+   * uncacheSong() - Update database so that song is no longer cached by setting cached to false and size_bytes to 0 and updating size_over_plays
    * @param song_uid - song uid of song to uncache
    */
   async uncacheSong(song_uid: string): Promise<void> {
     if (!(await this.containsSong(song_uid))) {
       throw new Error('Song does not exist in song database');
     } else {
-      await this.dbRun('UPDATE song_cache SET cached = $cached WHERE song_uid = $song_uid', {
-        $cached: 0,
-        $song_uid: song_uid,
-      });
+      await this.dbRun(
+        'UPDATE song_cache SET cached = $cached, size_bytes = $size_bytes, size_over_plays = $size_over_plays WHERE song_uid = $song_uid',
+        {
+          $size_bytes: 0,
+          $size_over_plays: 0,
+          $cached: 0,
+          $song_uid: song_uid,
+        }
+      );
     }
   }
 
@@ -233,10 +241,13 @@ export default class SongDB extends SQLiteInterface {
     if (!(await this.containsSong(song_uid))) {
       throw new Error('Song does not exist in song database');
     } else {
-      await this.dbRun('UPDATE song_cache SET size_bytes = $size_bytes WHERE song_uid = $song_uid', {
-        $size_bytes: size_bytes,
-        $song_uid: song_uid,
-      });
+      await this.dbRun(
+        'UPDATE song_cache SET size_bytes = $size_bytes, size_over_plays = IFNULL(($size_bytes / playbacks), 0) WHERE song_uid = $song_uid',
+        {
+          $size_bytes: size_bytes,
+          $song_uid: song_uid,
+        }
+      );
     }
   }
 
@@ -248,9 +259,12 @@ export default class SongDB extends SQLiteInterface {
     if (!(await this.containsSong(song_uid))) {
       throw new Error('Song does not exist in song database');
     } else {
-      await this.dbRun('UPDATE song_cache SET playbacks = playbacks + 1 WHERE song_uid = $song_uid', {
-        $song_uid: song_uid,
-      });
+      await this.dbRun(
+        'UPDATE song_cache SET playbacks = playbacks + 1, size_over_plays = IFNULL((size_bytes / (playbacks + 1)), 0) WHERE song_uid = $song_uid',
+        {
+          $song_uid: song_uid,
+        }
+      );
     }
   }
 
@@ -370,5 +384,30 @@ export default class SongDB extends SQLiteInterface {
       $song_uid: song_uid,
     });
     return rows[0]['COUNT(1)'] > 0;
+  }
+
+  /**
+   * bestToRemove() - Returns the cache info of the song that is best to be removed based on what song has the maximum (size in cache / # of playbacks)
+   * @returns - song that is best to be removed in cache. Returns empty object if no songs are unlocked or if size_over_plays is 0
+   */
+  async bestToRemove(): Promise<CacheInfo | {}> {
+    const results: Array<Omit<CacheInfo, 'cached'> & { cached: number; 'MAX(size_over_plays)': number }> = await this.dbAll(
+      'SELECT *, MAX(size_over_plays) FROM song_cache WHERE NOT EXISTS (SELECT song_uid FROM locks WHERE song_cache.song_uid = locks.song_uid)',
+      {}
+    );
+
+    if (results[0]['MAX(size_over_plays)'] === null) return {};
+    if (results[0]['MAX(size_over_plays)'] === 0) return {};
+
+    return {
+      song_uid: results[0].song_uid,
+      cached: results[0].cached === 1,
+      cache_location: results[0].cache_location,
+      start_chunk: results[0].start_chunk,
+      end_chunk: results[0].end_chunk,
+      size_bytes: results[0].size_bytes,
+      playbacks: results[0].playbacks,
+      size_over_plays: results[0].size_over_plays,
+    };
   }
 }

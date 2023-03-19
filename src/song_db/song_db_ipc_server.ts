@@ -75,6 +75,9 @@ export function StartSongDBComponent(): typeof ipc {
       case SongDBFunctions.isLocked: {
         return song_db.isLocked(args[0]);
       }
+      case SongDBFunctions.bestToRemove: {
+        return song_db.bestToRemove();
+      }
       case SongDBFunctions.close: {
         await song_db.close();
         return '';

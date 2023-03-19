@@ -2,7 +2,7 @@ import { ipc_config } from '../constants/constants';
 import Logger from '../logger/logger';
 
 import IPCInterface from '../ipc_template/ipc_interface';
-import { SongDBFunctions } from './song_db';
+import { CacheInfo, SongDBFunctions, SongInfo } from './song_db';
 
 /**
  * SongDBInterface - Connects to a SongDB component running as a seperate thread
@@ -17,14 +17,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param song_uid - song uid of song to get info of
    * @returns - object containing cache information about the song
    */
-  async getCacheInfo(song_uid: string): Promise<{
-    cached: boolean;
-    cache_location: string;
-    start_chunk: number;
-    end_chunk: number;
-    size_bytes: number;
-    playbacks: number;
-  }> {
+  async getCacheInfo(song_uid: string): Promise<CacheInfo> {
     return await this.RequestFunction(SongDBFunctions.getCacheInfo, [song_uid]);
   }
 
@@ -33,13 +26,7 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    * @param song_uid - song uid of song to get info of
    * @returns - object containing link, thumbnail, title, artist, and duration of song
    */
-  async getSongInfo(song_uid: string): Promise<{
-    link: string;
-    thumbnail_url: string;
-    title: string;
-    artist: string;
-    duration: number;
-  }> {
+  async getSongInfo(song_uid: string): Promise<SongInfo> {
     return this.RequestFunction(SongDBFunctions.getSongInfo, [song_uid]);
   }
 
@@ -164,6 +151,14 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
    */
   async isLocked(song_uid: string): Promise<boolean> {
     return await this.RequestFunction(SongDBFunctions.isLocked, [song_uid]);
+  }
+
+  /**
+   * bestToRemove() - Returns the cache info of the song that is best to be removed based on what song has the maximum (size in cache / # of playbacks)
+   * @returns - song that is best to be removed in cache or void if no songs are unlocked
+   */
+  async bestToRemove(): Promise<CacheInfo | {}> {
+    return await this.RequestFunction(SongDBFunctions.bestToRemove, []);
   }
 
   /**

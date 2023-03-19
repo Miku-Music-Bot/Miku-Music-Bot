@@ -31,20 +31,24 @@ export default function TestSongDB(
       const song_uid1 = 'yt$IK-IlYIQvcU';
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: 'cache/location0',
         start_chunk: 0,
         end_chunk: 212,
         size_bytes: 128,
-        playbacks: 3,
+        playbacks: 4,
+        size_over_plays: 32,
       };
       const expected_info1 = {
+        song_uid: song_uid1,
         cached: false,
         cache_location: 'cache/location1',
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 1,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       const actual1 = await song_db.getCacheInfo(song_uid1);
@@ -63,6 +67,7 @@ export default function TestSongDB(
       const song_uid1 = 'yt$IK-IlYIQvcU';
 
       const expected_info0 = {
+        song_uid: song_uid0,
         link: 'https://www.youtube.com/watch?v=M1vsdF4VfUo',
         thumbnail_url:
           'https://i.ytimg.com/vi/OSz516-6IR4/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDSbi0rVlwaHd-iNfSxF5ZAqSypVQ',
@@ -71,6 +76,7 @@ export default function TestSongDB(
         duration: 132,
       };
       const expected_info1 = {
+        song_uid: song_uid1,
         link: 'https://www.youtube.com/watch?v=IK-IlYIQvcU',
         thumbnail_url:
           'https://i.ytimg.com/vi/OSz516-6IR4/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDSbi0rVlwaHd-iNfSxF5ZAqSypVQ',
@@ -154,20 +160,24 @@ export default function TestSongDB(
       await song_db.cacheSong(song_uid1, cache_location1);
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location0,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const expected_info1 = {
+        song_uid: song_uid1,
         cached: true,
         cache_location: cache_location1,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       const actual1 = await song_db.getCacheInfo(song_uid1);
@@ -189,12 +199,14 @@ export default function TestSongDB(
       await song_db.cacheSong(song_uid0, cache_location1);
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location1,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       assert.deepEqual(actual0, expected_info0, 'Updates cache values');
@@ -215,23 +227,28 @@ export default function TestSongDB(
       const cache_location1 = 'cache/location1';
       await song_db.cacheSong(song_uid1, cache_location1);
 
+      await song_db.setSizeBytes(song_uid1, 100); // size bytes should be reset when uncached
       await song_db.uncacheSong(song_uid1);
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location0,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const expected_info1 = {
+        song_uid: song_uid1,
         cached: false,
         cache_location: cache_location1,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       const actual1 = await song_db.getCacheInfo(song_uid1);
@@ -254,21 +271,53 @@ export default function TestSongDB(
       const end_chunk = 123;
       const size_bytes = 128;
       const playbacks = 1;
+      const size_over_plays = size_bytes / playbacks;
       await song_db.setStartChunk(song_uid0, start_chunk);
       await song_db.setEndChunk(song_uid0, end_chunk);
       await song_db.setSizeBytes(song_uid0, size_bytes);
-      await song_db.incrementPlaybacks(song_uid0);
 
       const expected_info0 = {
+        song_uid: song_uid0,
+        cached: true,
+        cache_location: cache_location0,
+        start_chunk,
+        end_chunk,
+        size_bytes,
+        playbacks: 0,
+        size_over_plays: 0,
+      };
+      const actual0 = await song_db.getCacheInfo(song_uid0);
+      assert.deepEqual(actual0, expected_info0, 'Sets size_over_plays to 0 zero if playbacks is 0');
+
+      await song_db.incrementPlaybacks(song_uid0);
+
+      const expected_info1 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location0,
         start_chunk,
         end_chunk,
         size_bytes,
         playbacks,
+        size_over_plays,
       };
-      const actual0 = await song_db.getCacheInfo(song_uid0);
-      assert.deepEqual(actual0, expected_info0, 'Updates cache values');
+      const actual1 = await song_db.getCacheInfo(song_uid0);
+      assert.deepEqual(actual1, expected_info1, 'Updates cache values when incrementing playback');
+
+      await song_db.setSizeBytes(song_uid0, 123);
+
+      const expected_info2 = {
+        song_uid: song_uid0,
+        cached: true,
+        cache_location: cache_location0,
+        start_chunk,
+        end_chunk,
+        size_bytes: 123,
+        playbacks,
+        size_over_plays: 123,
+      };
+      const actual2 = await song_db.getCacheInfo(song_uid0);
+      assert.deepEqual(actual2, expected_info2, 'Updates cache values when setting size_bytes');
 
       await song_db.close();
       finish();
@@ -321,12 +370,14 @@ export default function TestSongDB(
       }
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location0,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       assert.deepEqual(actual0, expected_info0, 'Does not edit other cache info');
@@ -357,20 +408,24 @@ export default function TestSongDB(
       }
 
       const expected_info0 = {
+        song_uid: song_uid0,
         cached: true,
         cache_location: cache_location0,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const expected_info1 = {
+        song_uid: song_uid1,
         cached: true,
         cache_location: cache_location1,
         start_chunk: -1,
         end_chunk: -1,
         size_bytes: 0,
         playbacks: 0,
+        size_over_plays: 0,
       };
       const actual0 = await song_db.getCacheInfo(song_uid0);
       const actual1 = await song_db.getCacheInfo(song_uid1);
@@ -392,6 +447,7 @@ export default function TestSongDB(
       await song_db.cacheSong(song_uid0, cache_location0);
 
       const expected0 = {
+        song_uid: song_uid0,
         link: '',
         thumbnail_url: '',
         title: 'Unknown',
@@ -429,10 +485,11 @@ export default function TestSongDB(
       await song_db.setArtist(song_uid0, artist);
       await song_db.setDuration(song_uid0, duration);
 
-      const expected0 = { link, thumbnail_url, title, artist, duration };
+      const expected0 = { song_uid: song_uid0, link, thumbnail_url, title, artist, duration };
       const actual0 = await song_db.getSongInfo(song_uid0);
       assert.deepEqual(actual0, expected0, 'Updates song info');
       const expected1 = {
+        song_uid: song_uid1,
         link: '',
         thumbnail_url: '',
         title: 'Unknown',
@@ -501,6 +558,7 @@ export default function TestSongDB(
       }
 
       const expected0 = {
+        song_uid: song_uid0,
         link: '',
         thumbnail_url: '',
         title: 'Unknown',
@@ -568,6 +626,114 @@ export default function TestSongDB(
 
       const actual1 = await song_db.isLocked(song_uid0);
       assert.equal(actual1, false, 'Does not edit other locks');
+
+      await song_db.close();
+      finish();
+    });
+  });
+
+  describe('finds best song to remove', () => {
+    it('returns empty object if no songs are in that database', async () => {
+      const db_location = unique_db_location(db_directory);
+      const song_db = createDB(db_location);
+
+      const result0 = await song_db.bestToRemove();
+
+      assert.deepEqual(result0, {}, 'Returns empty object');
+
+      await song_db.close();
+      finish();
+    });
+
+    it('returns empty object if all songs in database are locked', async () => {
+      const db_location = unique_db_location(db_directory);
+      const song_db = createDB(db_location);
+
+      const song_uid0 = 'yt$M1vsdF4VfUo';
+      const cache_location0 = 'cache/location0';
+      await song_db.cacheSong(song_uid0, cache_location0);
+      await song_db.setSizeBytes(song_uid0, 100);
+      await song_db.incrementPlaybacks(song_uid0);
+      await song_db.addLock(song_uid0);
+
+      const song_uid1 = 'yt$IK-IlYIQvcU';
+      const cache_location1 = 'cache/location1';
+      await song_db.cacheSong(song_uid1, cache_location1);
+      await song_db.setSizeBytes(song_uid1, 100);
+      await song_db.incrementPlaybacks(song_uid1);
+      await song_db.addLock(song_uid1);
+
+      const result0 = await song_db.bestToRemove();
+
+      assert.deepEqual(result0, {}, 'Returns empty object');
+
+      await song_db.close();
+      finish();
+    });
+
+    it('returns empty object is size_over_plays is 0 for all songs', async () => {
+      const db_location = unique_db_location(db_directory);
+      const song_db = createDB(db_location);
+
+      const song_uid0 = 'yt$M1vsdF4VfUo';
+      const cache_location0 = 'cache/location0';
+      await song_db.cacheSong(song_uid0, cache_location0);
+
+      const song_uid1 = 'yt$IK-IlYIQvcU';
+      const cache_location1 = 'cache/location1';
+      await song_db.cacheSong(song_uid1, cache_location1);
+
+      const result0 = await song_db.bestToRemove();
+
+      assert.deepEqual(result0, {}, 'Returns empty object');
+
+      await song_db.close();
+      finish();
+    });
+
+    it('returns correct best song to delete', async () => {
+      const db_location = unique_db_location(db_directory);
+      const song_db = createDB(db_location);
+
+      const song_uid0 = 'yt$M1vsdF4VfUo';
+      const cache_location0 = 'cache/location0';
+      await song_db.cacheSong(song_uid0, cache_location0);
+      await song_db.setSizeBytes(song_uid0, 100);
+      await song_db.incrementPlaybacks(song_uid0);
+
+      const song_uid1 = 'yt$IK-IlYIQvcU';
+      const cache_location1 = 'cache/location1';
+      await song_db.cacheSong(song_uid1, cache_location1);
+      await song_db.setSizeBytes(song_uid1, 101);
+      await song_db.incrementPlaybacks(song_uid1);
+
+      const result0 = await song_db.bestToRemove();
+      const expected0 = {
+        song_uid: song_uid1,
+        cached: true,
+        cache_location: cache_location1,
+        start_chunk: -1,
+        end_chunk: -1,
+        size_bytes: 101,
+        playbacks: 1,
+        size_over_plays: 101,
+      };
+      assert.deepEqual(result0, expected0, 'Returns correct song');
+
+      await song_db.addLock(song_uid1);
+
+      const result1 = await song_db.bestToRemove();
+      const expected1 = {
+        song_uid: song_uid0,
+        cached: true,
+        cache_location: cache_location0,
+        start_chunk: -1,
+        end_chunk: -1,
+        size_bytes: 100,
+        playbacks: 1,
+        size_over_plays: 100,
+      };
+      assert.deepEqual(result1, expected1, 'Returns correct song after lock is added');
 
       await song_db.close();
       finish();
