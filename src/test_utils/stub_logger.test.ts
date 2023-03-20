@@ -1,52 +1,73 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { assert } from 'chai';
 import sinon from 'sinon';
 import * as LoggerImport from '../logger/logger';
-import Profiler, { LevelThresholds } from '../logger/profiler';
 
-// A fake logger object for use in tests
-class DummyLogger {
-  constructor(name: string) {
-    return;
-  }
+// Keeps track of all stubbed loggers, cleared when stubLogger() is called
+let stubbed_loggers: Array<{ spies: Array<sinon.SinonSpiedInstance<{ name: string; stop: () => void }>> }> = [];
 
-  debug(msg: string) {
-    return;
-  }
+/**
+ * createLoggerStub() - Creates a stubbed logger for use in tests
+ * @returns - object containing stubbed logger and profiler
+ */
+export function createLoggerStub(): LoggerImport.default {
+  const logger = {
+    spies: [] as Array<sinon.SinonSpiedInstance<{ name: string; stop: () => void }>>,
+    debug: () => {
+      return;
+    },
+    info: () => {
+      return;
+    },
+    warn: () => {
+      return;
+    },
+    error: () => {
+      return;
+    },
+    fatal: () => {
+      return;
+    },
+    profile: function (name: string) {
+      const profiler = {
+        name,
+        stop: () => {
+          return;
+        },
+      };
 
-  info(msg: string) {
-    return;
-  }
+      this.spies.push(sinon.spy(profiler));
 
-  warn(msg: string, error?: Error) {
-    return;
-  }
+      return profiler;
+    },
+  };
 
-  error(msg: string, error?: Error) {
-    return;
-  }
+  stubbed_loggers.push(logger);
 
-  fatal(msg: string, error?: Error) {
-    return;
-  }
-
-  profile(name: string, level_thresholds?: LevelThresholds) {
-    const profiler = {
-      stop: (options: object) => {
-        return 0;
-      },
-    } as unknown as Profiler;
-    return profiler;
-  }
+  return logger as unknown as LoggerImport.default;
 }
 
 /**
- * stubDummyLogger() - Replaces imported logger with a dummy logger for tests
- * IMPORTANT: Call sinon.restore() after test to clean up sandbox
+ * stubLogger() - Replaces imported logger with a dummy logger for tests and clears saved stubbed_loggers
+ * IMPORTANT: Should be called in beforeEach hooks for tests that need a dummy logger
  */
-export default function stubDummyLogger() {
+export function stubLogger() {
+  stubbed_loggers = [];
+  const logger = createLoggerStub();
   sinon.stub(LoggerImport, 'default').callsFake((name) => {
-    return new DummyLogger(name);
+    return logger;
   });
 }
 
-export const dummy_logger = new DummyLogger('DummyLogger') as unknown as LoggerImport.default;
+/**
+ * verifyProfilersStopped() - Verifies that all profilers were stopped
+ * IMPORTANT: Should be called in global afterEach hook and nowhere else. Also use sinon sandbox if restore is needed
+ */
+export function verifyProfilersStopped() {
+  stubbed_loggers.forEach((logger) => {
+    logger.spies.forEach((spy) => {
+      assert(spy.stop.callCount > 0, `Stop called at least once on profiler with name: "${spy.name}"`);
+    });
+  });
+  stubbed_loggers = [];
+}
