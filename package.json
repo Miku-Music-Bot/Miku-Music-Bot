@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint ./**/*.ts",
     "fix": "eslint ./**/*.ts --fix",
-    "build": "tsc",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "pretest": "npm run build",
     "test": "mocha --require source-map-support/register --file ./build/test_utils/global_hooks.test.js ./build/**/*test.js",
     "posttest": "npm run lint",
