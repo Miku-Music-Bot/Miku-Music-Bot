@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs-extra';
 
 import sqlite3, { Database, RunResult } from 'sqlite3';
 import Logger from '../logger/logger';
@@ -34,17 +34,24 @@ export default class SQLiteInterface {
    */
   protected async dbRun(cmd: string, params: object): Promise<RunResult> {
     await this.ready_;
-    return new Promise((resolve, reject) => {
-      this.db_.serialize(() => {
-        this.db_.run(cmd, params, function (error) {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(this);
+    const profiler = this.log_.profile(`Run {cmd: ${cmd}}`, { warn: 1000, error: 5000 });
+    try {
+      const result: RunResult = await new Promise((resolve, reject) => {
+        this.db_.serialize(() => {
+          this.db_.run(cmd, params, function (error) {
+            if (error) return reject(error);
+            resolve(this);
+          });
         });
       });
-    });
+
+      profiler.stop();
+      return result;
+    } catch (error) {
+      profiler.stop({ success: false, level: 'warn' });
+      this.log_.warn(`Error while running SQL {cmd: ${cmd}} with {param:${JSON.stringify(params)}}`, error);
+      throw error;
+    }
   }
 
   /**
@@ -55,17 +62,60 @@ export default class SQLiteInterface {
    */
   protected async dbAll(cmd: string, params: object): Promise<Array<any>> {
     await this.ready_;
-    return new Promise((resolve, reject) => {
-      this.db_.serialize(() => {
-        this.db_.all(cmd, params, (error, rows) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve(rows);
+    const profiler = this.log_.profile(`Fetch all rows {cmd: ${cmd}}`, { warn: 1000, error: 5000 });
+    try {
+      const rows: Array<any> = await new Promise((resolve, reject) => {
+        this.db_.serialize(() => {
+          this.db_.all(cmd, params, (error, rows) => {
+            if (error) return reject(error);
+            resolve(rows);
+          });
         });
       });
+
+      profiler.stop();
+      return rows;
+    } catch (error) {
+      profiler.stop({ success: false, level: 'warn' });
+      this.log_.warn(`Error while fetching rows with SQL {cmd: ${cmd}} with {param:${JSON.stringify(params)}}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * openDatabase() - Opens sqlite3 database
+   * @param database_path - path to the .db file
+   * @returns - promise that resolves to opened database
+   */
+  private async openDatabase(database_path: string): Promise<sqlite3.Database> {
+    return new Promise((resolve, reject) => {
+      const database = new sqlite3.Database(database_path, (error) => {
+        if (error) return reject(error);
+        resolve(database);
+      });
     });
+  }
+
+  /**
+   * createTables() - Creates tables in database
+   * @param tables - array of tables to create (runs commands in the format: "CREATE TABLE ${name} ${cols}")
+   * ex. { name: "Test", cols: "(col1 STRING, col2 STRING)" } creates a table named test with 2 columns named col1 and col2
+   * @returns - promise that resolves once tables are created
+   */
+  private async createTables(tables: Array<{ name: string; cols: string }>): Promise<void> {
+    for (let i = 0; i < tables.length; i++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.db_.run(`CREATE TABLE ${tables[i].name} ${tables[i].cols}`, (error) => {
+            if (error) return reject(error);
+            resolve();
+          });
+        });
+      } catch (error) {
+        this.log_.error(`Error creating table: ${tables[i].name}.`, error);
+        throw error;
+      }
+    }
   }
 
   /**
@@ -75,51 +125,51 @@ export default class SQLiteInterface {
    * ex. { name: "Test", cols: "(col1 STRING, col2 STRING)" } creates a table named test with 2 columns named col1 and col2
    */
   private initializeDatabase_(database_path: string, tables: Array<{ name: string; cols: string }>): void {
-    this.ready_ = new Promise((resolve, reject) => {
-      const profile = this.log_.profile('Initialize Database', { info: 0, error: 5000 });
-      const existed = fs.existsSync(database_path);
+    const profile = this.log_.profile('Initialize Database', { info: 0, error: 5000 });
 
-      // load database from file, fatal error if this fails
-      this.db_ = new sqlite3.Database(database_path, (error) => {
-        if (error) {
-          this.log_.fatal(`Failed to open database at: ${database_path}`, error);
-          profile.stop();
-          reject(error);
-          return;
-        }
-      });
-
-      // if database exists, just open it, don't initalize
-      if (existed) {
-        this.log_.debug(`Database at ${database_path} exists, skipping initialization`);
+    this.ready_ = new Promise((res, rej) => {
+      const resolve = () => {
         profile.stop();
-        resolve();
+        res();
+      };
+      const reject = (error: Error) => {
+        profile.stop({ success: false, level: 'error' });
+        rej(error);
+      };
+
+      let existed: boolean;
+      try {
+        existed = fs.existsSync(database_path);
+      } catch (error) {
+        reject(error);
+        this.log_.fatal('Error while checking if database existed already', error);
         return;
       }
 
-      this.log_.debug(`Database at ${database_path} did not exist, initializating`);
+      this.openDatabase(database_path)
+        .then((database) => {
+          this.db_ = database;
 
-      // create the tables needed
-      let count = 0;
-      for (let i = 0; i < tables.length; i++) {
-        this.db_.run(`CREATE TABLE ${tables[i].name} ${tables[i].cols}`, (error) => {
-          if (error) {
-            this.log_.fatal(`Error creating table: ${tables[i].name}.`, error);
-            profile.stop({ success: false, level: 'fatal' });
-            reject(error);
-            return;
+          // if database exists, just open it, don't initalize
+          if (existed) {
+            this.log_.debug(`Database at ${database_path} exists, skipping initialization`);
+            return resolve();
           }
 
-          // count how many commands have been completed, done initializing once all have been run
-          count++;
-          if (count === tables.length) {
-            profile.stop();
-            resolve();
-          }
+          this.log_.debug(`Database at ${database_path} did not exist, initializating`);
+          this.createTables(tables)
+            .then(() => {
+              resolve();
+            })
+            .catch((error) => {
+              this.log_.fatal('Failed to create tables', error);
+              reject(error);
+            });
+        })
+        .catch((error) => {
+          this.log_.fatal(`Failed to open database at: ${database_path}`, error);
+          reject(error);
         });
-      }
-
-      if (tables.length === 0) resolve();
     });
   }
 
