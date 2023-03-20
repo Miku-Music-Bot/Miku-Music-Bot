@@ -1,7 +1,9 @@
-import { assert } from 'chai';
+import chai, { assert } from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+chai.use(chaiAsPromised);
 import sinon from 'sinon';
 
-import { dummy_logger } from '../test_utils/stub_logger.test';
+import { createLoggerStub } from '../test_utils/stub_logger.test';
 import stubConfig from '../test_utils/stub_config.test';
 
 import StartIPCServer from './ipc_server';
@@ -38,9 +40,9 @@ describe('IPCInterface', () => {
     const ipc_id = uniqueID();
     const ready = Promise.resolve();
     const run_function_fake = sinon.fake.resolves('');
-    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, dummy_logger, ready, run_function_fake);
+    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, createLoggerStub(), ready, run_function_fake);
 
-    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, dummy_logger);
+    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, createLoggerStub());
 
     const args0: Array<undefined> = [];
     await ipc_interface.RequestFunction(TestFunctionNames.foo, args0);
@@ -99,9 +101,9 @@ describe('IPCInterface', () => {
 
     const ipc_id = uniqueID();
     const ready = Promise.resolve();
-    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, dummy_logger, ready, run_function_stub);
+    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, createLoggerStub(), ready, run_function_stub);
 
-    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, dummy_logger);
+    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, createLoggerStub());
 
     const result0 = await ipc_interface.RequestFunction(TestFunctionNames.foo, []);
     const result1 = await ipc_interface.RequestFunction(TestFunctionNames.foo, []);
@@ -134,18 +136,11 @@ describe('IPCInterface', () => {
     const ipc_id = uniqueID();
     const ready = Promise.resolve();
     const run_function_fake = sinon.fake.rejects(new Error('Some Server Error'));
-    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, dummy_logger, ready, run_function_fake);
+    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, createLoggerStub(), ready, run_function_fake);
 
-    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, dummy_logger);
+    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, createLoggerStub());
 
-    try {
-      await ipc_interface.RequestFunction(TestFunctionNames.foo, []);
-      assert.fail('Server error did not cause interface to throw error');
-    } catch (error) {
-      assert.throws(() => {
-        throw error;
-      }, 'Some Server Error');
-    }
+    await assert.isRejected(ipc_interface.RequestFunction(TestFunctionNames.foo, []), 'Some Server Error');
 
     ipc_interface.disconnect();
     ipc.server.stop();
@@ -156,24 +151,25 @@ describe('IPCInterface', () => {
       foo,
       bar,
     }
+    const sandbox = sinon.createSandbox();
 
     const ipc_id = uniqueID();
     const ready = Promise.resolve();
-    const run_function_fake = sinon.fake.resolves('');
-    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, dummy_logger, ready, run_function_fake);
+    const run_function_fake = sandbox.fake.resolves('');
+    const ipc = StartIPCServer<TestFunctionNames>(ipc_id, createLoggerStub(), ready, run_function_fake);
 
-    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, dummy_logger);
+    const ipc_interface = new IPCInterfaceTester<TestFunctionNames>(ipc_id, createLoggerStub());
 
     await ipc_interface.RequestFunction(TestFunctionNames.bar, []);
 
     // Run 10 functions with ipc causing errors
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    sinon.stub(ipc_interface.ipc_.of[ipc_id], 'emit').callsFake(sinon.fake.throws(new Error('Some IPC Error')));
+    sandbox.stub(ipc_interface.ipc_.of[ipc_id], 'emit').callsFake(sandbox.fake.throws(new Error('Some IPC Error')));
     for (let i = 0; i < 10; i++) {
       ipc_interface.RequestFunction(TestFunctionNames.foo, [i]);
     }
-    sinon.restore();
+    sandbox.restore();
 
     await ipc_interface.RequestFunction(TestFunctionNames.bar, []);
 

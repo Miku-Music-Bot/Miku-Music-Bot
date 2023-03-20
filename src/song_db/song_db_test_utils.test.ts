@@ -1,14 +1,10 @@
 import { assert } from 'chai';
 import path from 'path';
+
+import uniqueID from '../test_utils/unique_id.test';
+
 import SongDB from './song_db';
 import SongDBInterface from './song_db_ipc_interface';
-
-// Returns a unique string each time to be used as a database name
-let id = 0;
-export function unique_db_location(dir: string) {
-  const name = `SongDB-Test-${id++}`;
-  return path.join(dir, name);
-}
 
 /**
  * TestSongDB() - Runs tests on a given SongDB or SongDBInterface
@@ -115,14 +111,7 @@ export default function TestSongDB(
       const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
       const song_db = createDB(db_location);
 
-      try {
-        await song_db.getCacheInfo('yt$M1vsdF4VfU');
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.getCacheInfo('yt$M1vsdF4VfU'), 'Song does not exist in song database');
 
       await song_db.close();
       finish();
@@ -132,14 +121,7 @@ export default function TestSongDB(
       const db_location = path.join(__dirname, '..', '..', 'src', 'song_db', 'song_db.test.db');
       const song_db = createDB(db_location);
 
-      try {
-        await song_db.getSongInfo('yt$M1vsdF4VfU');
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.getSongInfo('yt$M1vsdF4VfU'), 'Song does not exist in song database');
 
       await song_db.close();
       finish();
@@ -148,7 +130,7 @@ export default function TestSongDB(
 
   describe('Cache/uncache song', () => {
     it('caches a new songs', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -189,7 +171,7 @@ export default function TestSongDB(
     });
 
     it('does nothing if song is already cached, but updates values', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -216,7 +198,7 @@ export default function TestSongDB(
     });
 
     it('uncaches song when requested', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -260,7 +242,7 @@ export default function TestSongDB(
     });
 
     it('sets new cache info correctly', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -324,7 +306,7 @@ export default function TestSongDB(
     });
 
     it('throws error if setting cache info of unknown song', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -336,38 +318,10 @@ export default function TestSongDB(
       const start_chunk = 0;
       const end_chunk = 123;
       const size_bytes = 128;
-      try {
-        await song_db.setStartChunk(song_uid1, start_chunk);
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setEndChunk(song_uid1, end_chunk);
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setSizeBytes(song_uid1, size_bytes);
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.incrementPlaybacks(song_uid1);
-        assert.fail('Did not throw error when setting cache info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.setStartChunk(song_uid1, start_chunk), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setEndChunk(song_uid1, end_chunk), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setSizeBytes(song_uid1, size_bytes), 'Song does not exist in song database');
+      await assert.isRejected(song_db.incrementPlaybacks(song_uid1), 'Song does not exist in song database');
 
       const expected_info0 = {
         song_uid: song_uid0,
@@ -387,7 +341,7 @@ export default function TestSongDB(
     });
 
     it('throws error if uncaching unknown song', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -398,14 +352,7 @@ export default function TestSongDB(
       const cache_location1 = 'cache/location1';
       await song_db.cacheSong(song_uid1, cache_location1);
 
-      try {
-        await song_db.uncacheSong('yt$unknownid');
-        assert.fail('Did not throw error on unknown id');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.uncacheSong('yt$unknownid'), 'Song does not exist in song database');
 
       const expected_info0 = {
         song_uid: song_uid0,
@@ -439,7 +386,7 @@ export default function TestSongDB(
 
   describe('Get/set song info', () => {
     it('sets default song info when caching new song', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -462,7 +409,7 @@ export default function TestSongDB(
     });
 
     it('sets new song info correctly', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -504,7 +451,7 @@ export default function TestSongDB(
     });
 
     it('sets throws error when setting song info of invalid song', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -520,42 +467,11 @@ export default function TestSongDB(
       const artist = 'Evan Call - Topic';
       const duration = 132;
 
-      try {
-        await song_db.setLink(song_uid1, link);
-        assert.fail('Did not throw error when setting song info of invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setThumbnailUrl(song_uid1, thumbnail_url);
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setTitle(song_uid1, title);
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setArtist(song_uid1, artist);
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
-      try {
-        await song_db.setDuration(song_uid1, duration);
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.setLink(song_uid1, link), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setThumbnailUrl(song_uid1, thumbnail_url), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setTitle(song_uid1, title), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setArtist(song_uid1, artist), 'Song does not exist in song database');
+      await assert.isRejected(song_db.setDuration(song_uid1, duration), 'Song does not exist in song database');
 
       const expected0 = {
         song_uid: song_uid0,
@@ -575,7 +491,7 @@ export default function TestSongDB(
 
   describe('Add/remove locks', () => {
     it('locks song then unlocks after locks are removed', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -606,7 +522,7 @@ export default function TestSongDB(
     });
 
     it('throws error when adding locks for unknown song', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -615,14 +531,7 @@ export default function TestSongDB(
 
       const song_uid1 = 'yt$IK-IlYIQvcU';
 
-      try {
-        await song_db.addLock(song_uid1);
-        assert.fail('Did not throw error when adding lock for invalid song');
-      } catch (error) {
-        assert.throws(() => {
-          throw error;
-        }, 'Song does not exist in song database');
-      }
+      await assert.isRejected(song_db.addLock(song_uid1), 'Song does not exist in song database');
 
       const actual1 = await song_db.isLocked(song_uid0);
       assert.equal(actual1, false, 'Does not edit other locks');
@@ -634,7 +543,7 @@ export default function TestSongDB(
 
   describe('finds best song to remove', () => {
     it('returns empty object if no songs are in that database', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const result0 = await song_db.bestToRemove();
@@ -646,7 +555,7 @@ export default function TestSongDB(
     });
 
     it('returns empty object if all songs in database are locked', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -672,7 +581,7 @@ export default function TestSongDB(
     });
 
     it('returns empty object is size_over_plays is 0 for all songs', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';
@@ -692,7 +601,7 @@ export default function TestSongDB(
     });
 
     it('returns correct best song to delete', async () => {
-      const db_location = unique_db_location(db_directory);
+      const db_location = path.join(db_directory, uniqueID());
       const song_db = createDB(db_location);
 
       const song_uid0 = 'yt$M1vsdF4VfUo';

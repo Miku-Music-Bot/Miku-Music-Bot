@@ -2,7 +2,7 @@ import { assert } from 'chai';
 import sinon from 'sinon';
 import stubConfig from '../test_utils/stub_config.test';
 
-import { dummy_logger } from '../test_utils/stub_logger.test';
+import { createLoggerStub } from '../test_utils/stub_logger.test';
 import uniqueID from '../test_utils/unique_id.test';
 
 import StartIPCServer from './ipc_server';
@@ -35,7 +35,7 @@ describe('Start IPC Server', () => {
     const process_send_stub = sinon.stub(process, 'send');
 
     const ready = Promise.resolve();
-    const ipc = StartIPCServer(uniqueID(), dummy_logger, ready, sinon.fake());
+    const ipc = StartIPCServer(uniqueID(), createLoggerStub(), ready, sinon.fake());
 
     setTimeout(() => {
       assert(process_send_stub.getCall(0).calledWith('ready'), 'Send ready message to parent');
@@ -46,11 +46,12 @@ describe('Start IPC Server', () => {
   });
 
   it('calls fatal when ready rejects', (done) => {
-    const fatal_stub = sinon.stub(dummy_logger, 'fatal').callsFake(sinon.fake());
+    const logger = createLoggerStub();
+    const fatal_stub = sinon.stub(logger, 'fatal').callsFake(sinon.fake());
     const process_send_stub = sinon.stub(process, 'send');
 
     const ready = Promise.reject();
-    const ipc = StartIPCServer(uniqueID(), dummy_logger, ready, sinon.fake());
+    const ipc = StartIPCServer(uniqueID(), logger, ready, sinon.fake());
 
     setTimeout(() => {
       assert.equal(process_send_stub.callCount, 0, 'Does not send ready message to parent');
@@ -62,7 +63,8 @@ describe('Start IPC Server', () => {
   });
 
   it('calls fatal when server encounters error', (done) => {
-    const fatal_stub = sinon.stub(dummy_logger, 'fatal').callsFake(sinon.fake());
+    const logger = createLoggerStub();
+    const fatal_stub = sinon.stub(logger, 'fatal').callsFake(sinon.fake());
     sinon.stub(process, 'send').callsFake(() => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -71,7 +73,7 @@ describe('Start IPC Server', () => {
     });
 
     const ready = Promise.resolve();
-    const ipc = StartIPCServer(uniqueID(), dummy_logger, ready, sinon.fake());
+    const ipc = StartIPCServer(uniqueID(), logger, ready, sinon.fake());
 
     setTimeout(() => {
       assert.equal(fatal_stub.callCount, 1, 'Logs fatal error');

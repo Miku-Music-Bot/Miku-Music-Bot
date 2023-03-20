@@ -4,7 +4,7 @@ import ipc from 'node-ipc';
 import path from 'path';
 
 import { createDirectory, removeDirectory } from '../test_utils/test_directory.test';
-import stubDummyLogger, { dummy_logger } from '../test_utils/stub_logger.test';
+import { createLoggerStub, stubLogger } from '../test_utils/stub_logger.test';
 import stubConfig from '../test_utils/stub_config.test';
 
 import TestSongDB from './song_db_test_utils.test';
@@ -22,7 +22,7 @@ describe('SongDatabase', () => {
   });
 
   beforeEach(() => {
-    stubDummyLogger();
+    stubLogger();
   });
 
   after(() => {
@@ -38,7 +38,7 @@ describe('SongDatabase', () => {
         },
       });
 
-      return new SongDB.default(dummy_logger);
+      return new SongDB.default(createLoggerStub());
     },
     () => {
       return;
@@ -58,7 +58,7 @@ describe('SongDatabaseInterface', () => {
         retry: 0,
       },
     });
-    stubDummyLogger();
+    stubLogger();
   });
 
   after(() => {
@@ -77,7 +77,7 @@ describe('SongDatabaseInterface', () => {
 
       component = SongDBServer.StartSongDBComponent();
 
-      return new SongDBInterface(dummy_logger);
+      return new SongDBInterface(createLoggerStub());
     },
     () => {
       component.server.stop();
