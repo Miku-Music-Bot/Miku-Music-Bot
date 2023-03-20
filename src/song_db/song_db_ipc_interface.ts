@@ -31,12 +31,21 @@ export default class SongDBInterface extends IPCInterface<SongDBFunctions> {
   }
 
   /**
+   * addSong() - Adds a song to database (ignores if song is already in database)
+   * @param song_uid - song uid of song to add
+   * @param cache_location - cache location of song to add
+   */
+  async addSong(song_uid: string, cache_location: string): Promise<void> {
+    return await this.RequestFunction(SongDBFunctions.addSong, [song_uid, cache_location]);
+  }
+
+  /**
    * cacheSong() - Update database so that song is cached
    * @param song_uid - song uid of song to uncache
    * @param cache_location - cache location of song to add
    */
-  async cacheSong(song_uid: string, cache_location: string): Promise<void> {
-    await this.RequestFunction(SongDBFunctions.cacheSong, [song_uid, cache_location]);
+  async cacheSong(song_uid: string): Promise<void> {
+    await this.RequestFunction(SongDBFunctions.cacheSong, [song_uid]);
   }
 
   /**

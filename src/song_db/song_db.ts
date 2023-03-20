@@ -7,6 +7,7 @@ import SQLiteInterface from '../sqlite_interface/sqlite_interface';
 export enum SongDBFunctions {
   getCacheInfo,
   getSongInfo,
+  addSong,
   cacheSong,
   uncacheSong,
   setStartChunk,
@@ -84,36 +85,6 @@ export default class SongDB extends SQLiteInterface {
   }
 
   /**
-   * addSong() - Adds a song to database
-   * @param song_uid - song uid of song to add
-   * @param cache_location - cache location of song to add
-   */
-  private async addSong(song_uid: string, cache_location: string): Promise<void> {
-    await this.dbRun(
-      'INSERT INTO song_cache VALUES ($song_uid, $cached, $cache_location, $start_chunk, $end_chunk, $size_bytes, $playbacks, $size_over_plays)',
-      {
-        $song_uid: song_uid,
-        $cached: 1,
-        $cache_location: cache_location,
-        $start_chunk: -1,
-        $end_chunk: -1,
-        $size_bytes: 0,
-        $playbacks: 0,
-        $size_over_plays: 0,
-      }
-    );
-
-    await this.dbRun('INSERT INTO song_info VALUES ($song_uid, $link, $thumbnail_url, $title, $artist, $duration)', {
-      $song_uid: song_uid,
-      $link: '',
-      $thumbnail_url: '',
-      $title: 'Unknown',
-      $artist: 'Unknown',
-      $duration: -1,
-    });
-  }
-
-  /**
    * getCacheInfo() - Gets cache information about a song
    * @param song_uid - song uid of song to get info of
    * @returns - object containing cache information about the song
@@ -161,22 +132,50 @@ export default class SongDB extends SQLiteInterface {
   }
 
   /**
+   * addSong() - Adds a song to database (ignores if song is already in database)
+   * @param song_uid - song uid of song to add
+   * @param cache_location - cache location of song to add
+   */
+  async addSong(song_uid: string, cache_location: string): Promise<void> {
+    if (await this.containsSong(song_uid)) return;
+
+    await this.dbRun(
+      'INSERT INTO song_cache VALUES ($song_uid, $cached, $cache_location, $start_chunk, $end_chunk, $size_bytes, $playbacks, $size_over_plays)',
+      {
+        $song_uid: song_uid,
+        $cached: 0,
+        $cache_location: cache_location,
+        $start_chunk: -1,
+        $end_chunk: -1,
+        $size_bytes: 0,
+        $playbacks: 0,
+        $size_over_plays: 0,
+      }
+    );
+
+    await this.dbRun('INSERT INTO song_info VALUES ($song_uid, $link, $thumbnail_url, $title, $artist, $duration)', {
+      $song_uid: song_uid,
+      $link: '',
+      $thumbnail_url: '',
+      $title: 'Unknown',
+      $artist: 'Unknown',
+      $duration: -1,
+    });
+  }
+
+  /**
    * cacheSong() - Update database so that song is cached
    * @param song_uid - song uid of song to uncache
    * @param cache_location - cache location of song to add
    */
-  async cacheSong(song_uid: string, cache_location: string): Promise<void> {
+  async cacheSong(song_uid: string): Promise<void> {
     if (!(await this.containsSong(song_uid))) {
-      await this.addSong(song_uid, cache_location);
+      throw new Error('Song does not exist in song database');
     } else {
-      await this.dbRun(
-        'UPDATE song_cache SET cached = $cached, cache_location = $cache_location WHERE song_uid = $song_uid',
-        {
-          $cached: 1,
-          $song_uid: song_uid,
-          $cache_location: cache_location,
-        }
-      );
+      await this.dbRun('UPDATE song_cache SET cached = $cached WHERE song_uid = $song_uid', {
+        $cached: 1,
+        $song_uid: song_uid,
+      });
     }
   }
 
@@ -189,8 +188,10 @@ export default class SongDB extends SQLiteInterface {
       throw new Error('Song does not exist in song database');
     } else {
       await this.dbRun(
-        'UPDATE song_cache SET cached = $cached, size_bytes = $size_bytes, size_over_plays = $size_over_plays WHERE song_uid = $song_uid',
+        'UPDATE song_cache SET cached = $cached, size_bytes = $size_bytes, size_over_plays = $size_over_plays, start_chunk = $start_chunk, end_chunk = $end_chunk WHERE song_uid = $song_uid',
         {
+          $start_chunk: -1,
+          $end_chunk: -1,
           $size_bytes: 0,
           $size_over_plays: 0,
           $cached: 0,

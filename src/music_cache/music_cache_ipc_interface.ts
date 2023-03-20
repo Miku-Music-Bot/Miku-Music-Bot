@@ -30,7 +30,7 @@ export default class MusicCacheInterface extends IPCInterface<MusicCacheFunction
    * @param url - url of song to fetch cache location of
    * @returns - object containing cache location information
    */
-  async cacheLocation(url: string): Promise<{ cache_location: string; start_chunk: number; end_chunk: number }> {
+  async cacheLocation(url: string): Promise<{ uid: string; loc: string; start_chunk: number; end_chunk: number }> {
     return this.RequestFunction(MusicCacheFunctions.cacheLocation, [url]);
   }
 
@@ -39,7 +39,7 @@ export default class MusicCacheInterface extends IPCInterface<MusicCacheFunction
    * @param lock_id - cache lock_id for the song (recieved from cache() function)
    * @returns - Promise that resolves once lock has been successfully released
    */
-  async releaseLock(lock_id: number): Promise<void> {
+  async releaseLock(lock_id: string): Promise<void> {
     await this.RequestFunction(MusicCacheFunctions.releaseLock, [lock_id]);
   }
 }

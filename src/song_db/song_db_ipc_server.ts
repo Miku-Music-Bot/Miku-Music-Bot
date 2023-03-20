@@ -21,8 +21,12 @@ export function StartSongDBComponent(): typeof ipc {
       case SongDBFunctions.getSongInfo: {
         return song_db.getSongInfo(args[0]);
       }
+      case SongDBFunctions.addSong: {
+        await song_db.addSong(args[0], args[1]);
+        return '';
+      }
       case SongDBFunctions.cacheSong: {
-        await song_db.cacheSong(args[0], args[1]);
+        await song_db.cacheSong(args[0]);
         return '';
       }
       case SongDBFunctions.uncacheSong: {
