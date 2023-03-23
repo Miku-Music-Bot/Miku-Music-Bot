@@ -68,7 +68,7 @@ describe('SQLite Interface', () => {
     const sqlite_interface = new SQLiteInterfaceTester(db_location, tables, createLoggerStub());
 
     await sqlite_interface.dbRun('INSERT INTO test_table0 VALUES ($col1, $col2)', {
-      $col1: 'song string',
+      $col1: 'some string',
       $col2: '0',
     });
 
