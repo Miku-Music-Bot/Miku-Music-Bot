@@ -1,9 +1,10 @@
 /node_modules
-/built
+/.vscode
+/build
+/cache
+/databases
 /logs
-/temp
-/assets/thumbnails/*
+/.nyc_output
+/coverage
 
-!/assets/thumbnails/defaultThumbnail.jpg
 .env
-token.json
